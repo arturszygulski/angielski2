@@ -1351,6 +1351,10 @@
     speakIcon();
     bindExercise(it, c);
   }
+  /* który model AI odpowiedział — delikatny dopisek przy znaczku AI */
+  function mdlShort(m) { m = String(m || ''); return /sonnet/i.test(m) ? 'Sonnet' : /haiku/i.test(m) ? 'Haiku' : /opus/i.test(m) ? 'Opus' : m; }
+  function mdlTag(m) { return m ? '<i class="mdl" title="Odpowiedział model: ' + esc(m) + '"> · ' + esc(mdlShort(m)) + '</i>' : ''; }
+  function aiTag(m) { return '<span class="ai-tag">AI' + mdlTag(m) + '</span>'; }
   /* „Odsłuchaj zdanie” rzadko używane: mała ikonka głośnika na początku zdania (klawisz bez zmian) */
   function speakIcon() {
     const b = document.getElementById('speak'), sent = document.querySelector('.ex-card .sentence');
@@ -1858,6 +1862,7 @@
     const fill = it.type === 'cloze' && m === 'ai-ok' ? (extra.ans || '').trim() : (it.type === 'cloze' || it.type === 'choice') ? it.w.answers[0] : '';
     S.reListening = false;
     S.fb = Object.assign({ stepMsg: S.stepMsg, kind, m, xp, isFirst, fill, slow: correct && kind === 'ok' && (S.hint || slow), hinted: S.hint }, extra);
+    if (S.fb.expl && !S.fb.mdl && AI.lastAt() >= S.cardStart) S.fb.mdl = AI.lastModel();
     S.phase = 'feedback';
     renderExercise();
     if (correct) { const cb = document.getElementById('combo'); if (cb) { cb.classList.add('bump'); setTimeout(() => cb.classList.remove('bump'), 220); } }
@@ -1871,7 +1876,7 @@
   function feedbackHtml(it) {
     const fb = S.fb;
     const xp = fb.xp ? ' · +' + fb.xp + ' XP' : '';
-    const ai = t => '<span class="ai-tag">AI</span>' + esc(t);
+    const ai = t => aiTag(fb.mdl) + esc(t);
     let cls = 'ok', icon = IC.check, title = fb.m === 'ai-ok' ? 'Też dobrze!' : 'Dobrze!', main = '';
     const smalls = [];
     if (fb.kind === 'bad') { cls = 'bad'; icon = IC.alert; title = 'Jeszcze nie.'; }
@@ -4937,7 +4942,7 @@
   }
   function tenseFeedback(it, fb, xp, smalls, setTitle) {
     const ts = it.ts, T = TS_BY[ts.tid];
-    const ai = t => '<span class="ai-tag">AI</span>' + esc(t);
+    const ai = t => aiTag(fb.mdl) + esc(t);
     let main;
     if (it.type === 'tense_t') {
       const better = fb.better && U.norm(fb.better) !== U.norm(fb.ans || '') ? fb.better : '';
@@ -5320,7 +5325,7 @@
     if (!me.length) { TK = { phase: 'pick', lvl: X.lvl }; renderTalk(); return; }
     X.phase = 'sumload'; X.sum = null; X.sumErr = '';
     renderTalkSummary();
-    try { X.sum = await AI.talkSummary(X.scene, L[X.lvl], X.msgs); }
+    try { X.sum = await AI.talkSummary(X.scene, L[X.lvl], X.msgs); X.sum._m = AI.lastModel(); }
     catch (e) { X.sumErr = AI.humanError(e); }
     if (TK !== X) return;
     finishTalkStats(X);
@@ -5369,7 +5374,7 @@
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Średnio słów</div><span class="kpi-val">' + String(X.avg).replace('.', ',') + '</span><div class="small-note">na jedną wypowiedź</div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Podpowiedzi</div><span class="kpi-val">' + X.hintsUsed + '</span><div class="small-note">im mniej, tym samodzielniej</div></div></section>' +
       (X.sumErr ? '<section class="note raised"><div class="ic inset">' + IC.alert + '</div><div class="tx"><b>Nie udało się przygotować podsumowania</b><span>' + esc(X.sumErr) + '</span></div><button class="btn" id="tkSumRetry">Spróbuj ponownie</button></section>' : '') +
-      (Sm ? '<section class="set-card raised"><h2>Ocena</h2><p style="margin:0;font-size:17px;line-height:1.55">' + esc(Sm.summary) + '</p></section>' +
+      (Sm ? '<section class="set-card raised"><h2>Ocena ' + aiTag(Sm._m) + '</h2><p style="margin:0;font-size:17px;line-height:1.55">' + esc(Sm.summary) + '</p></section>' +
         '<section class="set-card raised"><h2>Poprawki</h2>' + (Sm.corrections.length ? '<div class="col" style="gap:12px">' + Sm.corrections.map(c => '<div class="list-item inset corr"><div style="min-width:0"><div class="small-note">Powiedziałeś: <s>' + esc(c.you) + '</s></div><div lang="en"><b>' + esc(c.better) + '</b></div><div class="small-note">' + esc(c.why) + '</div></div><button class="btn small" data-csay="' + esc(c.better) + '" aria-label="Odsłuchaj">' + IC.speaker + '</button></div>').join('') + '</div>' : '<p class="small-note" style="margin:0">Bez istotnych błędów — świetnie!</p>') + '</section>' +
         '<section class="set-card raised"><div class="row between"><h2>Zwroty do nauki</h2>' + (Sm.phrases.length ? '<button class="btn small" id="tkAddAll">Dodaj wszystkie ' + K('D') + '</button>' : '') + '</div><div class="col" style="gap:10px">' +
         Sm.phrases.map((p, i) => '<div class="list-item inset"><div style="min-width:0"><span class="w" style="font-size:18px" lang="en">' + esc(p.phrase) + '</span><span class="p"> — ' + esc(p.pl) + '</span><div class="small-note" lang="en">' + esc(p.sentence) + '</div></div>' +
@@ -5387,7 +5392,7 @@
     if ($('#tkAddAll')) $('#tkAddAll').onclick = () => { let n = 0; Sm.phrases.forEach((_, i) => { if (addOne(i)) n++; }); renderTalkSummary(); toast(n ? 'Dodano ' + n + ' zwrotów do nauki.' : 'Nic nowego do dodania.'); };
     if ($('#tkSumRetry')) $('#tkSumRetry').onclick = async () => {
       X.phase = 'sumload'; renderTalkSummary();
-      try { X.sum = await AI.talkSummary(X.scene, L[X.lvl], X.msgs); X.sumErr = ''; const rec = (D().convos || []).slice(-1)[0]; if (rec) { rec.score = X.sum.score; rec.goal = rec.goal || X.sum.goalDone; Store.save(); } }
+      try { X.sum = await AI.talkSummary(X.scene, L[X.lvl], X.msgs); X.sum._m = AI.lastModel(); X.sumErr = ''; const rec = (D().convos || []).slice(-1)[0]; if (rec) { rec.score = X.sum.score; rec.goal = rec.goal || X.sum.goalDone; Store.save(); } }
       catch (e) { X.sumErr = AI.humanError(e); }
       X.phase = 'summary'; if (screen === 'talk') renderTalkSummary();
     };
@@ -5451,6 +5456,7 @@
     const ctx = mistakeCtx(it, S.fb);
     try {
       const data = await AI.explainMistake(ctx, L[levels().vocab]);
+      data._m = AI.lastModel();
       ex[key] = Object.assign(ex[key] || { chat: [] }, { at: Date.now(), title: (ctx.answer ? ctx.answer + ' → ' : '') + ctx.correct, type: TYPES[it.type].title, ctx, data });
       trimExplains(); Store.save();
     } catch (e) { EX_ERR[key] = AI.humanError(e); }
@@ -5466,7 +5472,7 @@
     renderExplainPanel(it);
     try {
       const a = await AI.discussMistake(rec.ctx, L[levels().vocab], rec.data, rec.chat, q);
-      rec.chat.push({ q, a, at: Date.now() }); rec.at = Date.now();
+      rec.chat.push({ q, a, at: Date.now(), m: AI.lastModel() }); rec.at = Date.now();
       if (rec.chat.length > 20) rec.chat.splice(0, rec.chat.length - 20);
       Store.save();
     } catch (e) { EX_ERR[key + '#q'] = AI.humanError(e); }
@@ -5480,7 +5486,7 @@
       (d.examples.length ? '<div class="ex-sec"><h3>Przykłady w kontekście</h3>' + d.examples.map(x => '<div class="ex-row">' + say(x.en) + '<div><div lang="en">' + esc(x.en) + '</div><div class="small-note">' + esc(x.pl) + '</div></div></div>').join('') + '</div>' : '') +
       (d.simpler.length ? '<div class="ex-sec"><h3>Prościej / inaczej</h3>' + d.simpler.map(x => '<div class="ex-row">' + say(x.en) + '<div><div lang="en">' + esc(x.en) + '</div><div class="small-note">' + esc(x.pl) + '</div></div></div>').join('') + '</div>' : '') +
       (d.watch ? '<div class="ex-sec watch"><h3>Uważaj</h3><p>' + esc(d.watch) + '</p></div>' : '') +
-      ((rec.chat || []).length ? '<div class="qa">' + rec.chat.map(m => '<div class="qa-item"><div class="q">' + esc(m.q) + '</div><div class="a">' + esc(m.a).replace(/\n/g, '<br>') + '</div></div>').join('') + '</div>' : '');
+      ((rec.chat || []).length ? '<div class="qa">' + rec.chat.map(m => '<div class="qa-item"><div class="q">' + esc(m.q) + '</div><div class="a">' + esc(m.a).replace(/\n/g, '<br>') + (m.m ? ' <span class="small-note">' + mdlTag(m.m) + '</span>' : '') + '</div></div>').join('') + '</div>' : '');
   }
   function renderExplainPanel(it) {
     const el = document.getElementById('explain'); if (!el) return;
@@ -5490,7 +5496,7 @@
     const draft = (document.getElementById('exQ') || {}).value || '';
     if (EX_BUSY[key] && !(rec && rec.data)) { el.innerHTML = '<div class="checking"><span class="spinner"></span>AI przygotowuje dokładne wyjaśnienie…</div>'; return; }
     if (!rec || !rec.data) { el.innerHTML = '<div class="status bad">' + esc(EX_ERR[key] || 'Brak wyjaśnienia.') + '</div><button class="btn small" id="exRetry">Spróbuj ponownie</button>'; const r = document.getElementById('exRetry'); if (r) r.onclick = () => openExplain(it); return; }
-    el.innerHTML = '<div class="row between"><b class="ex-title"><span class="ai-tag">AI</span>Dokładniej</b><button class="btn small" id="exClose" aria-label="Zwiń">Zwiń ' + K('E') + '</button></div>' +
+    el.innerHTML = '<div class="row between"><b class="ex-title">' + aiTag(rec.data._m) + 'Dokładniej</b><button class="btn small" id="exClose" aria-label="Zwiń">Zwiń ' + K('E') + '</button></div>' +
       (rec.data.keyProblem ? '<div class="fb bad" role="status">' + IC.alert + '<span><b>Uwaga — samo ćwiczenie wygląda na błędne.</b> ' + esc(rec.data.keyProblem) + ' <button class="btn small" id="exRep">Popraw zdanie ' + K('X') + '</button></span></div>' : '') +
       explainBodyHtml(rec, { say: true }) +
       (rec.pending ? '<div class="qa"><div class="qa-item"><div class="q">' + esc(rec.pending) + '</div></div></div><div class="checking"><span class="spinner"></span>AI odpowiada…</div>' : '') +
@@ -5635,7 +5641,7 @@
       // kontrola jakości zdań (jak przy słówkach od AI)
       let items = r.items.map(x => ({ word: x.answer, sentence: x.en, pl: x.answer_pl, x }));
       try { const qc = await qcWordItems(items); items = qc.items; } catch (e) { }
-      const T = { id: tid, title: r.title, at: Date.now(), about: r.about, contrast: r.contrast, examples: r.examples, pitfalls: r.pitfalls,
+      const T = { id: tid, m: AI.lastModel(), title: r.title, at: Date.now(), about: r.about, contrast: r.contrast, examples: r.examples, pitfalls: r.pitfalls,
         items: items.map(q => Object.assign({}, q.x, { en: q.sentence })), talkRole: r.talkRole, talkGoal: r.talkGoal, src: ctx.sentence };
       D().topics[tid] = T;
       const ks = Object.keys(D().topics); if (ks.length > 40) ks.sort((a, b) => D().topics[a].at - D().topics[b].at).slice(0, ks.length - 40).forEach(k => delete D().topics[k]);
@@ -5694,7 +5700,7 @@
     if (!X.tid) return renderTopicPick();
     const T = (D().topics || {})[X.tid];
     const head = '<header class="ex-head"><button class="btn" id="tpBack">' + IC.back + (X.ret ? ' Wróć do ćwiczenia ' : ' Wróć ') + K('Esc') + '</button>' +
-      '<div class="ex-title"><b>Rozszerz temat</b><span>' + (T ? esc(T.title) : 'przygotowuję…') + '</span></div><div style="width:150px"></div></header>';
+      '<div class="ex-title"><b>Rozszerz temat</b><span>' + (T ? esc(T.title) + (T.m ? ' ' + aiTag(T.m) : '') : 'przygotowuję…') + '</span></div><div style="width:150px"></div></header>';
     let body;
     if (!T) {
       body = X.err

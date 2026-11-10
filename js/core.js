@@ -152,16 +152,19 @@ window.AI = (function () {
     return (s.model || 'claude-haiku-5-5').trim();
   }
   /* gdy model do wyjaśnień odmówi (400/404 — np. zła nazwa albo brak dostępu), zapytanie idzie jeszcze raz na szybkim modelu */
-  let smartErr = '';
+  let smartErr = '', lastModel = '', lastAt = 0;
   const fastModel = () => (Store.data.settings.model || 'claude-haiku-5-5').trim();
   async function aiFetch(url, opts) {
     let body; try { body = JSON.parse(opts.body); } catch (e) { return fetch(url, opts); }
     const res = await fetch(url, opts);
+    if (res.ok) { lastModel = body.model; lastAt = Date.now(); }
     if (res.ok || !(res.status === 400 || res.status === 404) || body.model === fastModel()) return res;
     let msg = ''; try { const j = await res.clone().json(); msg = (j.error && j.error.message) || ''; } catch (e) { }
     smartErr = body.model + ' → ' + res.status + (msg ? ': ' + msg : '');
     console.warn('Model do wyjaśnień nie zadziałał, używam szybkiego:', smartErr);
-    return fetch(url, Object.assign({}, opts, { body: JSON.stringify(Object.assign(body, { model: fastModel() })) }));
+    const r2 = await fetch(url, Object.assign({}, opts, { body: JSON.stringify(Object.assign(body, { model: fastModel() })) }));
+    if (r2.ok) { lastModel = body.model; lastAt = Date.now(); }
+    return r2;
   }
   /* model wybierany synchronicznie przy starcie zapytania — flaga od razu wraca, więc równoległe szybkie sprawdzenia zostają na Haiku */
   const smart = fn => function () { curSmart = true; try { return fn.apply(this, arguments); } finally { curSmart = false; } };
@@ -625,7 +628,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, humanError };
+  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

@@ -857,3 +857,6 @@ main.ex-card { position: relative; }
 .sentence > .btn.spk-ic { width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; align-self: center; margin-right: 6px; color: var(--ink-2); }
 .sentence > .btn.spk-ic svg { width: 18px; height: 18px; }
 .sentence > .btn.spk-ic[hidden] { display: none; }
+
+/* który model odpowiedział */
+.ai-tag .mdl, .mdl { font-style: normal; font-weight: 500; opacity: .7; }
