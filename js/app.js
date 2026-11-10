@@ -772,7 +772,7 @@
       '<header class="top"><div class="hello"><div class="logo raised">' + IC.spark + '</div>' +
       '<div><h1>' + (name ? 'Cześć, ' + esc(name) : 'Cześć!') + '</h1><p>Angielski codziennie.</p></div></div>' +
       '<div class="row" style="gap:14px">' +
-      (syncState.needsPerm ? '<button class="btn pill small primary" id="syncChip">' + IC.cloud + ' Połącz z Dyskiem</button>' : '') +
+      '<span id="syncChipBox">' + syncChipHtml() + '</span>' +
       '<button class="btn pill small" id="aiChip" title="Ustawienia AI">' + (AI.enabled() ? '<span style="width:9px;height:9px;border-radius:50%;background:#5D9A6E"></span> AI włączone' : '<span style="width:9px;height:9px;border-radius:50%;background:#B5AFA7"></span> AI wyłączone') + '</button>' +
       '<div class="chip head inset">Poziom ' + L[overallLevel()] + '</div>' +
       '<button class="btn round" id="settings" aria-label="Ustawienia (O)" title="Ustawienia (O)">' + IC.gear + '</button></div></header>' +
@@ -833,7 +833,7 @@
 
     $('#settings').onclick = () => go('settings');
     $('#aiChip').onclick = () => go('settings');
-    if ($('#syncChip')) $('#syncChip').onclick = connectSync;
+    bindSyncChip();
     if ($('#toSync')) $('#toSync').onclick = () => go('settings', 'sync');
     if ($('#start')) $('#start').onclick = () => startSession(false);
     if ($('#quick')) $('#quick').onclick = () => startSession(true);
@@ -2147,10 +2147,25 @@
     if (syncState.status) return '<span class="status ' + (syncState.ok ? 'ok' : 'bad') + '">' + IC.cloud + ' ' + esc(syncState.status) + '</span>' + (syncState.ok ? '' : ' <button class="btn small" id="syncRetry">Zapisz teraz</button>');
     return '';
   }
+  /* kropka stanu Dysku Google na stronie głównej: zielona = działa, czerwona = coś nie tak */
+  function syncChipHtml() {
+    const dot = c => '<span style="width:9px;height:9px;border-radius:50%;background:' + c + '"></span> ';
+    const st = D().settings;
+    let ok = false, label, title;
+    if (!Sync.supported) { label = 'Dysk — nieobsługiwany'; title = 'Ta przeglądarka nie zapisuje do folderu — użyj Chrome albo Edge.'; }
+    else if (!st.syncFolder) { label = 'Dysk niepodłączony'; title = 'Kliknij, aby wybrać folder kopii na Dysku Google.'; }
+    else if (syncState.needsPerm) { label = 'Połącz z Dyskiem'; title = 'Przeglądarka potrzebuje Twojej zgody na zapis w folderze kopii.'; }
+    else if (syncState.busy) { ok = true; label = 'Dysk — zapisuję…'; title = ''; }
+    else if (!syncState.ok) { label = 'Dysk — błąd'; title = syncState.status || 'Ostatni zapis się nie udał.'; }
+    else { ok = true; label = 'Dysk Google'; title = 'Synchronizacja działa · folder: ' + st.syncFolder + (D().lastSync ? ' · ostatni zapis: ' + fmtTime(D().lastSync) : ''); }
+    return '<button class="btn pill small" id="syncChip" title="' + esc(title) + '">' + dot(ok ? '#5D9A6E' : '#C2584A') + label + '</button>';
+  }
+  function bindSyncChip() { const b = document.getElementById('syncChip'); if (b) b.onclick = () => syncState.needsPerm ? connectSync() : go('settings'); }
   function bindSyncLine() { const b = document.getElementById('syncRetry'); if (b) b.onclick = () => syncNow(true); }
   function refreshSyncUI() {
     const el = document.getElementById('syncLine'); if (el) { el.innerHTML = syncLineHtml(); bindSyncLine(); }
     const st = document.getElementById('syncStatus'); if (st) st.innerHTML = syncStatusHtml();
+    const ch = document.getElementById('syncChipBox'); if (ch) { ch.innerHTML = syncChipHtml(); bindSyncChip(); }
   }
   async function syncNow(ask) {
     if (!Sync.supported) return false;
