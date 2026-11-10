@@ -151,6 +151,18 @@ window.AI = (function () {
     if (curSmart) { const m = (s.modelSmart == null ? 'claude-sonnet-5-5' : s.modelSmart).trim(); if (m) return m; }
     return (s.model || 'claude-haiku-5-5').trim();
   }
+  /* gdy model do wyjaśnień odmówi (400/404 — np. zła nazwa albo brak dostępu), zapytanie idzie jeszcze raz na szybkim modelu */
+  let smartErr = '';
+  const fastModel = () => (Store.data.settings.model || 'claude-haiku-5-5').trim();
+  async function aiFetch(url, opts) {
+    let body; try { body = JSON.parse(opts.body); } catch (e) { return fetch(url, opts); }
+    const res = await fetch(url, opts);
+    if (res.ok || !(res.status === 400 || res.status === 404) || body.model === fastModel()) return res;
+    let msg = ''; try { const j = await res.clone().json(); msg = (j.error && j.error.message) || ''; } catch (e) { }
+    smartErr = body.model + ' → ' + res.status + (msg ? ': ' + msg : '');
+    console.warn('Model do wyjaśnień nie zadziałał, używam szybkiego:', smartErr);
+    return fetch(url, Object.assign({}, opts, { body: JSON.stringify(Object.assign(body, { model: fastModel() })) }));
+  }
   /* model wybierany synchronicznie przy starcie zapytania — flaga od razu wraca, więc równoległe szybkie sprawdzenia zostają na Haiku */
   const smart = fn => function () { curSmart = true; try { return fn.apply(this, arguments); } finally { curSmart = false; } };
 
@@ -159,7 +171,7 @@ window.AI = (function () {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
     try {
-      const res = await fetch(URL, {
+      const res = await aiFetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: {
           'content-type': 'application/json',
@@ -185,7 +197,7 @@ window.AI = (function () {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
     try {
-      const res = await fetch(URL, {
+      const res = await aiFetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
@@ -214,7 +226,7 @@ window.AI = (function () {
     if (e.name === 'AbortError') return 'AI nie odpowiedziało na czas.';
     if (e.status === 401) return 'Nieprawidłowy klucz API — sprawdź go w ustawieniach.';
     if (e.status === 400 && /credit|balance/i.test(e.message)) return 'Brak środków na koncie API — doładuj je w Claude Console.';
-    if (e.status === 404 || (e.status === 400 && /model/i.test(e.message))) return 'Nieznany model — sprawdź nazwę modelu w ustawieniach.';
+    if (e.status === 404 || (e.status === 400 && /model/i.test(e.message))) return 'Model odrzucił zapytanie — sprawdź nazwę modelu w ustawieniach.' + (e.message ? ' (' + e.message + ')' : '');
     if (e.status === 429) return 'Za dużo zapytań naraz — spróbuj za chwilę.';
     if (e.status >= 500) return 'Serwer AI jest chwilowo przeciążony.';
     if (e instanceof TypeError) return 'Brak połączenia z internetem — AI pominięte.';
@@ -318,7 +330,7 @@ window.AI = (function () {
     const s = Store.data.settings;
     const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 30000);
     try {
-      const res = await fetch(URL, {
+      const res = await aiFetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({ model: pickModel(), max_tokens: 600, system: sys(system), messages: msgs })
@@ -446,7 +458,7 @@ window.AI = (function () {
     msgs.push({ role: 'user', content: question });
     const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 30000);
     try {
-      const res = await fetch(URL, {
+      const res = await aiFetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({ model: pickModel(), max_tokens: 700, system: sys(system), messages: msgs })
@@ -613,7 +625,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: smart(test), humanError };
+  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */
