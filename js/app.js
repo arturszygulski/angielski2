@@ -1345,7 +1345,17 @@
       })() + '</div>' + body + lower + '</main></div>';
 
     if (ph === 'answer') unifyControls();
+    speakIcon();
     bindExercise(it, c);
+  }
+  /* „Odsłuchaj zdanie” rzadko używane: mała ikonka głośnika na początku zdania (klawisz bez zmian) */
+  function speakIcon() {
+    const b = document.getElementById('speak'), sent = document.querySelector('.ex-card .sentence');
+    if (!b || !sent) return;
+    const k = b.querySelector('.kbd'), key = k ? k.textContent.trim() : 'S';
+    b.className = 'btn spk-ic'; b.innerHTML = IC.speaker;
+    b.title = 'Odsłuchaj zdanie (' + key + ')'; b.setAttribute('aria-label', b.title);
+    sent.insertBefore(b, sent.firstChild);
   }
   /* wspólny dolny rząd przycisków we wszystkich ćwiczeniach: Zgaduję | … | Sprawdź (pod cienką kreską) */
   function unifyControls() {
