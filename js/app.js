@@ -1774,7 +1774,7 @@
     else { g = 3; kind = 'ok'; }
 
     const isFirst = !(c.id in S.first);
-    if (isFirst) { S.snap = S.snap || {}; const pc0 = D().cards[c.id]; S.snap[c.id] = { card: pc0 ? JSON.parse(JSON.stringify(pc0)) : null, mlen: (D().mistakes || []).length }; }
+    if (isFirst) { S.snap = S.snap || {}; const pc0 = D().cards[c.id]; const wk0 = scaleKey(it), ws0 = wk0 && (D().wsc || {})[wk0]; S.snap[c.id] = { card: pc0 ? JSON.parse(JSON.stringify(pc0)) : null, mlen: (D().mistakes || []).length, wk: wk0, wsc: ws0 ? JSON.parse(JSON.stringify(ws0)) : null }; }
     S.stepMsg = '';
     if (isFirst && it.ts) pushTenseHist(it.ts.tid, correct);
     if (isFirst && SENT_TYPES[it.type] && !it.simple) pushSentHist(correct);
@@ -1953,6 +1953,16 @@
       nc.added = (prev && prev.added) || Date.now();
       if (prev) ['st', 'sk', 'ft', 'mastered'].forEach(k => { if (prev[k] != null) nc[k] = prev[k]; });
       D().cards[c.id] = card = nc; S.first[c.id] = 2;
+      // cofamy też to, co dała odpowiedź „Dobrze”: kropkę dnia (skala słowa) i komunikat o trudności
+      const sn = S.snap[c.id];
+      if (sn.wk) {
+        const ws = D().wsc = D().wsc || {};
+        if (sn.wsc) ws[sn.wk] = Object.assign({}, sn.wsc, { day: U.dayKey() }); else ws[sn.wk] = { lv: 0, day: U.dayKey() };
+        if (S.fb) S.fb.wsc = { lv: ws[sn.wk].lv, d: 0 };
+      }
+      S.stepUps = (S.stepUps || []).filter(x => x !== c.id); S.mastered = (S.mastered || []).filter(x => x !== c.id);
+      S.stepMsg = '';
+      if (S.fb) S.fb.stepMsg = 'Trudne — nie liczę tego jako pewnej odpowiedzi, wróci szybciej.';
     }
     card.hard = 1; card.hardOk = 0; delete card.hardDay;
     if (card.due > Date.now() + U.DAY) card.due = Date.now() + Math.round((card.due - Date.now()) / 2);
