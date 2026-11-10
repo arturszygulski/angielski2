@@ -466,6 +466,7 @@
 
   let toastTimer = null;
   function toast(msg, action) {
+    const ms = typeof action === 'number' ? action : 0; if (ms) action = null;
     const old = document.querySelector('.toast'); if (old) old.remove();
     clearTimeout(toastTimer);
     const el = document.createElement('div');
@@ -473,7 +474,7 @@
     el.innerHTML = '<span>' + esc(msg) + '</span>' + (action ? '<button class="btn small">' + esc(action.label) + ' ' + K('Ctrl+Z') + '</button>' : '');
     document.body.appendChild(el);
     if (action) el.querySelector('button').onclick = () => { el.remove(); action.fn(); };
-    toastTimer = setTimeout(() => el.remove(), action ? 7000 : 3200);
+    toastTimer = setTimeout(() => el.remove(), ms || (action ? 7000 : 3200));
   }
   function modal(html, bind) {
     const ov = document.createElement('div');
@@ -2181,8 +2182,8 @@
   /* czy na Dysku jest nowsza kopia (np. z innego komputera lub przeglądarki)? */
   async function checkRemote(h, always) {
     let remote;
-    try { remote = await Sync.read(h); } catch (e) { return false; }
-    if (!remote || !remote.cards) { if (always) toast('W tym folderze nie ma jeszcze kopii postępów.'); return false; }
+    try { remote = await Sync.read(h); } catch (e) { if (always) toast('Nie udało się odczytać kopii z folderu „' + (h.name || '') + '” (' + (e && (e.name || e.message) || 'błąd') + '). Jeśli to Dysk Google, sprawdź, czy plik jest dostępny offline.', 9000); return false; }
+    if (!remote || !remote.cards) { if (always) toast('W folderze „' + (h.name || '') + '” nie ma pliku angielski-postepy.json. Wybierz folder, w którym leży ten plik (ten sam, który był ustawiony w starej wersji).', 9000); return false; }
     const localEmpty = !D().profile.placementDone;
     const newer = (remote.progressAt || 0) > (D().progressAt || 0) + 2000;
     if (always || newer || (localEmpty && remote.profile && remote.profile.placementDone)) { offerRemote(remote); return true; }
