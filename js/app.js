@@ -928,7 +928,7 @@
     Object.assign(S, {
       phase: 'answer', unsure: false, hint: false, emptyPrompt: false, answer: '', fb: null, cardStart: Date.now(),
       tiles: null, order: [], ins: null, errTok: null, errSel: null, errCursor: 0, autoPlayed: false,
-      listening: false, spoken: false, interim: '', recogErr: '', heard: '', ygOpen: false, typeMs: 0, lastKeyAt: 0, pvOpts: null, tnOpts: null, exOpen: false, view: null, viewId: null, chOpts: null, chWait: false, plays: 0, premarked: false, rep: null
+      listening: false, spoken: false, interim: '', recogErr: '', heard: '', ygOpen: false, typeMs: 0, lastKeyAt: 0, pvOpts: null, tnOpts: null, exOpen: false, view: null, viewId: null, chOpts: null, chWait: false, plays: 0, premarked: false, rep: null, spPend: null, spTries: 0
     });
   }
   const cur = () => S && S.queue[S.pos];
@@ -1306,12 +1306,15 @@
           (S.reListening ? '<div class="interim inset deep" id="interim" aria-live="polite">' + esc(S.interim || '') + '</div>' : '');
       } else {
         body += '<button class="btn mic' + (S.listening ? ' on primary' : '') + '" id="mic" aria-label="' + (S.listening ? 'Zatrzymaj nagrywanie' : 'Mów (Spacja)') + '">' + IC.mic + '</button>' +
-          '<div class="small-note">' + (S.listening ? 'Słucham… mów spokojnie po angielsku — skończę po chwili ciszy albo gdy klikniesz jeszcze raz' : K('Spacja') + ' albo kliknij, żeby mówić') + '</div>' + micHint() +
-          '<div class="interim inset deep" id="interim" aria-live="polite">' + esc(S.interim || '') + '</div>' +
+          '<div class="small-note">' + (S.listening ? 'Słucham… mów spokojnie po angielsku — skończę po chwili ciszy albo gdy klikniesz jeszcze raz' : S.spPend ? 'Źle zrozumiałem? ' + K('Spacja') + ' — powiedz jeszcze raz, ta próba się nie liczy · ' + K('Enter') + ' — sprawdź' : K('Spacja') + ' albo kliknij, żeby mówić') + '</div>' + micHint() +
+          (S.spPend && !S.listening
+            ? (function () { const dfx = wordDiff(fullSentence(it), S.spPend.heard); return '<div class="interim inset deep wd" id="interim">Usłyszałem: „' + dfx.B.map((w, k) => dfx.bNear[k] ? '<u class="near">' + esc(w) + '</u>' : dfx.bOk[k] ? esc(w) : '<s>' + esc(w) + '</s>').join(' ') + '”</div>'; })()
+            : '<div class="interim inset deep" id="interim" aria-live="polite">' + esc(S.interim || '') + '</div>') +
           (S.recogErr ? '<div class="fb bad" role="status" style="max-width:640px">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '');
       }
       controls = '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn +
-        '<button class="btn" id="skip">Pomiń — nie mogę teraz mówić ' + K('Alt+K') + '</button></div>';
+        '<button class="btn" id="skip">Pomiń — nie mogę teraz mówić ' + K('Alt+K') + '</button>' +
+        (S.spPend && !S.listening ? '<button class="btn primary" id="check">Sprawdź ' + K('Enter') + '</button>' : '') + '</div>';
     }
 
     let lower;
@@ -1458,7 +1461,8 @@
         }
         if (it.type === 'speak') {
           if (altKey(e, 'KeyK')) { e.preventDefault(); skipCard(); return; }
-          if ((e.code === 'Space' || altKey(e, 'KeyM')) && !typingInField()) { e.preventDefault(); toggleListen(); return; }
+          if ((e.code === 'Space' || altKey(e, 'KeyM') || (plainKey(e, 'KeyM') && S.spPend)) && !typingInField()) { e.preventDefault(); toggleListen(); return; }
+          if (e.key === 'Enter' && !e.altKey && S.spPend && !S.listening && !onButton()) { e.preventDefault(); confirmSpeak(); return; }
           return;
         }
         if (it.type === 'order' && !typingInField() && !e.altKey && !e.ctrlKey && !e.metaKey) {
@@ -1620,7 +1624,11 @@
         let best = alts[0], bs = -1, bt = false;
         alts.forEach(a => { const t = containsTarget(a, it.w.answers), s = listenScore(full, a); if ((t && !bt) || (t === bt && s > bs)) { best = a; bs = s; bt = t; } });
         const m = bt && bs >= 0.9 ? 'exact' : bt && bs >= 0.45 ? 'typo' : 'wrong'; // „Dobrze” tylko gdy prawie całe zdanie się zgadza
-        applyOutcome(c, it, m, (Date.now() - S.cardStart) / 1000, { heard: best, score: bs, hasTarget: bt });
+        const el = S.spPend ? S.spPend.el : (Date.now() - S.cardStart) / 1000;
+        S.spPend = { m, el, heard: best, score: bs, hasTarget: bt };
+        // całe zdanie się zgadza — oceniamy od razu; inaczej najpierw pokazujemy, co usłyszałem (można powtórzyć, zanim program oceni)
+        if (speakMatch(wordDiff(full, best)) && m === 'exact') return confirmSpeak();
+        renderExercise();
       },
       onError: err => {
         if (S !== sess || cur() !== c) return;
@@ -1631,6 +1639,12 @@
     });
   }
 
+  function confirmSpeak() {
+    if (!S || S.phase !== 'answer' || !S.spPend) return;
+    if (S.listening) Recog.stop();
+    const c = cur(), it = curView(c), P = S.spPend;
+    applyOutcome(c, it, P.m, P.el, { heard: P.heard, score: P.score, hasTarget: P.hasTarget });
+  }
   /* mówienie: pełna zgodność zdania (literówki rozpoznawania dopuszczalne) */
   function speakMatch(dfx) { return dfx.aOk.every(Boolean) && dfx.bOk.every(Boolean); }
   /* ćwiczenie wymowy po ocenie — kolejne próby nie zmieniają wyniku, tylko pokazują, co się zgadza */
@@ -1675,7 +1689,7 @@
   async function submit(asUnsure) {
     if (!S || S.phase !== 'answer') return;
     const c = cur(), it = curView(c), sess = S;
-    if (it.type === 'speak') return;
+    if (it.type === 'speak') { if (S.spPend && !S.listening) confirmSpeak(); return; }
     const elapsed = thinkElapsed();
     const full = fullSentence(it);
     const guard = () => S === sess && cur() === c;
