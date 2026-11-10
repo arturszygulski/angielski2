@@ -54,7 +54,7 @@ window.Store = (function () {
       version: 1,
       profile: { name: '', levels: null, placementDone: false, createdAt: Date.now() },
       settings: {
-        apiKey: '', model: 'claude-haiku-5-5', newPerDay: 8, newExtraPerDay: 6, blockMin: 5, goalMin: 15, voiceURI: '', speakAfter: true, slowSec: 20, maxReviewsPerDay: 150,
+        apiKey: '', model: 'claude-haiku-5-5', modelSmart: 'claude-sonnet-5-5', newPerDay: 8, newExtraPerDay: 6, blockMin: 5, goalMin: 15, voiceURI: '', speakAfter: true, slowSec: 20, maxReviewsPerDay: 150,
         sounds: true, volume: 50, rate: 0.95, syncFolder: '', ygAccent: 'us', playMin: 10, playQ: 25, raceSec: 60,
         games: { race: true, order: true, error: true, dictation: true, speak: true, translate: true, particle: true, tenses: true }
       },
@@ -144,6 +144,15 @@ window.AI = (function () {
   const sys = t => String(t || '') + VOICE;
   class AIError extends Error { constructor(status, msg) { super(msg || ''); this.status = status; } }
   function enabled() { return !!(Store.data.settings.apiKey || '').trim(); }
+  /* dwa modele: szybki (Haiku) do częstych sprawdzeń, mądrzejszy (Sonnet) do wyjaśnień i rzadkich, ważnych zadań */
+  let curSmart = false;
+  function pickModel() {
+    const s = Store.data.settings;
+    if (curSmart) { const m = (s.modelSmart == null ? 'claude-sonnet-5-5' : s.modelSmart).trim(); if (m) return m; }
+    return (s.model || 'claude-haiku-5-5').trim();
+  }
+  /* model wybierany synchronicznie przy starcie zapytania — flaga od razu wraca, więc równoległe szybkie sprawdzenia zostają na Haiku */
+  const smart = fn => function () { curSmart = true; try { return fn.apply(this, arguments); } finally { curSmart = false; } };
 
   async function call(system, user, maxTokens, timeoutMs) {
     const s = Store.data.settings;
@@ -158,7 +167,7 @@ window.AI = (function () {
           'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true'
         },
-        body: JSON.stringify({ model: (s.model || 'claude-haiku-5-5').trim(), max_tokens: maxTokens || 300, system: sys(system), messages: [{ role: 'user', content: user }] })
+        body: JSON.stringify({ model: pickModel(), max_tokens: maxTokens || 300, system: sys(system), messages: [{ role: 'user', content: user }] })
       });
       if (!res.ok) {
         let msg = '';
@@ -180,7 +189,7 @@ window.AI = (function () {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: (s.model || 'claude-haiku-5-5').trim(), max_tokens: maxTokens || 600, system: sys(system),
+          model: pickModel(), max_tokens: maxTokens || 600, system: sys(system),
           tools: [{ name: 'odpowiedz', description: 'Zwróć wynik w tym formacie.', input_schema: schema }],
           tool_choice: { type: 'tool', name: 'odpowiedz' },
           messages: [{ role: 'user', content: user }]
@@ -312,7 +321,7 @@ window.AI = (function () {
       const res = await fetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: (s.model || 'claude-haiku-5-5').trim(), max_tokens: 600, system: sys(system), messages: msgs })
+        body: JSON.stringify({ model: pickModel(), max_tokens: 600, system: sys(system), messages: msgs })
       });
       if (!res.ok) { let msg = ''; try { const j = await res.json(); msg = (j.error && j.error.message) || ''; } catch (e) { } throw new AIError(res.status, msg); }
       const j = await res.json();
@@ -440,7 +449,7 @@ window.AI = (function () {
       const res = await fetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: (s.model || 'claude-haiku-5-5').trim(), max_tokens: 700, system: sys(system), messages: msgs })
+        body: JSON.stringify({ model: pickModel(), max_tokens: 700, system: sys(system), messages: msgs })
       });
       if (!res.ok) { let msg = ''; try { const j = await res.json(); msg = (j.error && j.error.message) || ''; } catch (e) { } throw new AIError(res.status, msg); }
       const j = await res.json();
@@ -604,7 +613,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan, topicPack, checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase, translateSentence, askAboutText, punctuate, newWords, translateBatch, judgeTranslation, makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence, talkTurn, talkHint, talkSummary, explainMistake, discussMistake, simplifySentence, test, humanError };
+  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: smart(test), humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

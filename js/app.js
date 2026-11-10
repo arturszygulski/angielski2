@@ -2280,7 +2280,9 @@
       '<p class="small-note" style="margin:0">Z kluczem API program wyjaśnia błędy po polsku i uznaje poprawne odpowiedzi napisane inaczej niż wzorzec. Klucz założysz na <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Zostaje tylko w tej przeglądarce i nie trafia do kopii.</p>' +
       '<div class="field"><label for="key">Klucz API</label><div class="ctl"><input id="key" class="txt" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="' + esc(st.apiKey) + '">' +
       '<button class="btn small" id="showKey" aria-label="Pokaż klucz">' + IC.eye + '</button></div></div>' +
-      '<div class="field"><label for="model">Model</label><div class="ctl"><input id="model" class="txt" spellcheck="false" value="' + esc(st.model) + '"></div></div>' +
+      '<div class="field"><label for="model">Model szybki</label><div class="ctl"><input id="model" class="txt" spellcheck="false" value="' + esc(st.model) + '"></div></div>' +
+      '<div class="field"><label for="modelSmart">Model do wyjaśnień</label><div class="ctl"><input id="modelSmart" class="txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div></div>' +
+      '<p class="small-note" style="margin:0">Szybki: sprawdzanie odpowiedzi, rozmowa, zdania do słówek. Do wyjaśnień: Wyjaśnij, pytania o błąd, Rozszerz temat, ocena tłumaczeń, podsumowanie rozmowy, plan „Krok po kroku”. Puste pole = wszystko na szybkim.</p>' +
       '<div class="field"><label></label><div class="ctl"><button class="btn small primary" id="testAi">Sprawdź połączenie</button><span class="status" id="aiStatus"></span></div></div></section>' +
 
       '<section class="set-card raised"><h2>Gry</h2>' +
@@ -2344,11 +2346,16 @@
     $('#key').oninput = e => { st.apiKey = e.target.value.trim(); save(); };
     on('#showKey', () => { const k = $('#key'); k.type = k.type === 'password' ? 'text' : 'password'; });
     $('#model').oninput = e => { st.model = e.target.value.trim() || 'claude-haiku-5-5'; save(); };
+    $('#modelSmart').oninput = e => { st.modelSmart = e.target.value.trim(); save(); };
     on('#testAi', async () => {
       const s = $('#aiStatus');
       if (!AI.enabled()) { s.className = 'status bad'; s.textContent = 'Najpierw wklej klucz API.'; return; }
       s.className = 'status'; s.textContent = 'Sprawdzam…';
-      try { await AI.test(); s.className = 'status ok'; s.textContent = '✓ Połączenie działa.'; }
+      try {
+        await AI.test();
+        try { await AI.testSmart(); s.className = 'status ok'; s.textContent = '✓ Połączenie działa (oba modele).'; }
+        catch (e2) { s.className = 'status bad'; s.textContent = 'Szybki model działa, model do wyjaśnień nie: ' + AI.humanError(e2); }
+      }
       catch (e) { s.className = 'status bad'; s.textContent = AI.humanError(e); }
     });
     $$('[data-acc]').forEach(b => b.onclick = () => { st.ygAccent = b.dataset.acc; save(); renderSettings(); });
