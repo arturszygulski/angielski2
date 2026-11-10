@@ -2,6 +2,21 @@
 (function () {
   'use strict';
   const app = document.getElementById('app');
+  /* opisy (.desc) schowane pod ikonką „i” w prawym górnym rogu modułu */
+  function infoize() {
+    app.querySelectorAll('.desc:not([data-i])').forEach(p => {
+      p.dataset.i = '1';
+      const box = p.closest('.set-card, .panel, .list-card'); if (!box) return;
+      p.hidden = true;
+      if (box.querySelector(':scope > .info-btn')) return;
+      box.classList.add('has-info');
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'info-btn'; btn.title = 'Opis'; btn.setAttribute('aria-label', 'Pokaż opis'); btn.textContent = 'i';
+      btn.onclick = () => { const ds = box.querySelectorAll('.desc'), show = ds.length && ds[0].hidden; ds.forEach(x => { x.hidden = !show; }); btn.classList.toggle('on', !!show); };
+      box.appendChild(btn);
+    });
+  }
+  new MutationObserver(infoize).observe(app, { childList: true, subtree: true });
   const esc = U.esc;
   const L = WORDS.LEVELS;
   const D = () => Store.data;
@@ -2268,7 +2283,7 @@
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b>Ustawienia</b></div><div style="width:110px"></div></header>' +
 
       '<section class="set-card raised" id="syncCard"><h2>Automatyczna kopia na Dysku Google</h2>' +
-      '<p class="small-note" style="margin:0">Wskaż folder na Dysku Google na komputerze, np. <b>G:\\Mój dysk\\Angielski</b> (najpierw utwórz go w Eksploratorze). Po każdej sesji program zapisze tam postępy, a Dysk Google wyśle je do chmury. W podfolderze „kopie” zostają kopie z 14 ostatnich dni. Klucz API nie jest zapisywany. Gdy uczysz się na innym komputerze albo w innej przeglądarce, wskaż ten sam folder — program zaproponuje wczytanie nowszych postępów.</p>' +
+      '<p class="small-note desc" style="margin:0">Wskaż folder na Dysku Google na komputerze, np. <b>G:\\Mój dysk\\Angielski</b> (najpierw utwórz go w Eksploratorze). Po każdej sesji program zapisze tam postępy, a Dysk Google wyśle je do chmury. W podfolderze „kopie” zostają kopie z 14 ostatnich dni. Klucz API nie jest zapisywany. Gdy uczysz się na innym komputerze albo w innej przeglądarce, wskaż ten sam folder — program zaproponuje wczytanie nowszych postępów.</p>' +
       '<div class="small-note" id="syncStatus" style="font-size:15px;color:var(--ink)">' + syncStatusHtml() + '</div>' +
       (Sync.supported
         ? '<div class="row"><button class="btn primary" id="syncPick">' + (st.syncFolder ? 'Zmień folder' : 'Wybierz folder') + '</button>' +
@@ -2277,12 +2292,12 @@
       '</section>' +
 
       '<section class="set-card raised"><h2>Sztuczna inteligencja</h2>' +
-      '<p class="small-note" style="margin:0">Z kluczem API program wyjaśnia błędy po polsku i uznaje poprawne odpowiedzi napisane inaczej niż wzorzec. Klucz założysz na <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Zostaje tylko w tej przeglądarce i nie trafia do kopii.</p>' +
+      '<p class="small-note desc" style="margin:0">Z kluczem API program wyjaśnia błędy po polsku i uznaje poprawne odpowiedzi napisane inaczej niż wzorzec. Klucz założysz na <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Zostaje tylko w tej przeglądarce i nie trafia do kopii.</p>' +
       '<div class="field"><label for="key">Klucz API</label><div class="ctl"><input id="key" class="txt" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="' + esc(st.apiKey) + '">' +
       '<button class="btn small" id="showKey" aria-label="Pokaż klucz">' + IC.eye + '</button></div></div>' +
       '<div class="field"><label for="model">Model szybki</label><div class="ctl"><input id="model" class="txt" spellcheck="false" value="' + esc(st.model) + '"></div></div>' +
       '<div class="field"><label for="modelSmart">Model do wyjaśnień</label><div class="ctl"><input id="modelSmart" class="txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div></div>' +
-      '<p class="small-note" style="margin:0">Szybki: sprawdzanie odpowiedzi, rozmowa, zdania do słówek. Do wyjaśnień: Wyjaśnij, pytania o błąd, Rozszerz temat, ocena tłumaczeń, podsumowanie rozmowy, plan „Krok po kroku”. Puste pole = wszystko na szybkim.</p>' +
+      '<p class="small-note desc" style="margin:0">Szybki: sprawdzanie odpowiedzi, rozmowa, zdania do słówek. Do wyjaśnień: Wyjaśnij, pytania o błąd, Rozszerz temat, ocena tłumaczeń, podsumowanie rozmowy, plan „Krok po kroku”. Puste pole = wszystko na szybkim.</p>' +
       '<div class="field"><label></label><div class="ctl"><button class="btn small primary" id="testAi">Sprawdź połączenie</button><span class="status" id="aiStatus"></span></div></div></section>' +
 
       '<section class="set-card raised"><h2>Gry</h2>' +
@@ -2299,7 +2314,7 @@
       '<div class="field"><label for="newExtraPerDay">Nowe ćwiczenia dziennie</label><div class="ctl"><input id="newExtraPerDay" class="txt num" type="number" min="0" max="30" value="' + (st.newExtraPerDay == null ? 6 : st.newExtraPerDay) + '"><span class="small-note">oprócz nowych słów</span></div></div>' +
       '</section>' +
       '<section class="set-card raised"><h2>Filmy (YouGlish)</h2>' +
-      '<p class="small-note" style="margin:0">' + (CAN_EMBED
+      '<p class="small-note desc" style="margin:0">' + (CAN_EMBED
         ? 'Program działa jako lokalna strona — filmy odtwarzają się w programie.'
         : 'Program jest otwarty z pliku, więc filmy otworzą się w nowej karcie na youglish.com, a gra „Usłysz w filmie” jest niedostępna. Żeby odtwarzać je w programie, uruchamiaj go plikiem <b>Uruchom.bat</b> z folderu programu (dane przeniesiesz kopią z Dysku Google lub z pliku).') + '</p>' +
       '<div class="field"><label>Akcent</label><div class="ctl lvl-pills">' + [['us', 'amerykański'], ['uk', 'brytyjski'], ['all', 'wszystkie']].map(a => '<button class="btn pill small' + ((st.ygAccent || 'us') === a[0] ? ' pressed' : '') + '" data-acc="' + a[0] + '">' + a[1] + '</button>').join('') + '</div></div>' +
@@ -2322,7 +2337,7 @@
       '</section>' +
 
       '<section class="set-card raised"><h2>Kopia w pliku</h2>' +
-      '<p class="small-note" style="margin:0">Ręczna kopia do folderu Pobrane — przydatna, gdy nie używasz Dysku Google. Ostatnia: <b>' + (d.lastBackup ? new Date(d.lastBackup).toLocaleDateString('pl-PL') : 'jeszcze nie było') + '</b>.</p>' +
+      '<p class="small-note desc" style="margin:0">Ręczna kopia do folderu Pobrane — przydatna, gdy nie używasz Dysku Google.</p><p class="small-note" style="margin:0">Ostatnia kopia: <b>' + (d.lastBackup ? new Date(d.lastBackup).toLocaleDateString('pl-PL') : 'jeszcze nie było') + '</b>.</p>' +
       '<div class="row"><button class="btn" id="export">Zapisz kopię do pliku</button><button class="btn" id="import">Wczytaj kopię z pliku</button><input type="file" id="file" accept=".json,application/json" hidden></div></section>' +
 
       '<section class="set-card raised"><h2>Oznaczone jako znane (' + known.length + ')</h2>' +
@@ -3130,7 +3145,7 @@
       '<div id="cMsg" class="small-note"></div></section>' +
       '<section class="set-card raised"><h2>Dodaj wiele naraz</h2>' +
       (ai
-        ? '<p class="small-note" style="margin:0">Jedno słowo w linii. Możesz dopisać znaczenie po myślniku, np. <i>deadline - termin</i>. AI doda zdania (do 25 słów naraz).</p>' +
+        ? '<p class="small-note desc" style="margin:0">Jedno słowo w linii. Możesz dopisać znaczenie po myślniku, np. <i>deadline - termin</i>. AI doda zdania (do 25 słów naraz).</p>' +
           '<textarea id="bulk" class="txt area" rows="5" spellcheck="false" placeholder="commute&#10;get along with - dogadywać się&#10;awkward"></textarea>' +
           '<div class="row" style="justify-content:flex-end"><button class="btn primary" id="bAdd">Dodaj wszystkie</button></div><div id="bMsg" class="small-note"></div>'
         : '<p class="small-note" style="margin:0">Z kluczem API możesz wkleić całą listę słów, a AI doda do nich znaczenia i zdania.</p>') +
@@ -3139,7 +3154,7 @@
         '<div class="row between"><span class="small-note">Nieznanych słów na poziomie ' + L[levels().vocab] + ': <b>' + WORDS.list.filter(w => w.lvl === levels().vocab && !D().cards[w.id]).length + '</b></span><button class="btn" id="topUp">Dobierz 30 nowych słów</button></div><div id="tuMsg"></div></section>' : '') +
       '<section class="set-card raised"><h2>Twoje słowa (' + ids.length + ')</h2>' +
       (ids.length
-        ? '<p class="small-note" style="margin:0">Własne słowa i słowa z tekstów mają pierwszeństwo przed bazą. Słowa od AI wchodzą razem z bazą, według poziomu.</p><div class="known-list">' + ids.map(id => {
+        ? '<p class="small-note desc" style="margin:0">Własne słowa i słowa z tekstów mają pierwszeństwo przed bazą. Słowa od AI wchodzą razem z bazą, według poziomu.</p><div class="known-list">' + ids.map(id => {
           const c = cust[id], st2 = customStatus(id);
           const tag = c.textId ? '<span class="src-tag">z tekstu: ' + esc(c.textTitle || '') + '</span>' : c.ai ? '<span class="src-tag">od AI · ' + L[c.lvl] + '</span>' : '';
           return '<div class="list-item inset"><div><span class="w" style="font-size:18px">' + esc(c.answers[0]) + '</span><span class="p"> — ' + esc(c.pl) + '</span>' + tag +
@@ -3659,7 +3674,7 @@
     app.innerHTML =
       '<div class="wrap narrow">' + backHeader('Moje teksty', 'czytaj, zaznaczaj, ucz się z własnych materiałów') +
       '<section class="set-card raised"><h2>Dodaj tekst</h2>' +
-      '<p class="small-note" style="margin:0">Wklej artykuł, fragment książki albo transkrypcję z YouTube. <b>Transkrypcja z YouTube:</b> pod filmem kliknij „…więcej” → „Pokaż transkrypcję”, zaznacz cały tekst, skopiuj i wklej tutaj — znaczniki czasu usunę sam. Możesz też wczytać plik napisów <b>.srt</b>, <b>.vtt</b> albo <b>.txt</b>.</p>' +
+      '<p class="small-note desc" style="margin:0">Wklej artykuł, fragment książki albo transkrypcję z YouTube. <b>Transkrypcja z YouTube:</b> pod filmem kliknij „…więcej” → „Pokaż transkrypcję”, zaznacz cały tekst, skopiuj i wklej tutaj — znaczniki czasu usunę sam. Możesz też wczytać plik napisów <b>.srt</b>, <b>.vtt</b> albo <b>.txt</b>.</p>' +
       '<div class="field"><label for="tTitle">Tytuł</label><div class="ctl"><input id="tTitle" class="txt" autocomplete="off" placeholder="np. TED: How AI learns"></div></div>' +
       '<textarea id="tBody" class="txt area" rows="8" spellcheck="false" placeholder="Wklej tutaj tekst po angielsku…"></textarea>' +
       '<div class="row between"><label class="btn small" for="tFile" style="cursor:pointer">Wczytaj plik…</label><input type="file" id="tFile" accept=".txt,.srt,.vtt,text/plain" hidden>' +

@@ -840,3 +840,12 @@ main.ex-card { position: relative; }
 .vm-row.vm-pv b { font-size: 13px; }
 .vm-btns { display: flex; gap: 8px; justify-content: flex-end; }
 @media (max-width: 640px) { .vm-row.vm-pv { grid-template-columns: 34px 1fr; } .vm-btns { grid-column: 2; justify-content: flex-start; } }
+
+/* opisy pod ikonką „i” */
+.has-info { position: relative; }
+.has-info > h2, .has-info > .row:first-child { padding-right: 44px; }
+.info-btn { position: absolute; top: 24px; right: 24px; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer;
+  font: italic 700 15px/30px Georgia, 'Times New Roman', serif; color: var(--ink-2); background: var(--bg);
+  box-shadow: 3px 3px 7px var(--sh-d), -3px -3px 7px var(--sh-l); padding: 0; }
+.info-btn:hover { color: var(--ink); }
+.info-btn.on { box-shadow: inset 2px 2px 5px var(--sh-d), inset -2px -2px 5px var(--sh-l); color: #B9456B; }
