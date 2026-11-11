@@ -3862,13 +3862,14 @@
       '<div class="panel raised side"><h2>Poziom gracza</h2>' + (function () { const li = levelInfo(D().xp); return '<div class="lcd inset deep" style="min-width:0;padding:18px"><div class="num" style="font-size:56px">' + li.level + '</div><div class="lbl">' + fmtNum(D().xp) + ' XP · do następnego ' + (li.need - li.into) + '</div></div><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%;background:linear-gradient(90deg,#B06A00,#E8A33D)"></div></div>'; })() + '</div></section>' +
       '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Poziom w czasie</h2>' +
       '<div class="legend">' + Object.keys(SK_COLORS).map(k => '<span><i style="background:' + SK_COLORS[k] + ';height:3px"></i>' + SKILL_NAME[k] + '</span>').join('') + '</div></div>' + levelsChartHtml() + levelWhyHtml() +
-      sentLevelHtml() + '<div class="row between"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></div></div>' +
+      sentLevelHtml() + '<div class="row between"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div></div>' +
       '<div class="panel raised side"><h2>Raporty tygodniowe</h2>' + reportsArchiveHtml() + '</div></section>' +
       '<section class="panel raised"><div class="row between"><h2>Odznaki</h2><span class="small-note">' + earned + ' z ' + BADGES.length + '</span></div><div class="badges">' + BADGES.map(b => badgeHtml(b, !!(D().badges || {})[b.id])).join('') + '</div></section>' +
       '</div>';
     $('#back').onclick = () => go('home');
     $$('[data-mode]').forEach(b => b.onclick = () => renderStats(b.dataset.mode));
     $('#sTest').onclick = () => startTest(true);
+    if ($('#sLastTest')) $('#sLastTest').onclick = showLastTest;
     $$('[data-sweep]').forEach(b => b.onclick = () => startSweep(+b.dataset.sweep, 'stats'));
     if ($('#pvPlay')) $('#pvPlay').onclick = () => startPlay('particle');
     if ($('#pvSweep')) $('#pvSweep').onclick = () => startSweep('pv', 'stats');
@@ -4847,7 +4848,7 @@
     T = null;
     const lv = levels(), before = Object.assign({}, lv), up = [], down = [];
     keys.forEach(k => { if (res[k] > lv[k]) { lv[k] = res[k]; hist()[k] = []; up.push(k); } else if (res[k] < lv[k]) down.push(k); });
-    recordLevels('test', { test: res, before });
+    recordLevels('test', { test: res, before, acc });
     progress(); Store.save(); syncAfterSession();
     renderMonthlyResult({ res, before, up, down, acc, lowered: [] });
   }
@@ -4859,13 +4860,13 @@
         : r.lowered.includes(k) ? '<span class="chip inset">obniżono do ' + L[lv[k]] + '</span>'
         : r.down.includes(k) ? '<button class="btn small" data-down="' + k + '">Obniż do ' + L[r.res[k]] + '</button>'
         : '<span class="chip inset">bez zmian</span>';
-      return '<div class="list-item inset"><div><span class="w" style="font-size:18px">' + SKILL_NAME[k] + '</span><div class="small-note">było ' + L[r.before[k]] + ' · w teście ' + L[r.res[k]] + ' · ' + r.acc[k] + '% poprawnych</div></div>' + st + '</div>';
+      return '<div class="list-item inset"><div><span class="w" style="font-size:18px">' + SKILL_NAME[k] + '</span><div class="small-note">było ' + L[r.before[k]] + ' · w teście ' + L[r.res[k]] + (r.acc && r.acc[k] != null ? ' · ' + r.acc[k] + '% poprawnych' : '') + '</div></div>' + st + '</div>';
     };
     const msg = r.up.length ? 'Brawo — poziom poszedł w górę: ' + r.up.map(k => SKILL_NAME[k].toLowerCase()).join(', ') + '.'
       : r.down.length ? 'Test wypadł niżej niż obecny poziom. To może być gorszy dzień — możesz zostawić poziom bez zmian.' : 'Poziom się potwierdził.';
     app.innerHTML =
       '<div class="wrap narrow">' +
-      '<header style="text-align:center"><h1 style="font-size:38px">Test miesiąca</h1><p class="muted" style="font-size:18px;margin:6px 0 0">' + esc(msg) + '</p></header>' +
+      '<header style="text-align:center"><h1 style="font-size:38px">Test miesiąca</h1>' + (r.at ? '<p class="small-note" style="margin:4px 0 0">z dnia ' + new Date(r.at).toLocaleDateString('pl-PL') + '</p>' : '') + '<p class="muted" style="font-size:18px;margin:6px 0 0">' + esc(msg) + '</p></header>' +
       '<section class="set-card raised"><h2>Wynik</h2><div class="col" style="gap:12px">' + ['vocab', 'grammar', 'listening'].map(row).join('') + '</div>' +
       '<p class="small-note" style="margin:0">Test niczego nie kasuje — Twoje powtórki zostają. Mówienie zmienia się samo po dobrych sesjach.</p></section>' +
       '<section class="panel raised"><h2>Poziom w czasie</h2>' + levelsChartHtml() + '</section>' +
@@ -4876,9 +4877,19 @@
       r.down = r.down.filter(x => x !== k); r.lowered.push(k);
       progress(); Store.save(); renderMonthlyResult(r);
     });
-    $('#go').onclick = () => go('home');
+    const back = r.from || 'home';
+    $('#go').onclick = () => go(back);
     const shownAt = Date.now();
-    keyHandler = e => { if (e.repeat || Date.now() - shownAt < 600) return; if ((e.key === 'Enter' && !onButton()) || e.key === 'Escape') { e.preventDefault(); go('home'); } };
+    keyHandler = e => { if (e.repeat || Date.now() - shownAt < 600) return; if ((e.key === 'Enter' && !onButton()) || e.key === 'Escape') { e.preventDefault(); go(back); } };
+  }
+  /* ponowne pokazanie wyniku ostatniego testu miesiąca (z historii poziomów) */
+  function lastTestEntry() { const h = levelHist(); for (let i = h.length - 1; i >= 0; i--) if (h[i].kind === 'test' && h[i].test) return { e: h[i], last: i === h.length - 1 }; return null; }
+  function showLastTest() {
+    const t = lastTestEntry(); if (!t) return;
+    const e = t.e, before = e.before || e.levels, keys = ['vocab', 'grammar', 'listening'], lv = levels();
+    renderMonthlyResult({ at: e.at, from: 'stats', res: e.test, before, acc: e.acc || null, lowered: [],
+      up: keys.filter(k => (e.levels[k] || 0) > (before[k] || 0)),
+      down: t.last ? keys.filter(k => e.test[k] < lv[k]) : [] });
   }
   let lwhyOpen = false;
   /* „Skąd ten poziom?” — tylko pokazuje dane, niczego nie zmienia */
