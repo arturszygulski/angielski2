@@ -927,3 +927,17 @@ main.ex-card { position: relative; }
 .btn.yg-ic svg { width: 18px; height: 18px; }
 .ex-card:has(> .yg-ic) { padding-bottom: 60px; }
 .qa-fab svg { width: 40px; height: 36px; }
+
+/* kolumny umiejętności: pasy A1–C1 */
+.skill.v2 { height: 330px; min-height: 0; }
+.skill.v2 .hd { position: absolute; top: 20px; left: 0; right: 0; text-align: center; z-index: 2; padding: 0 8px; }
+.skill.v2 .hd .name { position: static; padding: 0; }
+.skill.v2 .hd b { display: block; font-family: var(--head); font-size: 30px; margin-top: 4px; }
+.skill.v2 .hd small { font-size: 13px; color: var(--ink-2); }
+.skill.v2 .bands { position: absolute; left: 12px; right: 12px; bottom: 12px; top: 118px; border-radius: 30px; overflow: hidden; display: flex; flex-direction: column-reverse; }
+.skill.v2 .band { flex: 1; position: relative; border-top: 1px solid rgba(80,72,64,.18); }
+.skill.v2 .band:last-child { border-top: 0; }
+.skill.v2 .band i { position: absolute; left: 0; right: 0; bottom: 0; transition: height .5s; }
+.skill.v2 .band span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; letter-spacing: .5px; color: rgba(60,55,50,.45); z-index: 1; }
+.skill.v2 .band.cur span { color: var(--ink); }
+.skill.v2.dim .hd, .skill.v2.dim .bands { opacity: .55; }

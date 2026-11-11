@@ -755,19 +755,33 @@
     const nothing = due + freshW + freshX === 0;
 
     const vm = Math.round(mastery(lv.vocab) * 100);
-    const accTile = (sk, nm, c, dim) => {
-      const a = accuracy(sk);
-      return { name: nm, big: L[lv[sk]], small: dim ? 'wyłączone' : a == null ? 'za mało danych' : 'trafność ' + a + '%', fill: dim ? 0 : a == null ? 6 : Math.max(6, a), c, dim };
+    /* kolumny: pasy A1–C1, wypełnione do poziomu + postęp w bieżącym pasie (słownictwo: część słów poziomu; reszta: postęp do awansu) */
+    const promoPct = sk => {
+      if (lv[sk] >= L.length - 1) return 100;
+      if (promoteReady(sk)) return 100;
+      const s = promoteStatus(sk), PD = PROMO_GAP;
+      const parts = [Math.min(1, s.n / PROMO_N), s.acc == null ? 0 : Math.min(1, s.acc / PROMO_ACC), Math.min(1, s.days / PROMO_DAYS), Math.min(1, (PD - s.wait) / PD)];
+      return Math.round(Math.min.apply(null, parts) * 100); // najsłabszy warunek decyduje (uczciwiej niż średnia)
+    };
+    const promoTip = sk => { const s = promoteStatus(sk), a = accuracy(sk); return 'Do awansu: odpowiedzi ' + Math.min(s.n, PROMO_N) + '/' + PROMO_N + ' · trafność ' + (s.acc == null ? '—' : Math.round(s.acc * 100) + '%') + ' (min. ' + Math.round(PROMO_ACC * 100) + '%) · dni nauki ' + Math.min(s.days, PROMO_DAYS) + '/' + PROMO_DAYS + (s.wait ? ' · jeszcze ' + s.wait + ' dni od ostatniej zmiany' : '') + (a != null ? '\nTrafność ostatnio: ' + a + '%' : ''); };
+    const top = lv => lv >= L.length - 1;
+    const skTile = (sk, nm, c, dim) => {
+      const p = dim ? 0 : promoPct(sk);
+      return { sk, name: nm, lv: lv[sk], p, c, dim, small: dim ? 'wyłączone' : top(lv[sk]) ? 'najwyższy poziom' : 'do ' + L[lv[sk] + 1] + ': ' + p + '%', tip: dim ? '' : promoTip(sk) };
     };
     const tiles = [
-      { name: 'Słownictwo', big: L[lv.vocab], small: vm + '% poziomu', fill: Math.max(4, vm), c: '#CFCAC1' },
-      accTile('grammar', 'Gramatyka', '#D6CDCD', !typeEnabled('order') && !typeEnabled('error')),
-      accTile('listening', 'Słuchanie', '#CAD1C8', !typeEnabled('dictation')),
-      accTile('speaking', 'Mówienie', '#D0CCD6', !typeEnabled('speak'))
-    ].map(s =>
-      '<div class="skill inset' + (s.dim ? ' dim' : '') + '"><div class="name">' + s.name + '</div>' +
-      '<div class="fillbox"><div class="fill" style="height:' + s.fill + '%;background:' + s.c + '"></div></div>' +
-      '<div class="val"><b>' + s.big + '</b><small>' + s.small + '</small></div></div>').join('');
+      { sk: 'vocab', name: 'Słownictwo', lv: lv.vocab, p: vm, c: '#C4BDB2', small: vm + '% słów ' + L[lv.vocab], tip: 'Znasz ' + vm + '% słów poziomu ' + L[lv.vocab] + ' z bazy programu.' },
+      skTile('grammar', 'Gramatyka', '#D3C3C3', !typeEnabled('order') && !typeEnabled('error')),
+      skTile('listening', 'Słuchanie', '#BFCBBC', !typeEnabled('dictation')),
+      skTile('speaking', 'Mówienie', '#C7C1D2', !typeEnabled('speak'))
+    ].map(s => {
+      let bands = '';
+      for (let i = 0; i < L.length; i++) {
+        const h = s.dim ? 0 : i < s.lv ? 100 : i === s.lv ? Math.max(3, s.p) : 0;
+        bands += '<div class="band' + (i === s.lv ? ' cur' : '') + '"><i style="height:' + h + '%;background:' + s.c + '"></i><span>' + L[i] + '</span></div>';
+      }
+      return '<div class="skill inset v2' + (s.dim ? ' dim' : '') + '" title="' + esc(s.tip) + '"><div class="hd"><div class="name">' + s.name + '</div><b>' + L[s.lv] + '</b><small>' + s.small + '</small></div><div class="bands">' + bands + '</div></div>';
+    }).join('');
 
     const y = now.getFullYear(), m = now.getMonth();
     const first = new Date(y, m, 1), daysIn = new Date(y, m + 1, 0).getDate();
