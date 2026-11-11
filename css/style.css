@@ -921,3 +921,9 @@ main.ex-card { position: relative; }
 .qa-ctxbtn { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; max-width: 100%; padding: 8px 14px; }
 .qa-ctxbtn .small-note { font-style: italic; }
 .qa-input { font-family: inherit; line-height: 1.45; }
+
+/* Filmy — mała okrągła ikonka w lewym dolnym rogu karty (jak głośnik) */
+.btn.yg-ic { position: absolute; left: 18px; bottom: 14px; width: 38px; height: 38px; padding: 0; min-height: 0; display: grid; place-items: center; color: var(--ink-2); border-radius: 50%; }
+.btn.yg-ic svg { width: 18px; height: 18px; }
+.ex-card:has(> .yg-ic) { padding-bottom: 60px; }
+.qa-fab svg { width: 40px; height: 36px; }

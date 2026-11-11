@@ -1328,10 +1328,10 @@
       '<div class="ctl-sep"></div><div class="ctl-row eq">' +
       (explainEligible(S.fb) ? '<button class="btn" id="exBtn">' + (S.exOpen ? 'Zwiń ' : 'Wyjaśnij ') + K('E') + '</button>' : '') +
       (canSimplify(it, S.fb) ? '<button class="btn" id="simpBtn">' + ((D().sentFails || {})[c.id] >= 3 ? '<span class="rec-dot" title="To zdanie nie wychodzi kilka razy — spróbuj prostszej wersji"></span>' : '') + 'Uprość ' + K('Z') + '</button>' : '') +
-      (it.w && !it.fromText ? '<button class="btn" id="ygBtn"' + (S.ygOpen ? ' disabled' : '') + '>Filmy ' + K('V') + '</button>' : '') +
       (it.simple ? '' : '<button class="btn' + (D().cards[c.id] && D().cards[c.id].hard ? ' pressed' : '') + '" id="hardBtn" title="Dla mnie trudne — niech wraca częściej (kliknij jeszcze raz, by zdjąć)">Trudne ' + K('T') + '</button>') +
       (D().cards[c.id] && D().cards[c.id].state === 'known' ? '' : '<button class="btn" id="known">Umiem to ' + K('Alt+Enter') + '</button>') +
       '<button class="btn" id="next">Dalej ' + K('Enter') + '</button></div>' +
+      (it.w && !it.fromText ? '<button class="btn yg-ic" id="ygBtn" title="Filmy — posłuchaj słowa w filmach (V)" aria-label="Filmy (V)"' + (S.ygOpen ? ' disabled' : '') + '><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg></button>' : '') +
       (fixInfo(it) ? '<button class="btn rep-ic" id="repBtn" title="Zdanie jest złe? (X)" aria-label="Zdanie jest złe? (X)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>' : '');
 
     app.innerHTML =
@@ -3221,7 +3221,7 @@
     if (!b) {
       b = document.createElement('button'); b.id = 'qaFab'; b.className = 'qa-fab'; b.type = 'button';
       b.title = 'Zapytaj AI (Alt+Q)'; b.setAttribute('aria-label', 'Zapytaj AI (Alt+Q)');
-      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4M12 16h.01"/></svg><span>AI</span>';
+      b.innerHTML = '<svg viewBox="0 0 40 36" aria-hidden="true"><path d="M8 3h24a5 5 0 0 1 5 5v14a5 5 0 0 1-5 5H17l-7 6v-6H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><text x="20" y="19.5" text-anchor="middle" font-family="Quicksand, sans-serif" font-weight="700" font-size="12" fill="currentColor">AI</text></svg>';
       b.onclick = () => qaOpen();
       document.body.appendChild(b);
     }
