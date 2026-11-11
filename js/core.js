@@ -428,6 +428,7 @@ window.AI = (function () {
   /* Szczegółowe wyjaśnienie błędu + krótka dyskusja */
   function mistakeContextPub(c) { return mistakeContext(c); }
   function mistakeContext(c) {
+    if (c.free) return 'Artur rozmawiał z AI o angielskim (nie było ćwiczenia). Zapis rozmowy:\n' + c.free + '\n';
     return 'Ćwiczenie: ' + c.task + '\n' + (c.pl ? 'Podpowiedź / znaczenie po polsku: ' + c.pl + '\n' : '') +
       (c.sentence ? 'Poprawne zdanie: "' + c.sentence + '"\n' : '') + 'Oczekiwana odpowiedź: "' + c.correct + '"\n' +
       (c.options && c.options.length ? 'Opcje do wyboru: ' + c.options.map(o => '"' + o + '"').join(', ') + '\n' : '') +
@@ -450,6 +451,34 @@ window.AI = (function () {
       examples: { type: 'array', items: { type: 'object', required: ['en', 'pl'], properties: { en: STR, pl: STR } } },
       simpler: { type: 'array', items: { type: 'object', required: ['en', 'pl'], properties: { en: STR, pl: STR } } } } });
     return { why: String(j.why || ''), examples: (j.examples || []).slice(0, 3), simpler: (j.simpler || []).slice(0, 2), watch: String(j.watch || ''), keyProblem: j.key_ok === false ? String(j.key_problem || '').trim() : '' };
+  }
+  /* „Zapytaj AI” — swobodne pytania o angielski, w dowolnym momencie */
+  async function askFree(history, question, ctxSentence, levelName) {
+    const s = Store.data.settings;
+    const system = 'Jesteś cierpliwym, konkretnym nauczycielem angielskiego dla Artura — dorosłego Polaka (poziom ok. ' + levelName + '). Odpowiadasz po polsku, krótko (zwykle 2–6 zdań), z krótkimi przykładami po angielsku i ich tłumaczeniem, gdy pomagają. ' +
+      'Bez nagłówków i list numerowanych; pogrubiaj **tak** tylko najważniejsze angielskie słowa, przykłady po angielsku pisz *kursywą*. Jeśli pytanie nie dotyczy angielskiego, odpowiedz krótko i wróć do nauki.';
+    const msgs = [];
+    (history || []).slice(-10).forEach(m => { msgs.push({ role: 'user', content: m.q }); msgs.push({ role: 'assistant', content: m.a }); });
+    msgs.push({ role: 'user', content: (ctxSentence ? 'Dotyczy zdania z ćwiczenia: "' + ctxSentence + '"\n\n' : '') + question });
+    const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 40000);
+    try {
+      const res = await aiFetch(URL, {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: pickModel(), max_tokens: 900, system: sys(system), messages: msgs })
+      });
+      if (!res.ok) { let msg = ''; try { const j = await res.json(); msg = (j.error && j.error.message) || ''; } catch (e) { } throw new AIError(res.status, msg); }
+      const j = await res.json();
+      return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    } finally { clearTimeout(timer); }
+  }
+  /* słowa i zwroty z rozmowy → propozycje do Moich słówek */
+  async function chatWords(transcript, levelName) {
+    const system = 'Jesteś nauczycielem angielskiego. Odpowiadasz wyłącznie przez narzędzie.';
+    const user = 'Oto rozmowa Artura (poziom ' + levelName + ') z nauczycielem:\n' + transcript + '\n\nWybierz do 8 angielskich słów lub zwrotów z tej rozmowy, których warto się nauczyć (to, o co pytał, i najważniejsze nowe słowa z odpowiedzi). ' +
+      'Dla każdego: word — słowo/zwrot w podstawowej formie, pl — krótkie polskie znaczenie, sentence — naturalne zdanie po angielsku (6–12 słów), w którym word występuje DOKŁADNIE w tej formie.';
+    const j = await callJSON(system, user, 1200, 40000, { type: 'object', required: ['items'], properties: { items: { type: 'array', items: { type: 'object', required: ['word', 'pl', 'sentence'], properties: { word: STR, pl: STR, sentence: STR } } } } });
+    return (j.items || []).filter(x => x && x.word && x.sentence);
   }
   async function discussMistake(c, levelName, data, chat, question) {
     const s = Store.data.settings;
@@ -628,7 +657,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */
@@ -734,7 +763,7 @@ window.Recog = (function () {
   function listen(h) {
     if (!SR) { h.onError('unsupported'); return; }
     const r = new SR();
-    r.lang = 'en-US'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = true;
+    r.lang = h.lang || 'en-US'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = true;
     const SILENCE = h.silenceMs || 2500, FIRST = h.firstMs || 8000;
     let segs = [], lastAlts = [], done = false, timer = 0, heard = false;
     const arm = ms => { clearTimeout(timer); timer = setTimeout(() => { try { r.stop(); } catch (e) { } }, ms); };

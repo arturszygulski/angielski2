@@ -562,6 +562,7 @@
     window.scrollTo(0, 0);
     ({ welcome: renderWelcome, home: renderHome, exercise: renderExercise, race: renderRace, result: renderResult, settings: renderSettings,
        play: renderPlayMenu, yg: renderYG, words: renderWords, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
+    qaFabSync();
   }
 
   /* ================= EKRAN POWITALNY ================= */
@@ -3141,7 +3142,7 @@
     const closed = cur.reduce((a, g) => a + g.items.length - g.open.length, 0);
     const tips = D().mistakeTips;
     const hardN = hardIds().length;
-    const exN = explainList().length, fxN = Object.keys(D().fixes || {}).length;
+    const exN = explainList().length, fxN = Object.keys(D().fixes || {}).length, chN = (D().aiChats || []).filter(c => c.msgs && c.msgs.length).length;
     let k = 0;
     const order = cur.filter(g => g.specific).concat(cur.filter(g => !g.specific));
     const rowHtml = g => {
@@ -3169,18 +3170,20 @@
           (tips ? '<div id="tipsBox" class="tips">' + esc(tips.text).replace(/\n/g, '<br>') + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div></div>' : '<div id="tipsBox"></div>') + '</section>';
     } else if (mzTab === 'hard') body = hardListHtml() || '<p class="small-note">Nic nie jest oznaczone jako trudne. Oznaczysz przyciskiem „Trudne” (T) po odpowiedzi.</p>';
     else if (mzTab === 'ex') body = explainsHtml() || '<p class="small-note">Brak zapisanych wyjaśnień. Powstają przyciskiem „Wyjaśnij” (E) po odpowiedzi.</p>';
+    else if (mzTab === 'chat') body = aiChatsHtml() || '<p class="small-note">Brak rozmów. Przycisk „AI” jest w prawym dolnym rogu ekranu (Alt+Q).</p>';
     else body = fixesHtml() || '<p class="small-note">Brak poprawionych zdań.</p>';
     app.innerHTML =
       '<div class="wrap narrow mz">' + backHeader('Dziennik błędów', '') +
       '<section class="mz-top"><div><div class="big">' + openIds.length + ' ' + (openIds.length === 1 ? 'otwarty' : 'otwartych') + ' <span>· ' + closed + ' opanowanych · ' + (all ? 'od początku' : 'ostatnie ' + mzRange + ' dni') + '</span></div>' +
       '<div class="small-note" style="font-size:15px;margin-top:4px">' + (openIds.length ? 'Najwięcej otwartych: <b>' + esc(cur[0].cat) + '</b><br>' : '') + 'Błąd „zamyka się” po dobrej odpowiedzi innego dnia.</div></div>' +
       (openIds.length ? '<button class="btn primary big-cta" id="mzAll">Powtórz otwarte (' + Math.min(20, openIds.length) + ') ' + K('Enter') + '</button>' : '') + '</section>' +
-      '<div class="mz-tabs"><div class="seg inset" role="tablist">' + tab('pat', 'Wzorce') + tab('hard', 'Trudne (' + hardN + ')') + tab('ex', 'Wyjaśnienia (' + exN + ')') + tab('fix', 'Poprawione zdania (' + fxN + ')') + '</div>' +
+      '<div class="mz-tabs"><div class="seg inset" role="tablist">' + tab('pat', 'Wzorce') + tab('hard', 'Trudne (' + hardN + ')') + tab('ex', 'Wyjaśnienia (' + exN + ')') + tab('fix', 'Poprawione zdania (' + fxN + ')') + (chN ? tab('chat', 'Rozmowy z AI (' + chN + ')') : '') + '</div>' +
       (mzTab === 'pat' ? '<div class="seg inset">' + rng(7, '7 dni') + rng(30, '30 dni') + rng(3650, 'wszystko') + '</div>' : '') + '</div>' +
       body + '</div>';
     $('#back').onclick = () => go('home');
     bindFixes();
     if ($('#mzAll')) $('#mzAll').onclick = () => startCustomSession(openIds, 'Otwarte błędy');
+    $$('[data-qacont]').forEach(b => b.onclick = () => qaOpen(b.dataset.qacont));
     $$('[data-mztab]').forEach(b => b.onclick = () => { mzTab = b.dataset.mztab; renderMistakes(); });
     $$('[data-mzr]').forEach(b => b.onclick = () => { mzRange = +b.dataset.mzr; mzOpenCat = null; renderMistakes(); });
     $$('[data-mzcat]').forEach(r => { const tog = () => { const g = order[+r.dataset.mzcat]; mzOpenCat = mzOpenCat === g.cat ? null : g.cat; renderMistakes(); }; r.onclick = e => { if (e.target.closest('button')) return; tog(); }; r.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); tog(); } }; });
@@ -3207,6 +3210,185 @@
         const btns = $$('[data-practice]'); const b = btns[+e.key - 1]; if (b) { e.preventDefault(); b.click(); }
       }
     };
+  }
+
+
+  /* ================= ZAPYTAJ AI — pytanie w dowolnym momencie ================= */
+  const QA = { open: false, chat: null, busy: false, err: '', ctxOn: false, words: null, wsel: {}, wbusy: false, wmsg: '', openedAt: 0, listening: false, draft: '', pending: null };
+  function qaAllowed() { return screen !== 'welcome' && screen !== 'test'; }
+  function qaFabSync() {
+    let b = document.getElementById('qaFab');
+    if (!b) {
+      b = document.createElement('button'); b.id = 'qaFab'; b.className = 'qa-fab'; b.type = 'button';
+      b.title = 'Zapytaj AI (Alt+Q)'; b.setAttribute('aria-label', 'Zapytaj AI (Alt+Q)');
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4M12 16h.01"/></svg><span>AI</span>';
+      b.onclick = () => qaOpen();
+      document.body.appendChild(b);
+    }
+    b.hidden = !qaAllowed() || QA.open;
+  }
+  /* zdanie z bieżącego ćwiczenia — przed odpowiedzią z luką (żeby nie zdradzać odpowiedzi) */
+  function qaCtx() {
+    try {
+      if (screen !== 'exercise' || !S || !cur()) return null;
+      const it = curView(cur()); if (!it) return null;
+      if (S.phase === 'feedback') { const f = fullSentence(it); return f ? { show: f, send: f } : null; }
+      if (it.w && it.w.s && ['cloze', 'choice', 'particle', 'pvwrite'].indexOf(it.type) >= 0) { const m = it.w.s.replace('_', '_____'); return { show: m, send: m + ' (Artur jeszcze nie odpowiedział — nie podawaj brakującego słowa wprost)' }; }
+      return null;
+    } catch (e) { return null; }
+  }
+  function qaFmt(t) {
+    return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+?)\*/g, '$1<i>$2</i>').replace(/\n/g, '<br>');
+  }
+  function qaTranscript(chat) { return (chat.msgs || []).map(m => 'ARTUR: ' + m.q + (m.ctx ? ' [zdanie: ' + m.ctx + ']' : '') + '\nNAUCZYCIEL: ' + m.a).join('\n\n'); }
+  function qaOpen(chatId) {
+    if (!qaAllowed()) return;
+    if (chatId) { const c = (D().aiChats || []).find(x => x.id === chatId); if (c) { QA.chat = c; QA.words = null; QA.wmsg = ''; } }
+    QA.open = true; QA.openedAt = Date.now(); QA.err = '';
+    if (S && S.listening) Recog.stop();
+    renderQA(); qaFabSync();
+    setTimeout(() => { const i = document.getElementById('qaIn'); if (i) i.focus(); }, 30);
+  }
+  function qaClose(silent) {
+    if (!QA.open) return;
+    QA.open = false;
+    if (QA.listening) { Recog.stop(); QA.listening = false; }
+    if (S && S.phase === 'answer' && S.cardStart) S.cardStart += Date.now() - QA.openedAt; // czas w panelu nie liczy się do czasu odpowiedzi
+    const el = document.getElementById('qaPanel'); if (el) el.remove();
+    qaFabSync();
+    if (!silent && screen === 'exercise' && S) { const a = document.getElementById('ans'); if (a && !a.disabled) a.focus(); }
+  }
+  function renderQA() {
+    if (!QA.open) return;
+    let el = document.getElementById('qaPanel');
+    const draft = (document.getElementById('qaIn') || {}).value; if (draft != null) QA.draft = draft;
+    if (!el) { el = document.createElement('aside'); el.id = 'qaPanel'; el.className = 'qa-panel'; el.setAttribute('aria-label', 'Zapytaj AI'); document.body.appendChild(el); }
+    const msgs = QA.chat ? QA.chat.msgs : [];
+    const ctx = qaCtx();
+    let move = '';
+    if (msgs.length) {
+      if (QA.words) {
+        const n = QA.words.filter((w, i) => QA.wsel[i]).length;
+        move = '<div class="qa-words"><div class="small-note">Zaznacz, co dodać do Moich słówek:</div>' +
+          QA.words.map((w, i) => '<label class="check qa-w"><input type="checkbox" data-qaw="' + i + '"' + (QA.wsel[i] ? ' checked' : '') + '> <span><b lang="en">' + esc(w.word) + '</b> — ' + esc(w.pl) + '<br><span class="small-note" lang="en">' + esc(w.sentence) + '</span></span></label>').join('') +
+          '<div class="row" style="gap:10px;justify-content:flex-end"><button class="btn small" id="qaWCancel">Anuluj</button><button class="btn small primary" id="qaWAdd"' + (n ? '' : ' disabled') + '>Dodaj zaznaczone (' + n + ')</button></div></div>';
+      } else move = '<div class="small-note">Przenieś rozmowę do nauki:</div><div class="qa-to"><button class="btn" id="qaWords"' + (QA.wbusy ? ' disabled' : '') + '>' + (QA.wbusy ? '<span class="spinner"></span> Szukam słów…' : 'Dodaj słowa do nauki') + '</button><button class="btn" id="qaTopic">Zrób z tego ćwiczenia</button></div>';
+      if (QA.wmsg) move += '<div class="small-note qa-wmsg">' + esc(QA.wmsg) + '</div>';
+    }
+    el.innerHTML =
+      '<div class="qa-head"><b>Zapytaj AI</b><div class="row" style="gap:8px">' + (msgs.length ? '<button class="btn small" id="qaNew">Nowa rozmowa</button>' : '') + '<button class="btn small" id="qaX">Zamknij ' + K('Esc') + '</button></div></div>' +
+      '<div class="qa-msgs" id="qaMsgs">' +
+      (!msgs.length && !QA.pending ? '<div class="small-note qa-hint">Zapytaj o cokolwiek: różnicę między słowami, jak coś powiedzieć po angielsku, gramatykę… Rozmowę możesz potem zamienić w słówka albo ćwiczenia.' + (AI.enabled() ? '' : '<br><b>Wymaga klucza API w Ustawieniach.</b>') + '</div>' : '') +
+      msgs.map(m => '<div class="qa-q">' + (m.ctx ? '<span class="qa-qctx">📎 ' + esc(m.ctx.replace(/ \(Artur jeszcze.*$/, '')) + '</span>' : '') + esc(m.q) + '</div><div class="qa-a">' + qaFmt(m.a) + '<div class="qa-m">' + aiTag(m.m) + '</div></div>').join('') +
+      (QA.pending ? '<div class="qa-q">' + esc(QA.pending.q) + '</div><div class="checking"><span class="spinner"></span>AI odpowiada…</div>' : '') + '</div>' +
+      (QA.err ? '<div class="status bad">' + esc(QA.err) + '</div>' : '') + move +
+      (ctx ? (QA.ctxOn ? '<div class="qa-chip">📎 <span>' + esc(ctx.show) + '</span><button class="btn small" id="qaCtxOff" aria-label="Odłącz zdanie">×</button></div>' : '<button class="btn small qa-ctxbtn" id="qaCtxOn">+ dołącz bieżące zdanie <span class="small-note">„' + esc(ctx.show.length > 40 ? ctx.show.slice(0, 40) + '…' : ctx.show) + '”</span></button>') : '') +
+      '<textarea id="qaIn" class="txt qa-input" rows="2" placeholder="Zapytaj o cokolwiek po polsku albo angielsku…"' + (QA.busy ? ' disabled' : '') + '>' + esc(QA.draft || '') + '</textarea>' +
+      '<div class="qa-in">' + (Recog.supported() ? '<button class="btn' + (QA.listening ? ' primary' : '') + '" id="qaMic">' + IC.micSm + ' ' + (QA.listening ? 'Słucham…' : 'Mów') + ' ' + K('Alt+M') + '</button>' : '') +
+      '<button class="btn primary" id="qaSend"' + (QA.busy ? ' disabled' : '') + '>Wyślij ' + K('Enter') + '</button></div>';
+    const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
+    on('qaX', () => qaClose());
+    on('qaNew', () => { QA.chat = null; QA.words = null; QA.wmsg = ''; QA.err = ''; QA.ctxOn = false; renderQA(); });
+    on('qaSend', qaSend);
+    on('qaMic', qaMic);
+    on('qaCtxOn', () => { QA.ctxOn = true; renderQA(); });
+    on('qaCtxOff', () => { QA.ctxOn = false; renderQA(); });
+    on('qaWords', qaWords);
+    on('qaTopic', qaTopic);
+    on('qaWCancel', () => { QA.words = null; renderQA(); });
+    on('qaWAdd', qaWordsAdd);
+    el.querySelectorAll('[data-qaw]').forEach(cb => cb.onchange = () => { QA.wsel[+cb.dataset.qaw] = cb.checked; renderQA(); });
+    const box = document.getElementById('qaMsgs'); if (box) box.scrollTop = box.scrollHeight;
+    const inp = document.getElementById('qaIn'); if (inp && !QA.busy && document.activeElement !== inp && !QA.words) inp.focus();
+  }
+  async function qaSend() {
+    const inp = document.getElementById('qaIn'); const q = ((inp && inp.value) || '').trim();
+    if (!q || QA.busy) return;
+    if (!AI.enabled()) { QA.err = 'Najpierw wpisz klucz API w Ustawieniach.'; renderQA(); return; }
+    if (QA.listening) { Recog.stop(); QA.listening = false; }
+    if (!QA.chat) {
+      QA.chat = { id: Date.now().toString(36), at: Date.now(), msgs: [] };
+      const L2 = D().aiChats = D().aiChats || []; L2.push(QA.chat); if (L2.length > 50) L2.splice(0, L2.length - 50);
+    }
+    const c = QA.ctxOn ? qaCtx() : null, ctx = c ? c.send : '';
+    QA.pending = { q }; QA.busy = true; QA.err = ''; QA.draft = ''; QA.wmsg = ''; if (inp) inp.value = '';
+    renderQA();
+    const chat = QA.chat;
+    try {
+      const a = await AI.askFree(chat.msgs, q, ctx, L[levels().vocab]);
+      chat.msgs.push({ q, a, m: AI.lastModel(), ctx: c ? c.show : '' }); chat.at = Date.now(); Store.save();
+      QA.ctxOn = false;
+    } catch (e) { QA.err = AI.humanError(e); QA.draft = q; }
+    QA.pending = null; QA.busy = false;
+    renderQA();
+  }
+  function qaMic() {
+    if (!Recog.supported() || QA.busy) return;
+    if (QA.listening) { Recog.stop(); return; }
+    QA.listening = true; renderQA();
+    Recog.listen({
+      silenceMs: 3000, lang: 'pl-PL',
+      onInterim: t => { const i = document.getElementById('qaIn'); if (i) i.value = t; },
+      onResult: alts => { QA.listening = false; QA.draft = alts[0] || ''; const i = document.getElementById('qaIn'); if (i) i.value = QA.draft; renderQA(); },
+      onError: err => { QA.listening = false; if (err !== 'aborted') QA.err = recogMsg(err); renderQA(); }
+    });
+  }
+  async function qaWords() {
+    if (!QA.chat || QA.wbusy) return;
+    QA.wbusy = true; QA.wmsg = ''; renderQA();
+    try {
+      const items = await AI.chatWords(qaTranscript(QA.chat), L[levels().vocab]);
+      if (!items.length) QA.wmsg = 'AI nie znalazło w tej rozmowie słów do nauki.';
+      else { QA.words = items; QA.wsel = {}; items.forEach((x, i) => { QA.wsel[i] = true; }); }
+    } catch (e) { QA.wmsg = AI.humanError(e); }
+    QA.wbusy = false; renderQA();
+  }
+  function qaWordsAdd() {
+    if (!QA.words) return;
+    let ok = 0, base = 0; const errs = [];
+    QA.words.forEach((w, i) => {
+      if (!QA.wsel[i]) return;
+      const low = w.word.trim().toLowerCase(), bw = WORDS.list.find(x => x.answers.some(a => a.toLowerCase() === low));
+      if (bw) { const k = D().cards[bw.id]; if (k && k.state === 'known') delete D().cards[bw.id]; playMiss(bw.id); base++; return; } // słowo z bazy — do najbliższej sesji
+      const e = addCustom(w.word, w.pl, w.sentence, { extra: { fromChat: 1 } }); if (e) errs.push(e); else ok++;
+    });
+    Store.save();
+    QA.words = null;
+    QA.wmsg = (ok || base ? (ok ? 'Dodano do Moich słówek: ' + ok + '. ' : '') + (base ? 'Ze słownika programu do najbliższej sesji: ' + base + '.' : '') : 'Nic nie dodano.') + (errs.length ? ' ' + errs.slice(0, 2).join(' ') : '');
+    renderQA();
+  }
+  function qaTopic() {
+    if (!QA.chat || !QA.chat.msgs.length) return;
+    if (!AI.enabled()) return;
+    const ret = screen === 'exercise' && S ? S : null;
+    if (ret) { if (S.listening) Recog.stop(); S.paused = true; }
+    const chat = QA.chat;
+    qaClose(true);
+    D().topics = D().topics || {};
+    TPX = { tid: null, base: 'chat:' + chat.id, ret, busy: false, err: '', ctx: { free: qaTranscript(chat), task: 'Rozmowa z AI', correct: '', sentence: '' }, word: '', wordPl: '' };
+    TPX.focus = 'Temat: to, o co Artur pytał w tej rozmowie (najważniejsze słowo, zwrot albo konstrukcja). Omów to na przykładach z rozmowy.';
+    TPX.tid = topicIdFor(TPX.base + '|' + chat.msgs.length);
+    go('topic');
+    if (!D().topics[TPX.tid]) loadTopic(TPX.tid, TPX.ctx);
+  }
+  window.addEventListener('keydown', e => {
+    if (QA.open) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); qaClose(); return; }
+      if (e.altKey && e.code === 'KeyM') { e.preventDefault(); e.stopImmediatePropagation(); qaMic(); return; }
+      if (e.key === 'Enter' && !e.shiftKey && document.activeElement && document.activeElement.id === 'qaIn') { e.preventDefault(); e.stopImmediatePropagation(); qaSend(); return; }
+      e.stopImmediatePropagation(); // skróty programu nie działają, gdy panel jest otwarty
+      return;
+    }
+    const q = (e.key === '?' && !e.ctrlKey && !e.altKey && !typingInField()) || (e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyQ');
+    if (q && !document.querySelector('.overlay') && qaAllowed()) { e.preventDefault(); e.stopImmediatePropagation(); qaOpen(); }
+  }, true);
+  function aiChatsHtml() {
+    const L2 = (D().aiChats || []).filter(c => c.msgs && c.msgs.length).slice().sort((a, b) => b.at - a.at);
+    if (!L2.length) return '';
+    return '<section class="list-card raised"><h2 style="font-size:22px">Rozmowy z AI</h2><p class="small-note desc" style="margin:0">Pytania zadane przyciskiem „AI” w rogu ekranu (Alt+Q). Kliknij, żeby rozwinąć; „Kontynuuj” otwiera rozmowę w panelu.</p>' +
+      L2.slice(0, 30).map(c => '<details class="exsaved inset"><summary><b>' + esc(c.msgs[0].q.length > 70 ? c.msgs[0].q.slice(0, 70) + '…' : c.msgs[0].q) + '</b> <span class="small-note">· ' + new Date(c.at).toLocaleDateString('pl-PL') + ' · ' + c.msgs.length + ' pyt.</span></summary>' +
+        c.msgs.map(m => '<div class="qa-item"><div class="q">' + esc(m.q) + '</div><div class="a">' + qaFmt(m.a) + ' <span class="small-note">' + mdlTag(m.m) + '</span></div></div>').join('') +
+        '<div class="row" style="justify-content:flex-end"><button class="btn small" data-qacont="' + esc(c.id) + '">Kontynuuj</button></div></details>').join('') + '</section>';
   }
 
   /* ---------- Moje słówka ---------- */
@@ -5709,10 +5891,11 @@
     X.busy = true; X.err = ''; if (screen === 'topic') renderTopic();
     try {
       const r = await AI.topicPack(ctx, L[levels().vocab], X.focus);
+      const mUsed = AI.lastModel();
       // kontrola jakości zdań (jak przy słówkach od AI)
       let items = r.items.map(x => ({ word: x.answer, sentence: x.en, pl: x.answer_pl, x }));
       try { const qc = await qcWordItems(items); items = qc.items; } catch (e) { }
-      const T = { id: tid, m: AI.lastModel(), title: r.title, at: Date.now(), about: r.about, contrast: r.contrast, examples: r.examples, pitfalls: r.pitfalls,
+      const T = { id: tid, m: mUsed, title: r.title, at: Date.now(), about: r.about, contrast: r.contrast, examples: r.examples, pitfalls: r.pitfalls,
         items: items.map(q => Object.assign({}, q.x, { en: q.sentence })), talkRole: r.talkRole, talkGoal: r.talkGoal, src: ctx.sentence };
       D().topics[tid] = T;
       const ks = Object.keys(D().topics); if (ks.length > 40) ks.sort((a, b) => D().topics[a].at - D().topics[b].at).slice(0, ks.length - 40).forEach(k => delete D().topics[k]);
