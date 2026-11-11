@@ -247,6 +247,7 @@
     const lg = D().skLog = D().skLog || {}, a = lg[skill] = lg[skill] || [];
     const m = meta || {};
     a.push({ at: Date.now(), ok: ok ? 1 : 0, e: m.e ? 1 : 0, r: m.r ? 1 : 0, h: m.h ? 1 : 0, l: m.l != null ? m.l : null });
+    if (m.l != null && !m.e && !m.h) { const sl = skLv(skill); const c = sl[m.l] || (sl[m.l] = [0, 0]); c[0]++; if (ok) c[1]++; } // trwałe liczniki per poziom
     if (a.length > 200) a.splice(0, a.length - 200);
   }
   const EASY_TYPES = { choice: 1, particle: 1, tense_c: 1 };
@@ -262,6 +263,19 @@
     const lv = levels()[sk], since = lastLevelChange(sk);
     return ((D().skLog || {})[sk] || []).filter(x => x.at > since && !x.e && !x.h && (x.l == null || x.l >= lv));
   }
+  /* odpowiedzi per umiejętność i poziom: [liczba, dobrych] — na start policzone z historii skLog */
+  function skLv(sk) {
+    const d = D();
+    if (!d.skLvInit) {
+      const out = {};
+      Object.keys(d.skLog || {}).forEach(k => { const o = out[k] = {}; d.skLog[k].forEach(x => { if (x.l == null || x.e || x.h) return; const c = o[x.l] || (o[x.l] = [0, 0]); c[0]++; if (x.ok) c[1]++; }); });
+      d.skLv = out; d.skLvInit = 1;
+    }
+    const all = d.skLv = d.skLv || {};
+    return all[sk] || (all[sk] = {});
+  }
+  const LV_N = 40;
+  function skLvPct(sk, i) { const c = skLv(sk)[i]; if (!c || !c[0]) return 0; return Math.round(Math.min(1, c[0] / LV_N) * Math.min(1, (c[1] / c[0]) / PROMO_ACC) * 100); }
   function promoteStatus(sk) {
     const f = fairLog(sk).slice(-PROMO_N), ok = f.filter(x => x.ok).length;
     const days = new Set(f.map(x => U.dayKey(x.at))).size;
@@ -767,20 +781,22 @@
     const top = lv => lv >= L.length - 1;
     const skTile = (sk, nm, c, dim) => {
       const p = dim ? 0 : promoPct(sk);
-      return { sk, name: nm, lv: lv[sk], p, c, dim, small: dim ? 'wyłączone' : top(lv[sk]) ? 'najwyższy poziom' : 'do ' + L[lv[sk] + 1] + ': ' + p + '%', tip: dim ? '' : promoTip(sk) };
+      return { sk, name: nm, lv: lv[sk], p, c, dim, small: dim ? 'wyłączone' : top(lv[sk]) ? 'najwyższy poziom' : 'do ' + L[lv[sk] + 1] + ': ' + p + '%', tip: dim ? '' : promoTip(sk), per: L.map((x, i) => skLvPct(sk, i)) };
     };
     const tiles = [
-      { sk: 'vocab', name: 'Słownictwo', lv: lv.vocab, p: vm, c: '#C4BDB2', small: vm + '% słów ' + L[lv.vocab], tip: 'Znasz ' + vm + '% słów poziomu ' + L[lv.vocab] + ' z bazy programu.' },
+      { sk: 'vocab', name: 'Słownictwo', lv: lv.vocab, p: vm, c: '#C4BDB2', small: vm + '% słów ' + L[lv.vocab], tip: 'Znasz ' + vm + '% słów poziomu ' + L[lv.vocab] + ' z bazy programu.',
+        per: (function () { const rows = vocabMap().rows; return rows.map(r => r.total ? Math.round((r.mast + r.known) / r.total * 100) : 0); })() },
       skTile('grammar', 'Gramatyka', '#D3C3C3', !typeEnabled('order') && !typeEnabled('error')),
       skTile('listening', 'Słuchanie', '#BFCBBC', !typeEnabled('dictation')),
       skTile('speaking', 'Mówienie', '#C7C1D2', !typeEnabled('speak'))
     ].map(s => {
       let bands = '';
       for (let i = 0; i < L.length; i++) {
-        const h = s.dim ? 0 : i < s.lv ? 100 : i === s.lv ? Math.max(3, s.p) : 0;
-        bands += '<div class="band' + (i === s.lv ? ' cur' : '') + '"><i style="height:' + h + '%;background:' + s.c + '"></i><span>' + L[i] + '</span></div>';
+        const h = s.dim ? 0 : s.per[i] || 0; // każdy poziom wypełnia się osobno
+        bands += '<div class="band' + (i === s.lv ? ' cur' : '') + '"><i style="height:' + h + '%;background:' + s.c + '"></i><span>' + L[i] + (h ? ' · ' + h + '%' : '') + '</span></div>';
       }
-      return '<div class="skill inset v2' + (s.dim ? ' dim' : '') + '" title="' + esc(s.tip) + '"><div class="hd"><div class="name">' + s.name + '</div><b>' + L[s.lv] + '</b><small>' + s.small + '</small></div><div class="bands">' + bands + '</div></div>';
+      const tip = s.tip + (s.sk === 'vocab' ? '\nPasy: część słów każdego poziomu, które znasz.' : '\nPasy: na każdym poziomie pełny = ' + LV_N + ' odpowiedzi z trafnością min. ' + Math.round(PROMO_ACC * 100) + '%.');
+      return '<div class="skill inset v2' + (s.dim ? ' dim' : '') + '" title="' + esc(tip) + '"><div class="hd"><div class="name">' + s.name + '</div><b>' + L[s.lv] + '</b><small>' + s.small + '</small></div><div class="bands">' + bands + '</div></div>';
     }).join('');
 
     const y = now.getFullYear(), m = now.getMonth();
