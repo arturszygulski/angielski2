@@ -707,7 +707,7 @@
       submitT = () => { if (!inp.value.trim()) return shake(inp); answerTest(listenScore(full, inp.value) >= 0.85); };
     }
     $('#ok').onclick = submitT;
-    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submitT(); } };
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); submitT(); } }; // stop: ten sam Enter nie może zamknąć ekranu wyniku
     inp.focus();
   }
   function finishTest() {
@@ -4877,7 +4877,8 @@
       progress(); Store.save(); renderMonthlyResult(r);
     });
     $('#go').onclick = () => go('home');
-    keyHandler = e => { if ((e.key === 'Enter' && !onButton()) || e.key === 'Escape') { e.preventDefault(); go('home'); } };
+    const shownAt = Date.now();
+    keyHandler = e => { if (e.repeat || Date.now() - shownAt < 600) return; if ((e.key === 'Enter' && !onButton()) || e.key === 'Escape') { e.preventDefault(); go('home'); } };
   }
   let lwhyOpen = false;
   /* „Skąd ten poziom?” — tylko pokazuje dane, niczego nie zmienia */
