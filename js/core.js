@@ -143,6 +143,9 @@ window.AI = (function () {
   const VOICE = '\n\nWAŻNE: wszystkie teksty po polsku, które zobaczy użytkownik (wyjaśnienia, komentarze, oceny, podpowiedzi), pisz, zwracając się do niego bezpośrednio na „ty”, w rodzaju męskim — np. „napisałeś”, „użyłeś”, „dobrze ci poszło” — nigdy „uczeń napisał” ani „użytkownik”. W danych nazywam go Artur, ale w tekstach dla niego NIE pisz o nim w trzeciej osobie (żadnego „Artur napisał”, „odpowiedź ucznia”, „jego odpowiedź”) — zawsze „ty”: „twoja odpowiedź”, „napisałeś”.';
   const sys = t => String(t || '') + VOICE;
   class AIError extends Error { constructor(status, msg) { super(msg || ''); this.status = status; } }
+  /* formatowanie odpowiedzi: program pokazuje **pogrubienie** i *kursywę* (qaFmt w app.js) */
+  const FMT_TXT = ' Formatowanie: najważniejsze angielskie słowa i zwroty pogrubiaj **tak**, przykłady po angielsku pisz *kursywą*, każdą nową myśl w osobnym akapicie (pusta linia). Bez nagłówków, tabel i list numerowanych.';
+  const fmtJ = fields => '\n\nFormatowanie TYLKO w polach: ' + fields + ' — najważniejsze angielskie słowa pogrubiaj **tak**, przykłady po angielsku pisz *kursywą*. W pozostałych polach (zdania, odpowiedzi, tłumaczenia) żadnych gwiazdek ani znaczników.';
   function enabled() { return !!(Store.data.settings.apiKey || '').trim(); }
   /* dwa modele: szybki (Haiku) do częstych sprawdzeń, mądrzejszy (Sonnet) do wyjaśnień i rzadkich, ważnych zadań */
   let curSmart = false;
@@ -257,7 +260,7 @@ window.AI = (function () {
       'Oceń, czy odpowiedź Artura jest gramatycznie poprawna i naturalna w tym zdaniu ORAZ zgodna ze znaczeniem podpowiedzi (bliski synonim jest w porządku; literówka, która tworzy inne słowo, nie). ' +
       'Napisz po polsku 1–2 krótkie zdania: jeśli źle — dlaczego i czym różni się od oczekiwanej odpowiedzi; jeśli dobrze — krótko potwierdź.\n' +
       'Zwróć dokładnie: {"acceptable": true albo false, "explanation": "..."}';
-    const j = await callJSON(system, user, 500, 20000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
+    const j = await callJSON(system, user + fmtJ('explanation'), 500, 20000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
     return { acceptable: !!j.acceptable, explanation: String(j.explanation || '') };
   }
 
@@ -281,7 +284,7 @@ window.AI = (function () {
       'Oceń, czy odpowiedź Artura jest poprawnym, naturalnym angielskim zdaniem o tym samym sensie (inna poprawna kolejność lub forma jest w porządku). ' +
       'Napisz po polsku 1–2 krótkie zdania: jeśli źle — co dokładnie jest nie tak; jeśli dobrze — krótko potwierdź.\n' +
       'Zwróć dokładnie: {"acceptable": true albo false, "explanation": "..."}';
-    const j = await callJSON(system, user, 500, 20000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
+    const j = await callJSON(system, user + fmtJ('explanation'), 500, 20000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
     return { acceptable: !!j.acceptable, explanation: String(j.explanation || '') };
   }
 
@@ -305,7 +308,7 @@ window.AI = (function () {
     const user = 'Oto najczęstsze błędy Artura z ostatnich 30 dni:\n' + list + '\n\n' +
       'Napisz 3–5 krótkich, praktycznych wskazówek (każda w osobnej linii, zaczynając od "• "). ' +
       'Dla każdego wzorca wyjaśnij krótko zasadę lub sposób na zapamiętanie i podaj jeden przykład po angielsku. Bez wstępu i podsumowania.';
-    return (await call(system, user, 700)).trim();
+    return (await call(system + FMT_TXT, user, 700)).trim();
   }
 
   /* Moje teksty: znaczenie słowa/zwrotu w kontekście */
@@ -317,7 +320,7 @@ window.AI = (function () {
       'Wyjaśnij po polsku, co ten fragment znaczy W TYM KONKRETNYM ZDANIU. ' +
       'Zwróć: {"pl": "krótkie polskie tłumaczenie fragmentu w tym znaczeniu (1–5 słów)", "base": "forma podstawowa po angielsku (np. bezokolicznik)", ' +
       '"explanation": "1–3 krótkie zdania po polsku: znaczenie tutaj, ewentualnie inne częste znaczenia lub niuans", "example": "jedno inne krótkie zdanie po angielsku z tym słowem w tym samym znaczeniu"}';
-    const j = await callJSON(system, user, 600, 25000, { type: 'object', required: ['pl', 'base', 'explanation', 'example'], properties: { pl: STR, base: STR, explanation: STR, example: STR } });
+    const j = await callJSON(system, user + fmtJ('explanation'), 600, 25000, { type: 'object', required: ['pl', 'base', 'explanation', 'example'], properties: { pl: STR, base: STR, explanation: STR, example: STR } });
     return { pl: String(j.pl || ''), base: String(j.base || ''), explanation: String(j.explanation || ''), example: String(j.example || '') };
   }
   async function translateSentence(sentence, context) {
@@ -336,7 +339,7 @@ window.AI = (function () {
       const res = await aiFetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: pickModel(), max_tokens: 600, system: sys(system), messages: msgs })
+        body: JSON.stringify({ model: pickModel(), max_tokens: 600, system: sys(system + FMT_TXT), messages: msgs })
       });
       if (!res.ok) { let msg = ''; try { const j = await res.json(); msg = (j.error && j.error.message) || ''; } catch (e) { } throw new AIError(res.status, msg); }
       const j = await res.json();
@@ -375,7 +378,7 @@ window.AI = (function () {
       '- talk_role: po angielsku, krótki opis postaci i sytuacji do rozmowy, w której Artur będzie naturalnie musiał użyć tematu (postać zadaje pytania, które go do tego skłaniają);\n' +
       '- talk_goal: po polsku, cel Artura w tej rozmowie (np. „Użyj kilka razy expect, opowiadając o…”).';
     const IT = { type: 'object', required: ['kind', 'en', 'answer', 'answer_pl', 'pl'], properties: { kind: { type: 'string', enum: ['cloze', 'translate', 'order', 'dictation'] }, en: STR, answer: STR, answer_pl: STR, pl: STR } };
-    const j = await callJSON(system, user, 3000, 90000, { type: 'object', required: ['title', 'about', 'contrast', 'examples', 'pitfalls', 'items', 'talk_role', 'talk_goal'], properties: {
+    const j = await callJSON(system, user + fmtJ('about, contrast, pitfalls'), 3000, 90000, { type: 'object', required: ['title', 'about', 'contrast', 'examples', 'pitfalls', 'items', 'talk_role', 'talk_goal'], properties: {
       title: STR, about: STR, contrast: STR, examples: { type: 'array', items: { type: 'object', required: ['en', 'pl'], properties: { en: STR, pl: STR } } },
       pitfalls: { type: 'array', items: STR }, items: { type: 'array', items: IT }, talk_role: STR, talk_goal: STR } });
     return {
@@ -420,7 +423,7 @@ window.AI = (function () {
       '- W explanation wymień tylko rzeczywiste różnice, np. brakujące „the” albo zbędne słowo, cytując je.\n' +
       (spoken ? '- Artur PODYKTOWAŁ odpowiedź do mikrofonu — rozpoznawanie mowy mogło dodać, zgubić albo przekręcić krótkie słowo (np. „on”, „the”, „a”). Jeśli różnica wygląda na błąd rozpoznania, zaznacz to delikatnie („możliwe, że mikrofon usłyszał…”).\n' : '') +
       'Zwróć dokładnie: {"verdict": "natural" | "understandable" | "wrong", "better": "poprawiona, naturalna wersja zdania Artura (jak najbliżej jego słów)", "explanation": "1–2 krótkie zdania po polsku: co poprawić albo potwierdzenie"}';
-    const j = await callJSON(system, user, 500, 25000, { type: 'object', required: ['verdict', 'better', 'explanation'], properties: { verdict: { type: 'string', enum: ['natural', 'understandable', 'wrong'] }, better: STR, explanation: STR } });
+    const j = await callJSON(system, user + fmtJ('explanation'), 500, 25000, { type: 'object', required: ['verdict', 'better', 'explanation'], properties: { verdict: { type: 'string', enum: ['natural', 'understandable', 'wrong'] }, better: STR, explanation: STR } });
     const v = ['natural', 'understandable', 'wrong'].includes(j.verdict) ? j.verdict : 'wrong';
     return { verdict: v, better: String(j.better || ''), explanation: String(j.explanation || '') };
   }
@@ -446,7 +449,7 @@ window.AI = (function () {
       'key_ok — najpierw sprawdź samo ćwiczenie: true, jeśli zdanie z klucza jest poprawne, naturalne i ma sens; false tylko wtedy, gdy jest błędne, nienaturalne albo bez sensu (np. sprzeczne określenia czasu);\n' +
       'key_problem — tylko gdy key_ok = false: po polsku w 1 zdaniu, co jest źle w ćwiczeniu, i poprawna wersja; gdy key_ok = true — pusty tekst. Gdy key_ok = false, w why nie broń błędnego klucza. ' +
       'Jeśli odpowiedź Artura też jest poprawna i naturalna w tym zdaniu, powiedz to wprost w why.';
-    const j = await callJSON(system, user, 1200, 30000, { type: 'object', required: ['why', 'examples', 'simpler', 'watch', 'key_ok', 'key_problem'], properties: {
+    const j = await callJSON(system, user + fmtJ('why, watch'), 1200, 30000, { type: 'object', required: ['why', 'examples', 'simpler', 'watch', 'key_ok', 'key_problem'], properties: {
       why: STR, watch: STR, key_ok: { type: 'boolean' }, key_problem: STR,
       examples: { type: 'array', items: { type: 'object', required: ['en', 'pl'], properties: { en: STR, pl: STR } } },
       simpler: { type: 'array', items: { type: 'object', required: ['en', 'pl'], properties: { en: STR, pl: STR } } } } });
@@ -493,7 +496,7 @@ window.AI = (function () {
       const res = await aiFetch(URL, {
         method: 'POST', signal: ctrl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': s.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: pickModel(), max_tokens: 700, system: sys(system), messages: msgs })
+        body: JSON.stringify({ model: pickModel(), max_tokens: 700, system: sys(system + FMT_TXT), messages: msgs })
       });
       if (!res.ok) { let msg = ''; try { const j = await res.json(); msg = (j.error && j.error.message) || ''; } catch (e) { } throw new AIError(res.status, msg); }
       const j = await res.json();
@@ -545,7 +548,7 @@ window.AI = (function () {
       'Przygotuj podsumowanie po polsku. Pola: score — zrozumiałość Artura 0–100; goal_done — czy osiągnął cel; summary — 2–3 zdania po polsku: co poszło dobrze, nad czym pracować; ' +
       'corrections — 3–5 najważniejszych poprawek: {you: dokładnie to, co Artur powiedział, better: naturalna poprawna wersja, why: krótko po polsku}; pomiń drobiazgi, jeśli nie ma błędów — pusta lista; ' +
       'phrases — 3–6 przydatnych zwrotów z tej rozmowy albo do takiej sytuacji, warte nauki: {phrase: zwrot po angielsku, pl: znaczenie, sentence: krótkie zdanie po angielsku zawierające DOKŁADNIE ten zwrot}.';
-    const j = await callJSON(system, user, 1500, 45000, { type: 'object', required: ['score', 'goal_done', 'summary', 'corrections', 'phrases'], properties: {
+    const j = await callJSON(system, user + fmtJ('summary'), 1500, 45000, { type: 'object', required: ['score', 'goal_done', 'summary', 'corrections', 'phrases'], properties: {
       score: { type: 'integer' }, goal_done: { type: 'boolean' }, summary: STR,
       corrections: { type: 'array', items: { type: 'object', required: ['you', 'better', 'why'], properties: { you: STR, better: STR, why: STR } } },
       phrases: { type: 'array', items: { type: 'object', required: ['phrase', 'pl', 'sentence'], properties: { phrase: STR, pl: STR, sentence: STR } } } } });

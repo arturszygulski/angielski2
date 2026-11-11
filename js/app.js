@@ -1878,7 +1878,7 @@
   function feedbackHtml(it) {
     const fb = S.fb;
     const xp = fb.xp ? ' · +' + fb.xp + ' XP' : '';
-    const ai = t => aiTag(fb.mdl) + esc(t);
+    const ai = t => aiTag(fb.mdl) + qaFmt(t);
     let cls = 'ok', icon = IC.check, title = fb.m === 'ai-ok' ? 'Też dobrze!' : 'Dobrze!', main = '';
     const smalls = [];
     if (fb.kind === 'bad') { cls = 'bad'; icon = IC.alert; title = 'Jeszcze nie.'; }
@@ -3167,7 +3167,7 @@
           (area.length ? '<div class="mz-grp">Obszary</div><section class="mz-box">' + area.map(rowHtml).join('') + '</section>' : '') +
           '<section class="list-card raised"><div class="row between"><h2 style="font-size:20px">Wskazówki od AI</h2>' +
           (AI.enabled() ? '<button class="btn small" id="aiTips">' + (tips ? 'Odśwież' : 'Poproś AI o analizę') + ' ' + K('A') + '</button>' : '<span class="small-note">wymaga klucza API w ustawieniach</span>') + '</div>' +
-          (tips ? '<div id="tipsBox" class="tips">' + esc(tips.text).replace(/\n/g, '<br>') + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div></div>' : '<div id="tipsBox"></div>') + '</section>';
+          (tips ? '<div id="tipsBox" class="tips">' + qaFmt(tips.text) + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div></div>' : '<div id="tipsBox"></div>') + '</section>';
     } else if (mzTab === 'hard') body = hardListHtml() || '<p class="small-note">Nic nie jest oznaczone jako trudne. Oznaczysz przyciskiem „Trudne” (T) po odpowiedzi.</p>';
     else if (mzTab === 'ex') body = explainsHtml() || '<p class="small-note">Brak zapisanych wyjaśnień. Powstają przyciskiem „Wyjaśnij” (E) po odpowiedzi.</p>';
     else if (mzTab === 'chat') body = aiChatsHtml() || '<p class="small-note">Brak rozmów. Przycisk „AI” jest w prawym dolnym rogu ekranu (Alt+Q).</p>';
@@ -4291,7 +4291,7 @@
       (!ai ? '<span class="small-note">Z kluczem API zobaczysz tu znaczenie w tym zdaniu, formę podstawową i przykład.</span>'
         : RD.busy[key] ? '<div class="checking"><span class="spinner"></span>AI sprawdza znaczenie w tym zdaniu…</div>'
         : ex ? '<div class="ex-pl"><span class="ai-tag">AI</span><b>' + esc(ex.pl) + '</b>' + (ex.base && ex.base.toLowerCase() !== phrase.toLowerCase() ? ' <span class="small-note">(forma podstawowa: ' + esc(ex.base) + ')</span>' : '') + '</div>' +
-            '<div>' + esc(ex.explanation) + '</div>' + (ex.example ? '<div class="small-note" lang="en">np. ' + esc(ex.example) + '</div>' : '')
+            '<div>' + qaFmt(ex.explanation) + '</div>' + (ex.example ? '<div class="small-note" lang="en">np. ' + esc(ex.example) + '</div>' : '')
         : RD.err[key] ? '<div class="status bad">' + esc(RD.err[key]) + '</div><button class="btn small" id="rRetry">Spróbuj ponownie</button>'
         : '<button class="btn small" id="rRetry">Wyjaśnij z AI</button>') +
       '</div>' +
@@ -4300,7 +4300,7 @@
           '<button class="btn small" id="rMark">Usuń z nauki ' + K('D') + '</button>'
         : '<div class="field" style="gap:8px"><label for="rPl" style="flex-basis:100%">Znaczenie po polsku</label><div class="ctl"><input id="rPl" class="txt" autocomplete="off" value="' + esc((ex && ex.pl) || '') + '" placeholder="' + (ai ? 'AI uzupełni po chwili' : 'wpisz znaczenie') + '"></div></div>' +
           '<button class="btn primary" id="rMark">Dodaj do nauki ' + K('D') + '</button>') +
-      '<div class="qa">' + qa.map(x => '<div class="qa-item"><div class="q">' + esc(x.q) + '</div><div class="a">' + esc(x.a).replace(/\n/g, '<br>') + '</div></div>').join('') +
+      '<div class="qa">' + qa.map(x => '<div class="qa-item"><div class="q">' + esc(x.q) + '</div><div class="a">' + qaFmt(x.a) + '</div></div>').join('') +
       (RD.busy['q:' + sel.s] ? '<div class="checking"><span class="spinner"></span>AI odpowiada…</div>' : '') +
       (RD.err['q:' + sel.s] ? '<div class="status bad">' + esc(RD.err['q:' + sel.s]) + '</div>' : '') + '</div>' +
       '<div class="field" style="gap:8px"><label for="rQ" style="flex-basis:100%">Zapytaj AI o to zdanie ' + K('Q') + '</label><div class="ctl"><input id="rQ" class="txt" autocomplete="off" placeholder="' + (ai ? 'np. dlaczego tu jest „had been”?' : 'wymaga klucza API') + '"' + (ai ? '' : ' disabled') + '><button class="btn small" id="rAsk"' + (ai ? '' : ' disabled') + '>Zapytaj</button></div></div>';
@@ -5192,7 +5192,7 @@
   }
   function tenseFeedback(it, fb, xp, smalls, setTitle) {
     const ts = it.ts, T = TS_BY[ts.tid];
-    const ai = t => aiTag(fb.mdl) + esc(t);
+    const ai = t => aiTag(fb.mdl) + qaFmt(t);
     let main;
     if (it.type === 'tense_t') {
       const better = fb.better && U.norm(fb.better) !== U.norm(fb.ans || '') ? fb.better : '';
@@ -5624,7 +5624,7 @@
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Średnio słów</div><span class="kpi-val">' + String(X.avg).replace('.', ',') + '</span><div class="small-note">na jedną wypowiedź</div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Podpowiedzi</div><span class="kpi-val">' + X.hintsUsed + '</span><div class="small-note">im mniej, tym samodzielniej</div></div></section>' +
       (X.sumErr ? '<section class="note raised"><div class="ic inset">' + IC.alert + '</div><div class="tx"><b>Nie udało się przygotować podsumowania</b><span>' + esc(X.sumErr) + '</span></div><button class="btn" id="tkSumRetry">Spróbuj ponownie</button></section>' : '') +
-      (Sm ? '<section class="set-card raised"><h2>Ocena ' + aiTag(Sm._m) + '</h2><p style="margin:0;font-size:17px;line-height:1.55">' + esc(Sm.summary) + '</p></section>' +
+      (Sm ? '<section class="set-card raised"><h2>Ocena ' + aiTag(Sm._m) + '</h2><p style="margin:0;font-size:17px;line-height:1.55">' + qaFmt(Sm.summary) + '</p></section>' +
         '<section class="set-card raised"><h2>Poprawki</h2>' + (Sm.corrections.length ? '<div class="col" style="gap:12px">' + Sm.corrections.map(c => '<div class="list-item inset corr"><div style="min-width:0"><div class="small-note">Powiedziałeś: <s>' + esc(c.you) + '</s></div><div lang="en"><b>' + esc(c.better) + '</b></div><div class="small-note">' + esc(c.why) + '</div></div><button class="btn small" data-csay="' + esc(c.better) + '" aria-label="Odsłuchaj">' + IC.speaker + '</button></div>').join('') + '</div>' : '<p class="small-note" style="margin:0">Bez istotnych błędów — świetnie!</p>') + '</section>' +
         '<section class="set-card raised"><div class="row between"><h2>Zwroty do nauki</h2>' + (Sm.phrases.length ? '<button class="btn small" id="tkAddAll">Dodaj wszystkie ' + K('D') + '</button>' : '') + '</div><div class="col" style="gap:10px">' +
         Sm.phrases.map((p, i) => '<div class="list-item inset"><div style="min-width:0"><span class="w" style="font-size:18px" lang="en">' + esc(p.phrase) + '</span><span class="p"> — ' + esc(p.pl) + '</span><div class="small-note" lang="en">' + esc(p.sentence) + '</div></div>' +
@@ -5732,11 +5732,11 @@
   function explainBodyHtml(rec, opts) {
     const d = rec.data;
     const say = t => opts && opts.say ? '<button class="btn small exsay" data-exsay="' + esc(t) + '" aria-label="Odsłuchaj">' + IC.speaker + '</button>' : '';
-    return '<div class="ex-sec"><h3>Dlaczego tak</h3><p>' + esc(d.why) + '</p></div>' +
+    return '<div class="ex-sec"><h3>Dlaczego tak</h3><p>' + qaFmt(d.why) + '</p></div>' +
       (d.examples.length ? '<div class="ex-sec"><h3>Przykłady w kontekście</h3>' + d.examples.map(x => '<div class="ex-row">' + say(x.en) + '<div><div lang="en">' + esc(x.en) + '</div><div class="small-note">' + esc(x.pl) + '</div></div></div>').join('') + '</div>' : '') +
       (d.simpler.length ? '<div class="ex-sec"><h3>Prościej / inaczej</h3>' + d.simpler.map(x => '<div class="ex-row">' + say(x.en) + '<div><div lang="en">' + esc(x.en) + '</div><div class="small-note">' + esc(x.pl) + '</div></div></div>').join('') + '</div>' : '') +
-      (d.watch ? '<div class="ex-sec watch"><h3>Uważaj</h3><p>' + esc(d.watch) + '</p></div>' : '') +
-      ((rec.chat || []).length ? '<div class="qa">' + rec.chat.map(m => '<div class="qa-item"><div class="q">' + esc(m.q) + '</div><div class="a">' + esc(m.a).replace(/\n/g, '<br>') + (m.m ? ' <span class="small-note">' + mdlTag(m.m) + '</span>' : '') + '</div></div>').join('') + '</div>' : '');
+      (d.watch ? '<div class="ex-sec watch"><h3>Uważaj</h3><p>' + qaFmt(d.watch) + '</p></div>' : '') +
+      ((rec.chat || []).length ? '<div class="qa">' + rec.chat.map(m => '<div class="qa-item"><div class="q">' + esc(m.q) + '</div><div class="a">' + qaFmt(m.a) + (m.m ? ' <span class="small-note">' + mdlTag(m.m) + '</span>' : '') + '</div></div>').join('') + '</div>' : '');
   }
   function renderExplainPanel(it) {
     const el = document.getElementById('explain'); if (!el) return;
@@ -5963,9 +5963,9 @@
     } else {
       const r = T.res;
       body = '<section class="set-card panel raised tp-card"><h2 style="font-size:28px">' + esc(T.title) + '</h2>' +
-        '<p class="tp-about">' + esc(T.about) + '</p>' + (T.contrast ? '<p class="tp-about muted">' + esc(T.contrast) + '</p>' : '') +
+        '<p class="tp-about">' + qaFmt(T.about) + '</p>' + (T.contrast ? '<p class="tp-about muted">' + qaFmt(T.contrast) + '</p>' : '') +
         '<h3 class="tm-sub">Przykłady</h3><div class="tp-ex">' + T.examples.map((x, k) => '<button class="btn small tp-say" data-tsay="' + k + '" aria-label="Odsłuchaj">' + IC.speaker + '</button><div><div lang="en"><b>' + esc(x.en) + '</b></div><div class="small-note">' + esc(x.pl) + '</div></div>').join('') + '</div>' +
-        (T.pitfalls.length ? '<h3 class="tm-sub">Uważaj</h3><ul class="tp-pit">' + T.pitfalls.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '') + '</section>' +
+        (T.pitfalls.length ? '<h3 class="tm-sub">Uważaj</h3><ul class="tp-pit">' + T.pitfalls.map(x => '<li>' + qaFmt(x) + '</li>').join('') + '</ul>' : '') + '</section>' +
         '<div class="row center" style="gap:16px;flex-wrap:wrap">' +
         '<button class="btn big primary" id="tpEx">Ćwiczenia (' + T.items.length + ') ' + K('Enter') + '</button>' +
         '<button class="btn big" id="tpTalk">' + IC.chat + ' Pogadaj o tym z AI ' + K('G') + '</button>' +
