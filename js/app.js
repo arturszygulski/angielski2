@@ -2335,7 +2335,8 @@
       '<div class="field"><label for="key">Klucz API</label><div class="ctl"><input id="key" class="txt" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="' + esc(st.apiKey) + '">' +
       '<button class="btn small" id="showKey" aria-label="Pokaż klucz">' + IC.eye + '</button></div></div>' +
       '<div class="field"><label for="model">Model szybki</label><div class="ctl"><input id="model" class="txt" spellcheck="false" value="' + esc(st.model) + '"></div></div>' +
-      '<div class="field"><label for="modelSmart">Model do wyjaśnień</label><div class="ctl"><input id="modelSmart" class="txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div></div>' +
+      '<div class="field"><label></label><div class="ctl"><label class="check"><input type="checkbox" id="smartOn"' + (st.smartOn !== false ? ' checked' : '') + '> Lepszy model do wyjaśnień <span class="small-note">— wyłączony: wszystko na modelu szybkim (taniej)</span></label></div></div>' +
+      '<div class="field"' + (st.smartOn === false ? ' hidden' : '') + ' id="smartField"><label for="modelSmart">Model do wyjaśnień</label><div class="ctl"><input id="modelSmart" class="txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div></div>' +
       '<p class="small-note desc" style="margin:0">Szybki: sprawdzanie odpowiedzi, rozmowa, zdania do słówek. Do wyjaśnień: Wyjaśnij, pytania o błąd, Rozszerz temat, ocena tłumaczeń, podsumowanie rozmowy, plan „Krok po kroku”. Puste pole = wszystko na szybkim.</p>' +
       '<div class="field"><label></label><div class="ctl"><button class="btn small primary" id="testAi">Sprawdź połączenie</button><span class="status" id="aiStatus"></span></div></div></section>' +
 
@@ -2401,12 +2402,14 @@
     on('#showKey', () => { const k = $('#key'); k.type = k.type === 'password' ? 'text' : 'password'; });
     $('#model').oninput = e => { st.model = e.target.value.trim() || 'claude-haiku-5-5'; save(); };
     $('#modelSmart').oninput = e => { st.modelSmart = e.target.value.trim(); save(); };
+    $('#smartOn').onchange = e => { st.smartOn = e.target.checked; save(); $('#smartField').hidden = !e.target.checked; };
     on('#testAi', async () => {
       const s = $('#aiStatus');
       if (!AI.enabled()) { s.className = 'status bad'; s.textContent = 'Najpierw wklej klucz API.'; return; }
       s.className = 'status'; s.textContent = 'Sprawdzam…';
       try {
         await AI.test();
+        if (st.smartOn === false) { s.className = 'status ok'; s.textContent = '✓ Połączenie działa (lepszy model wyłączony).'; return; }
         try { await AI.testSmart(); s.className = 'status ok'; s.textContent = '✓ Połączenie działa (oba modele).'; }
         catch (e2) { s.className = 'status bad'; s.textContent = 'Szybki model działa, model do wyjaśnień nie: ' + AI.humanError(e2); }
       }

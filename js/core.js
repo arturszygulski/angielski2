@@ -148,7 +148,7 @@ window.AI = (function () {
   let curSmart = false;
   function pickModel() {
     const s = Store.data.settings;
-    if (curSmart) { const m = (s.modelSmart == null ? 'claude-sonnet-5-5' : s.modelSmart).trim(); if (m) return m; }
+    if (curSmart && s.smartOn !== false) { const m = (s.modelSmart == null ? 'claude-sonnet-5-5' : s.modelSmart).trim(); if (m) return m; }
     return (s.model || 'claude-haiku-5-5').trim();
   }
   /* gdy model do wyjaśnień odmówi (400/404 — np. zła nazwa albo brak dostępu), zapytanie idzie jeszcze raz na szybkim modelu */
