@@ -1811,6 +1811,7 @@
     D().typesPlayed = D().typesPlayed || {}; D().typesPlayed[it.type] = 1;
     if (isFirst && !it.simple) bumpUse(useKey(it.baseType || it.type));
     if (!correct || m === 'typo') logMistake(it, m, extra);
+    else if (kind === 'ok' && !it.simple) (D().okAt = D().okAt || {})[c.id] = Date.now(); // zamyka wcześniejsze błędy tego elementu (z innych dni)
     if (S.boss && correct && !S.bossHit[c.id]) S.bossHit[c.id] = 1;
     if (S.boss && !correct) S.bossClean = false;
     if (isFirst && (S.play || it.simple)) {
@@ -3055,8 +3056,8 @@
     } else if (it.type === 'cloze' || it.type === 'choice') {
       const ans = U.norm(extra.ans || '');
       const other = ans && WORDS.list.find(w => w.id !== it.w.id && w.answers.some(x => U.norm(x) === ans));
-      if (other) { const pair = [it.w.answers[0], other.answers[0]].sort(); cat = 'Mylisz słowa: ' + pair[0] + ' ↔ ' + pair[1]; d = it.w.answers[0]; }
-      else { cat = m === 'idk' ? 'Słowa, których nie pamiętasz' : 'Słownictwo — inne słowo niż trzeba'; d = it.w.answers[0] + ' (' + it.w.pl + ')'; }
+      if (other) { const pair = [it.w.answers[0], other.answers[0]].sort(); cat = 'Mylisz słowa: ' + pair[0] + ' ↔ ' + pair[1]; d = extra.ans + ' → ' + it.w.answers[0] + ' (' + it.w.pl + ')'; }
+      else { cat = m === 'idk' ? 'Słowa, których nie pamiętasz' : 'Słownictwo — inne słowo niż trzeba'; d = (m !== 'idk' && extra.ans ? extra.ans + ' → ' : '') + it.w.answers[0] + ' (' + it.w.pl + ')'; }
     } else if (it.type === 'error') { cat = 'Gramatyka: ' + it.g.expl.replace(/\.$/, ''); d = it.wrong + ' → ' + it.g.correct; }
     else if (it.type === 'order') { cat = 'Szyk zdania'; d = fullSentence(it); }
     else if (it.type === 'dictation') {
@@ -3097,41 +3098,101 @@
     newSession({ custom: title, queue: U.shuffle(q) });
     go('exercise');
   }
+  /* ---------- Dziennik: otwarte / opanowane ---------- */
+  /* błąd jest „otwarty”, dopóki element nie dostanie dobrej odpowiedzi innego (późniejszego) dnia */
+  function mistakeOpen(m) {
+    const ok = (D().okAt || {})[m.id], day = U.dayKey(m.at);
+    if (ok) return !(ok > m.at && U.dayKey(ok) !== day);
+    const c = D().cards[m.id]; // stare wpisy (sprzed zapamiętywania dobrych odpowiedzi): powtórka innego dnia z odstępem > 1 dzień
+    return !(c && c.last > m.at && U.dayKey(c.last) !== day && (c.ivl || 0) > 1 && c.state !== 'known') && !(c && c.state === 'known');
+  }
+  const MZ_SPECIFIC = /^(Mylisz|Gramatyka|Czasy|Phrasal)/;
+  let mzTab = 'pat', mzRange = 30, mzOpenCat = null;
+  function mzGroups(days, offset) {
+    const now = Date.now(), from = now - (days + offset) * U.DAY, to = now - offset * U.DAY, g = {};
+    (D().mistakes || []).forEach(m => {
+      if (m.at < from || m.at >= to) return;
+      const x = g[m.cat] || (g[m.cat] = { cat: m.cat, n: 0, items: {} });
+      x.n++;
+      const prev = x.items[m.id];
+      if (!prev || m.at > prev.at) x.items[m.id] = m; // najnowszy błąd danego elementu
+    });
+    return Object.values(g).map(x => {
+      const items = Object.values(x.items).sort((a, b) => b.at - a.at);
+      const open = items.filter(mistakeOpen);
+      return { cat: x.cat, n: x.n, items, open, openIds: open.map(m => m.id), specific: MZ_SPECIFIC.test(x.cat) };
+    }).sort((a, b) => b.open.length - a.open.length || b.n - a.n);
+  }
+  function mzItemHtml(m) {
+    const it = itemFor(m.id), typ = it && TYPES[it.type] ? TYPES[it.type].title : '';
+    const d = String(m.d || ''), k = d.indexOf(' → ');
+    const txt = k > 0 ? '<span class="mz-you">' + esc(d.slice(0, k)) + '</span> → <b>' + esc(d.slice(k + 3)) + '</b>' : esc(d);
+    const open = mistakeOpen(m);
+    return '<div class="mz-it' + (open ? '' : ' done') + '"><span class="small-note">' + new Date(m.at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) + (typ ? ' · ' + esc(typ) : '') + '</span>' +
+      '<span lang="en">' + txt + '</span><span class="mz-st ' + (open ? 'open' : 'ok') + '">' + (open ? 'otwarte' : 'opanowane ✓') + '</span></div>';
+  }
   function renderMistakes() {
     S = null;
-    const cur = mistakeGroups(30, 0), prev = mistakeGroups(30, 30);
+    screen = 'mistakes';
+    const all = mzRange >= 3650;
+    const cur = mzGroups(mzRange, 0), prev = all ? [] : mzGroups(mzRange, mzRange);
     const prevMap = {}; prev.forEach(g => { prevMap[g.cat] = g.n; });
-    const total = cur.reduce((a, g) => a + g.n, 0);
-    const max = cur.length ? cur[0].n : 1;
+    const openIds = []; cur.forEach(g => g.openIds.forEach(id => { if (openIds.indexOf(id) < 0) openIds.push(id); }));
+    const closed = cur.reduce((a, g) => a + g.items.length - g.open.length, 0);
     const tips = D().mistakeTips;
-    const rows = cur.slice(0, 12).map((g, i) => {
-      const p = prevMap[g.cat] || 0;
-      const trend = !p ? '<span class="trend new">nowe</span>' : g.n > p ? '<span class="trend up">▲ częściej</span>' : g.n < p ? '<span class="trend down">▼ rzadziej</span>' : '<span class="trend">bez zmian</span>';
-      return '<div class="mrow inset"><div class="mtop"><b>' + esc(g.cat) + '</b><span class="small-note">' + g.n + '× ' + trend + '</span></div>' +
-        '<div class="mbar"><div style="width:' + Math.round(g.n / max * 100) + '%"></div></div>' +
-        (g.ex.length ? '<div class="small-note">np. ' + g.ex.map(esc).join(' · ') + '</div>' : '') +
-        '<div class="row" style="justify-content:flex-end"><button class="btn small primary" data-practice="' + i + '">Ćwicz to ' + (i < 9 ? K(String(i + 1)) : '') + '</button></div></div>';
-    }).join('');
-    app.innerHTML =
-      '<div class="wrap narrow">' + backHeader('Dziennik błędów', 'ostatnie 30 dni') +
-      (total
-        ? '<section class="note raised"><div class="ic inset">' + IC.list + '</div><div class="tx"><b>' + total + ' ' + (total === 1 ? 'błąd' : 'błędów') + ' · ' + cur.length + ' ' + (cur.length === 1 ? 'wzorzec' : 'wzorców') + '</b><span>Najczęściej: ' + esc(cur[0].cat) + '. „Ćwicz to” robi krótką sesję tylko z tych elementów.</span></div></section>' +
-          '<section class="list-card raised"><div class="row between"><h2 style="font-size:22px">Wskazówki od AI</h2>' +
+    const hardN = hardIds().length;
+    const exN = explainList().length, fxN = Object.keys(D().fixes || {}).length;
+    let k = 0;
+    const order = cur.filter(g => g.specific).concat(cur.filter(g => !g.specific));
+    const rowHtml = g => {
+      const p = prevMap[g.cat] || 0, idx = order.indexOf(g), isOpen = mzOpenCat === g.cat;
+      const trend = all ? '<span></span>' : !p ? '<span class="trend new">nowe</span>' : g.n > p ? '<span class="trend up">▲ częściej</span>' : g.n < p ? '<span class="trend down">▼ rzadziej</span>' : '<span class="trend eq">bez zmian</span>';
+      const keyN = g.open.length ? ++k : 0;
+      return '<div class="mz-row' + (isOpen ? ' open' : '') + '" data-mzcat="' + idx + '" role="button" tabindex="0" aria-expanded="' + isOpen + '">' +
+        '<b><span class="chev">' + (isOpen ? '▾' : '▸') + '</span>' + esc(g.cat) + '</b>' +
+        '<span class="n" title="otwarte / wszystkie elementy">' + g.open.length + ' <small>/ ' + g.items.length + '</small></span>' + trend +
+        '<div class="mini inset"><div style="width:' + Math.round(g.open.length / Math.max(1, g.items.length) * 100) + '%"></div></div>' +
+        (g.open.length ? '<button class="btn small primary" data-practice="' + idx + '">Ćwicz' + (keyN <= 9 ? ' ' + K(String(keyN)) : '') + '</button>' : '<span class="small-note mz-all">wszystko ✓</span>') + '</div>' +
+        (isOpen ? '<div class="mz-items">' + g.items.slice(0, 30).map(mzItemHtml).join('') + (g.items.length > 30 ? '<div class="small-note">…i ' + (g.items.length - 30) + ' więcej</div>' : '') + '</div>' : '');
+    };
+    const spec = order.filter(g => g.specific), area = order.filter(g => !g.specific);
+    const tab = (id, label) => '<button class="btn' + (mzTab === id ? ' on' : '') + '" role="tab" aria-selected="' + (mzTab === id) + '" data-mztab="' + id + '">' + label + '</button>';
+    const rng = (d, label) => '<button class="btn' + (mzRange === d ? ' on' : '') + '" data-mzr="' + d + '">' + label + '</button>';
+    let body = '';
+    if (mzTab === 'pat') {
+      body = !cur.length
+        ? '<section class="note flatbox"><div class="tx"><b>' + ((D().mistakes || []).length ? 'Brak błędów w tym okresie' : 'Jeszcze pusto') + '</b><span>Błędy z sesji i gier są tu grupowane we wzorce, np. „Mylisz słowa: borrow ↔ lend” albo „Gramatyka: since / for”.</span></div></section>'
+        : (spec.length ? '<div class="mz-grp">Konkretne wzorce</div><section class="mz-box">' + spec.map(rowHtml).join('') + '</section>' : '') +
+          (area.length ? '<div class="mz-grp">Obszary</div><section class="mz-box">' + area.map(rowHtml).join('') + '</section>' : '') +
+          '<section class="list-card raised"><div class="row between"><h2 style="font-size:20px">Wskazówki od AI</h2>' +
           (AI.enabled() ? '<button class="btn small" id="aiTips">' + (tips ? 'Odśwież' : 'Poproś AI o analizę') + ' ' + K('A') + '</button>' : '<span class="small-note">wymaga klucza API w ustawieniach</span>') + '</div>' +
-          '<div id="tipsBox" class="tips">' + (tips ? esc(tips.text).replace(/\n/g, '<br>') + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div>' : '<span class="small-note">AI przejrzy Twoje najczęstsze błędy i podpowie, jak je zapamiętać.</span>') + '</div></section>' +
-          '<section class="col" style="gap:16px">' + rows + '</section>' + explainsHtml()
-        : '<section class="note raised"><div class="ic inset">' + IC.list + '</div><div class="tx"><b>Jeszcze pusto</b><span>Błędy z sesji i gier będą tu grupowane we wzorce, np. „Mylisz słowa: borrow ↔ lend” albo „Gramatyka: since / for”.</span></div></section>') +
-      hardListHtml() + fixesHtml() + '</div>';
+          (tips ? '<div id="tipsBox" class="tips">' + esc(tips.text).replace(/\n/g, '<br>') + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div></div>' : '<div id="tipsBox"></div>') + '</section>';
+    } else if (mzTab === 'hard') body = hardListHtml() || '<p class="small-note">Nic nie jest oznaczone jako trudne. Oznaczysz przyciskiem „Trudne” (T) po odpowiedzi.</p>';
+    else if (mzTab === 'ex') body = explainsHtml() || '<p class="small-note">Brak zapisanych wyjaśnień. Powstają przyciskiem „Wyjaśnij” (E) po odpowiedzi.</p>';
+    else body = fixesHtml() || '<p class="small-note">Brak poprawionych zdań.</p>';
+    app.innerHTML =
+      '<div class="wrap narrow mz">' + backHeader('Dziennik błędów', '') +
+      '<section class="mz-top"><div><div class="big">' + openIds.length + ' ' + (openIds.length === 1 ? 'otwarty' : 'otwartych') + ' <span>· ' + closed + ' opanowanych · ' + (all ? 'od początku' : 'ostatnie ' + mzRange + ' dni') + '</span></div>' +
+      '<div class="small-note" style="font-size:15px;margin-top:4px">' + (openIds.length ? 'Najwięcej otwartych: <b>' + esc(cur[0].cat) + '</b><br>' : '') + 'Błąd „zamyka się” po dobrej odpowiedzi innego dnia.</div></div>' +
+      (openIds.length ? '<button class="btn primary big-cta" id="mzAll">Powtórz otwarte (' + Math.min(20, openIds.length) + ') ' + K('Enter') + '</button>' : '') + '</section>' +
+      '<div class="mz-tabs"><div class="seg inset" role="tablist">' + tab('pat', 'Wzorce') + tab('hard', 'Trudne (' + hardN + ')') + tab('ex', 'Wyjaśnienia (' + exN + ')') + tab('fix', 'Poprawione zdania (' + fxN + ')') + '</div>' +
+      (mzTab === 'pat' ? '<div class="seg inset">' + rng(7, '7 dni') + rng(30, '30 dni') + rng(3650, 'wszystko') + '</div>' : '') + '</div>' +
+      body + '</div>';
     $('#back').onclick = () => go('home');
     bindFixes();
+    if ($('#mzAll')) $('#mzAll').onclick = () => startCustomSession(openIds, 'Otwarte błędy');
+    $$('[data-mztab]').forEach(b => b.onclick = () => { mzTab = b.dataset.mztab; renderMistakes(); });
+    $$('[data-mzr]').forEach(b => b.onclick = () => { mzRange = +b.dataset.mzr; mzOpenCat = null; renderMistakes(); });
+    $$('[data-mzcat]').forEach(r => { const tog = () => { const g = order[+r.dataset.mzcat]; mzOpenCat = mzOpenCat === g.cat ? null : g.cat; renderMistakes(); }; r.onclick = e => { if (e.target.closest('button')) return; tog(); }; r.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); tog(); } }; });
     if ($('#hardGo')) $('#hardGo').onclick = () => startCustomSession(hardIds(), 'Trudne');
     $$('[data-unhard]').forEach(b => b.onclick = () => { const x = D().cards[b.dataset.unhard]; if (x) { delete x.hard; delete x.hardOk; delete x.hardDay; Store.save(); } renderMistakes(); });
-    $$('[data-practice]').forEach(b => b.onclick = () => { const g = cur[+b.dataset.practice]; startCustomSession(g.ids, 'Ćwiczenie: ' + g.cat); });
+    $$('[data-practice]').forEach(b => b.onclick = e => { e.stopPropagation(); const g = order[+b.dataset.practice]; startCustomSession(g.openIds, 'Ćwiczenie: ' + g.cat); });
     const askAI = async () => {
       const box = $('#tipsBox'); if (!box) return;
-      box.innerHTML = '<div class="checking"><span class="spinner"></span>AI analizuje Twoje błędy…</div>';
+      box.className = 'tips'; box.innerHTML = '<div class="checking"><span class="spinner"></span>AI analizuje Twoje błędy…</div>';
       try {
-        const text = await AI.analyzeMistakes(cur.slice(0, 8).map(g => ({ cat: g.cat, n: g.n, ex: g.ex.slice(0, 3) })));
+        const src = order.filter(g => g.open.length).concat(order.filter(g => !g.open.length));
+        const text = await AI.analyzeMistakes(src.slice(0, 8).map(g => ({ cat: g.cat, n: g.open.length || g.n, ex: g.items.slice(0, 3).map(m => m.d) })));
         D().mistakeTips = { at: Date.now(), text }; Store.save();
         if (screen === 'mistakes') renderMistakes();
       } catch (e) { box.innerHTML = '<span class="status bad">' + esc(AI.humanError(e)) + '</span>'; }
@@ -3139,8 +3200,12 @@
     if ($('#aiTips')) $('#aiTips').onclick = askAI;
     keyHandler = e => {
       if (e.key === 'Escape') { e.preventDefault(); go('home'); return; }
+      if (typingInField()) return;
+      if (e.key === 'Enter' && !onButton() && !(document.activeElement && document.activeElement.closest('[data-mzcat]')) && $('#mzAll')) { e.preventDefault(); $('#mzAll').click(); return; }
       if (plainKey(e, 'KeyA') && $('#aiTips')) { e.preventDefault(); askAI(); return; }
-      if (!e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key) && !typingInField()) { const b = app.querySelector('[data-practice="' + (+e.key - 1) + '"]'); if (b) { e.preventDefault(); b.click(); } }
+      if (!e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key) && mzTab === 'pat') {
+        const btns = $$('[data-practice]'); const b = btns[+e.key - 1]; if (b) { e.preventDefault(); b.click(); }
+      }
     };
   }
 
@@ -5520,9 +5585,12 @@
       else e.stopPropagation();
     };
   }
+  function explainList() {
+    const seen = {};
+    return Object.values(D().explains || {}).filter(r => r.data).sort((a, b) => b.at - a.at).filter(r => { const k = r.title + '|' + ((r.ctx && r.ctx.sentence) || ''); if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 30);
+  }
   function explainsHtml() {
-    const ex = D().explains || {};
-    const list = Object.values(ex).filter(r => r.data).sort((a, b) => b.at - a.at).slice(0, 15);
+    const list = explainList();
     if (!list.length) return '';
     return '<section class="list-card raised"><h2 style="font-size:22px">Zapisane wyjaśnienia</h2><p class="small-note" style="margin:0">Kliknij, żeby rozwinąć. Nowe powstają przyciskiem „Wyjaśnij dokładniej” po błędzie.</p>' +
       list.map(r => '<details class="exsaved inset"><summary><b>' + esc(r.title) + '</b> <span class="small-note">· ' + esc(r.type || '') + ' · ' + new Date(r.at).toLocaleDateString('pl-PL') + ((r.chat || []).length ? ' · ' + r.chat.length + ' pyt.' : '') + '</span></summary>' +
