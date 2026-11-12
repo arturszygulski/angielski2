@@ -2006,7 +2006,7 @@
     let xp = 0;
     if (correct) {
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo);
-      xp = (10 + (S.combo >= 3 ? 5 : 0)) * (S.boss ? 2 : 1);
+      xp = (xpBase(it) + (S.combo >= 3 ? 5 : 0)) * (S.boss ? 2 : 1);
       S.xp += xp; D().xp += xp; t.xp += xp;
       if (S.combo > D().bestCombo) { D().bestCombo = S.combo; D().bestComboAt = Date.now(); }
     } else {
@@ -2758,12 +2758,24 @@
     return { level, into: xp - acc, need };
   }
   /* ---------- Poziom gracza: droga 1→50, rangi co 10 poziomów, daty awansów ---------- */
-  const PL_MAX = 50, PL_RANKS = ['Nowicjusz', 'Uczeń', 'Bywalec', 'Znawca', 'Ekspert', 'Mistrz'];
+  const PL_MAX = 50, PL_RANKS = ['Początkujący', 'Regularny', 'Wytrwały', 'Zaprawiony', 'Niezłomny', 'Maratończyk'];
+  /* bramki rang: ranga 2+ wymaga poziomu angielskiego (średnia z 4 umiejętności): Wytrwały A2, Zaprawiony B1, Niezłomny B2, Maratończyk C1 */
+  function engLevel() { const lv = levels(); return Math.floor(['vocab', 'grammar', 'listening', 'speaking'].reduce((a, k) => a + (lv[k] || 0), 0) / 4 + 1e-9); }
+  function plCap() { const e = engLevel(); return e >= 4 ? Infinity : (e + 2) * 10 - 1; }
+  function plPoz(n) { const d = n % 10, t = n % 100; return n + ' ' + (n === 1 ? 'poziom' : d >= 2 && d <= 4 && (t < 12 || t > 14) ? 'poziomy' : 'poziomów'); }
+  function plLevel() { return Math.min(levelInfo(D().xp).level, plCap()); }
+  /* XP za dobrą odpowiedź zależne od poziomu materiału: A1 10 … C1 18; materiał 2 poziomy poniżej Twojego — połowa, niżej — ćwierć */
+  function xpBase(it) {
+    const m = histMeta(it, { isNew: true }), lv = m.l;
+    if (typeof lv !== 'number') return 10;
+    const base = 10 + 2 * lv, gap = (levels()[TYPES[it.type].skill] || 0) - lv;
+    return Math.round(base * (gap >= 3 ? 0.25 : gap === 2 ? 0.5 : 1));
+  }
   const plRank = lv => PL_RANKS[Math.min(5, Math.floor(lv / 10))];
   function xpForLevel(lv) { let acc = 0; for (let l = 1; l < lv; l++) acc += 100 + (l - 1) * 50; return acc; }
   /* daty osiągnięcia poziomów: przy pierwszym uruchomieniu odtworzone z XP zapisanego w dniach nauki, potem zapisywane na bieżąco */
   function playerLevelDates() {
-    const d = D(), cur = levelInfo(d.xp).level;
+    const d = D(), cur = plLevel();
     let pl = d.plDates;
     if (!pl) {
       pl = {}; const keys = Object.keys(d.days).sort(); let sum = 0;
@@ -2776,7 +2788,7 @@
     return pl;
   }
   function playerLevelHtml() {
-    const li = levelInfo(D().xp), lv = li.level, pl = playerLevelDates();
+    const li = levelInfo(D().xp), lv = plLevel(), gated = li.level > lv, pl = playerLevelDates();
     const fd = t => t ? new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric', year: '2-digit' }) : '';
     /* kropki: jeden rząd na rangę (1–9, 10–19 … 40–49, 50); najechanie pokazuje datę */
     let dots = '';
@@ -2790,11 +2802,12 @@
     });
     const toMax = Math.max(0, xpForLevel(PL_MAX) - D().xp), ri = Math.min(5, Math.floor(lv / 10)), next = ri < 5 ? (ri + 1) * 10 : null;
     const hist = Object.keys(pl).map(Number).filter(l => l <= lv).sort((a, b) => b - a);
-    return '<div class="pl-top"><b>' + lv + '</b><div><span class="pink">' + plRank(lv) + '</span><small>' + (pl[lv] ? 'poziom ' + lv + ' od ' + fd(pl[lv]) : '') + (next ? ' · ' + PL_RANKS[ri + 1] + ' od poziomu ' + next : lv >= PL_MAX ? ' · Mistrz +' + (lv - PL_MAX) : '') + '</small></div></div>' +
+    return '<div class="pl-top"><b>' + lv + '</b><div><span class="pink">' + plRank(lv) + '</span><small>' + (pl[lv] ? 'poziom ' + lv + ' od ' + fd(pl[lv]) : '') + (next ? ' · ' + PL_RANKS[ri + 1] + ' od poziomu ' + next + (ri >= 1 && engLevel() < ri ? ' (wymaga ' + L[ri] + ')' : '') : lv >= PL_MAX ? ' · ' + PL_RANKS[5] + ' +' + (lv - PL_MAX) : '') + '</small></div></div>' +
       '<div class="pl-grid">' + dots + '</div>' +
-      '<div class="pl-two"><div><span>Za Tobą</span><b>' + fmtNum(D().xp) + ' XP</b> <small>· ' + Math.min(lv, PL_MAX) + ' ' + (lv === 1 ? 'poziom' : 'poziomów') + '</small></div>' +
-      '<div><span>Przed Tobą do Mistrza</span><b>' + (toMax ? '~' + fmtNum(Math.round(toMax / 100) * 100) + ' XP' : '✓ osiągnięty') + '</b>' + (toMax ? ' <small>· ' + (PL_MAX - lv) + ' poziomów</small>' : '') + '</div></div>' +
-      '<div class="pl-near"><span>do poziomu ' + (lv + 1) + '</span><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%"></div></div><span>' + fmtNum(li.need - li.into) + ' XP</span></div>' +
+      '<div class="pl-two"><div><span>Za Tobą</span><b>' + fmtNum(D().xp) + ' XP</b> <small>· ' + plPoz(Math.min(lv, PL_MAX)) + '</small></div>' +
+      '<div><span>Przed Tobą do rangi ' + PL_RANKS[5] + '</span><b>' + (toMax ? '~' + fmtNum(Math.round(toMax / 100) * 100) + ' XP' : '✓ osiągnięty') + '</b>' + (toMax ? ' <small>· ' + plPoz(PL_MAX - lv) + '</small>' : '') + '</div></div>' +
+      (gated ? '<div class="pl-gate">Do rangi <b>' + PL_RANKS[ri + 1] + '</b> potrzebny poziom angielskiego <b>' + L[ri] + '</b> (teraz ' + L[engLevel()] + ') — zrób test miesiąca. XP zbiera się dalej: czeka już ' + plPoz(li.level - lv) + '.</div>'
+        : '<div class="pl-near"><span>do poziomu ' + (lv + 1) + '</span><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%"></div></div><span>' + fmtNum(li.need - li.into) + ' XP</span></div>') +
 '';
   }
   function mondayOf(t) { const d = new Date(U.startOfDay(t)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }

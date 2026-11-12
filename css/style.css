@@ -1161,3 +1161,5 @@ header.top { gap: 24px; align-items: center; }
 /* pionowe kreski między dniami/okresami na wykresie minut */
 .bcols { gap: 0; }
 .bcol + .bcol::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1.5px solid #A9A29A; pointer-events: none; }
+.pl-gate { font-size: 14px; line-height: 1.45; color: var(--ink-2); border-top: 1px solid #D2CCC4; padding-top: 10px; }
+.pl-gate b { color: var(--ink); }
