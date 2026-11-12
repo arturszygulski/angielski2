@@ -1158,3 +1158,6 @@ header.top { gap: 24px; align-items: center; }
 .sa-leg { display: inline-block; width: 0; height: 14px; border-left: 2px dashed var(--ink); vertical-align: middle; margin-right: 4px; }
 @media (max-width: 1100px) { .st-g3 { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) { .acc2 { grid-template-columns: minmax(0, 1fr); } .acc2-l { border-left: 0; padding-left: 0; border-top: 1px solid #D2CCC4; padding-top: 14px; } }
+/* pionowe kreski między dniami/okresami na wykresie minut */
+.bcols { gap: 0; }
+.bcol + .bcol::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid #C6C0B8; pointer-events: none; }
