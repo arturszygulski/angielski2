@@ -1344,7 +1344,7 @@
         body = '<div class="prompt-lbl">Przetłumacz na angielski</div>' + (err
           ? '<div class="fb bad" role="status">' + IC.alert + '<span>Nie udało się przygotować polskiego zdania: ' + esc(err) + '</span></div>'
           : '<div class="checking"><span class="spinner"></span>Przygotowuję polskie zdanie…</div>');
-        controls = '<div class="row center" style="gap:14px;margin-top:4px">' + (err ? '<button class="btn" id="plRetry">Spróbuj ponownie</button>' : '') + '<button class="btn" id="skip">Pomiń ' + K('Alt+K') + '</button></div>';
+        controls = '<div class="row center" style="gap:24px;margin-top:4px">' + (err ? '<button class="btn" id="plRetry">Spróbuj ponownie</button>' : '') + '<button class="btn" id="skip" title="Nie mogę teraz mówić — pomiń">Pomiń ' + K('Alt+K') + '</button></div>';
         if (!err) ensurePL([it.id]).then(() => { if (S && cur() === c && S.phase === 'answer') renderExercise(); });
       } else {
         body =
@@ -1392,8 +1392,8 @@
             : '<div class="interim inset deep" id="interim" aria-live="polite">' + esc(S.interim || '') + '</div>') +
           (S.recogErr ? '<div class="fb bad" role="status" style="max-width:640px">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '');
       }
-      controls = '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn +
-        '<button class="btn" id="skip">Pomiń — nie mogę teraz mówić ' + K('Alt+K') + '</button>' +
+      controls = '<div class="row center" style="gap:24px;margin-top:4px">' + knownBtn + idkBtn +
+        '<button class="btn" id="skip" title="Nie mogę teraz mówić — pomiń">Pomiń ' + K('Alt+K') + '</button>' +
         (S.spPend && !S.listening ? '<button class="btn primary" id="check">Sprawdź ' + K('Enter') + '</button>' : '') + '</div>';
     }
 
