@@ -1075,3 +1075,66 @@ header.top { gap: 24px; align-items: center; }
 .pl-dot.me { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--pink-ink); }
 .pl-dot[data-tip]:hover::after, .pl-dot[data-tip]:focus::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font: 600 12px var(--body); white-space: nowrap; padding: 6px 10px; border-radius: 8px; z-index: 20; pointer-events: none; }
 .pl-dot[data-tip]:hover::before, .pl-dot[data-tip]:focus::before { content: ''; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--ink); border-bottom: 0; z-index: 20; }
+
+/* ===== Statystyki — przebudowa (12.11) ===== */
+.st2 { gap: 26px; }
+.st2 h2, .st2 h3 { margin: 0; font-size: 20px; }
+.st-sh { display: flex; align-items: baseline; gap: 12px; margin: 10px 4px -12px; }
+.st-sh b { font: 700 13px var(--body); letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-2); }
+.st-sh small { font-size: 13px; color: var(--ink-2); }
+.st-f { border: 1.5px solid #BDB6AD; border-radius: 26px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.st-g2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; align-items: stretch; }
+.st-ins { margin: 0; font-size: 16px; line-height: 1.45; }
+.st-kp { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.st-kp .sk { padding: 2px 16px; border-left: 1px solid #D2CCC4; min-width: 0; }
+.st-kp .sk:first-child { border-left: 0; padding-left: 2px; }
+.st-kp .sk span { display: block; font-size: 13px; color: var(--ink-2); }
+.st-kp .sk b { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font: 700 30px var(--head); line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.st-kp .sk small { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.st2 em.up, .st2 em.dn, .st2 em.eq { font: 600 12px var(--body); font-style: normal; border-radius: 99px; padding: 2px 8px; }
+.st2 em.up { background: var(--ok-bg); color: var(--ok-ink); }
+.st2 em.dn { background: var(--bad-bg); color: var(--bad-ink); }
+.st2 em.eq { color: var(--ink-2); }
+.sa-rows { display: flex; flex-direction: column; gap: 12px; }
+.sa-row { display: grid; grid-template-columns: 104px 1fr 46px; gap: 12px; align-items: center; font-size: 15px; }
+.sa-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.sa-bar { height: 14px; border-radius: 99px; box-shadow: inset 2px 2px 4px var(--sh-d), inset -2px -2px 4px var(--sh-l); overflow: hidden; }
+.sa-bar i { display: block; height: 100%; border-radius: 99px; }
+.lnk2 { background: none; border: 0; padding: 0; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-color: #BDB6AD; text-underline-offset: 3px; white-space: nowrap; }
+.lnk2:hover { text-decoration-color: var(--ink); }
+.st-test { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.st2 .lwhy { margin-top: 0 !important; }
+.st2 .lwhy summary b { font-size: 15px !important; }
+.st-rev { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 15px; color: var(--ink-2); padding: 16px 24px; }
+.st-rev > b { color: var(--ink); margin-right: 8px; }
+.st-rev .fl1 b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.st-rev .fsep { color: #BDB6AD; }
+.rec2 { display: grid; grid-template-columns: 1fr auto; gap: 10px 14px; font-size: 14px; align-items: baseline; }
+.rec2 span { color: var(--ink-2); }
+.rec2 b { font: 700 18px var(--head); text-align: right; font-variant-numeric: tabular-nums; }
+.rep2 { display: flex; flex-direction: column; }
+.rep2-row { display: grid; grid-template-columns: 1fr 80px 70px; gap: 10px; align-items: center; background: none; border: 0; border-bottom: 1px solid #D2CCC4; padding: 9px 4px; font: inherit; font-size: 14px; color: var(--ink); text-align: left; cursor: pointer; border-radius: 0; }
+.rep2-row:last-child { border-bottom: 0; }
+.rep2-row:hover { background: rgba(255,255,255,.3); }
+.rep2-row small { color: var(--ink-2); }
+.rep2-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.rep2-row em { justify-self: end; }
+.st-lbl { font-size: 13px; color: var(--ink-2); margin-bottom: -4px; }
+.bd2-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
+.bd2 { display: flex; align-items: center; gap: 10px; height: 58px; box-sizing: border-box; border: 1px solid #BDB6AD; border-radius: 16px; padding: 0 12px 0 8px; min-width: 0; }
+.bd2 > i { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 14px; color: #fff; background: var(--pink); }
+.bd2 > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.bd2 b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd2 small { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd2:not(.on) { border-style: dashed; }
+.bd2:not(.on) > i { background: #D0CBC4; box-shadow: inset 1px 1px 2px rgba(40,30,20,.25); }
+.bd2-p { display: block; height: 4px; border-radius: 99px; background: #D0CBC4; overflow: hidden; }
+.bd2-p span { display: block; height: 100%; background: var(--pink); }
+@media (max-width: 900px) {
+  .st-g2 { grid-template-columns: minmax(0, 1fr); }
+  .st-kp { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
+  .st-kp .sk { border-left: 0; padding: 0 8px 0 2px; }
+}
+.st-g2.rev2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: start; }
+@media (max-width: 900px) { .st-g2.rev2 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .st2 .ex-head { flex-wrap: wrap; justify-content: center; gap: 12px; } .st2 .ex-head .seg { max-width: 100%; } .st2 .ex-head .seg .btn { padding-left: 10px; padding-right: 10px; } }

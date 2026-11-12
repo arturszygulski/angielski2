@@ -4063,36 +4063,144 @@
     for (let i = 2; i < 7; i++) names.push(['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'][new Date(U.addDays(today, i)).getDay()]);
     return '<div class="fc">' + n.map((v, i) => '<div class="fcol" title="' + names[i] + ': ' + v + ' powtórek"><span class="fv">' + v + '</span><div class="fb2" style="height:' + Math.max(v ? 4 : 0, v / max * 110) + 'px"></div><span class="fl">' + names[i] + '</span></div>').join('') + '</div>';
   }
+  /* ---------- Statystyki: elementy płaskie (przebudowa 12.11) ---------- */
+  let stRepAll = false, stBdAll = false, stAccLines = false;
+  function kpiFlat(k, sd) {
+    const v = k.v, p = k.p, has = v != null;
+    const fv = (x, kk) => kk === 'acc' ? Math.round(x) + '%' : kk === 'min' ? fmtDur(x * 60) : fmtNum(Math.round(x)) + k.unit;
+    const val = has ? fv(v, k.key) : '—';
+    if (sd.mode === 'all') {
+      const sub = k.key === 'acc' ? 'ze wszystkich odpowiedzi' : 'średnio ' + (k.avg < 10 ? (k.avg || 0).toFixed(1).replace('.', ',') : fmtNum(Math.round(k.avg))) + k.perDayUnit;
+      return '<div class="sk"><span>' + k.label + '</span><b>' + val + '</b><small>' + sub + '</small></div>';
+    }
+    let delta = '';
+    if (has && p != null) {
+      const diff = k.pts ? Math.round(v - p) : pctDelta(v, p);
+      if (diff == null) delta = '<em class="up">nowość</em>';
+      else if (diff === 0) delta = '<em class="eq">=</em>';
+      else delta = '<em class="' + (diff > 0 ? 'up' : 'dn') + '">' + (diff > 0 ? '▲ ' : '▼ ') + Math.abs(diff) + (k.pts ? ' pkt' : '%') + '</em>';
+    }
+    return '<div class="sk"><span>' + k.label + '</span><b>' + val + delta + '</b><small>poprzednio ' + (p == null ? '—' : fv(p, k.key)) + '</small></div>';
+  }
+  function kpiTotal(sd) {
+    const days = D().days, ks = Object.keys(days);
+    let all = 0, nDays = 0; ks.forEach(k => { all += days[k].sec || 0; if (isStudyDay(days[k])) nDays++; });
+    if (sd.mode === 'all') return '<div class="sk"><span>Dni nauki</span><b>' + nDays + '</b><small>na ' + sd.elapsed + ' ' + (sd.elapsed === 1 ? 'dzień' : 'dni') + ' z programem</small></div>';
+    return '<div class="sk"><span>Razem od początku</span><b>' + fmtDur(all) + '</b><small>' + (nDays ? fmtDur(all / nDays) + ' na dzień nauki' : '—') + '</small></div>';
+  }
+  function skillAccHtml(sd) {
+    const r = aggSkill(sd.curStart, sd.elapsed), keys = ['vocab', 'listening', 'speaking', 'grammar'];
+    const rows = keys.filter(k => r[k][1] > 0);
+    if (!rows.length) return '<div class="small-note">Trafność pojawi się po pierwszych odpowiedziach w tym okresie.</div>';
+    return '<div class="sa-rows">' + rows.map(k => { const pc = Math.round(r[k][0] / r[k][1] * 100);
+      return '<div class="sa-row" title="' + esc(SKILL_NAME[k] + ': ' + r[k][0] + ' z ' + r[k][1] + ' poprawnie') + '"><span>' + SKILL_NAME[k] + '</span><div class="sa-bar"><i style="width:' + pc + '%;background:' + SK_COLORS[k] + '"></i></div><b>' + pc + '%</b></div>'; }).join('') + '</div>';
+  }
+  function forecastLine() {
+    const c = D().cards, today = U.startOfDay(), n = [0, 0, 0, 0, 0, 0, 0];
+    Object.keys(c).forEach(id => {
+      const x = c[id]; if (x.state !== 'review') return;
+      const it = itemFor(id); if (!it || !typeEnabled(it.type)) return;
+      const d = Math.max(0, daysBetween(today, x.due)); if (d < 7) n[d]++;
+    });
+    if (!n.some(Boolean)) return '<span>brak powtórek w najbliższym tygodniu</span>';
+    const names = ['dziś', 'jutro'];
+    for (let i = 2; i < 7; i++) names.push(['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'][new Date(U.addDays(today, i)).getDay()]);
+    return n.map((v, i) => '<span class="fl1">' + names[i] + ' <b>' + v + '</b></span>').join('<span class="fsep">·</span>');
+  }
+  function recordsFlat() {
+    const days = D().days;
+    let bestDay = null;
+    Object.keys(days).forEach(k => { if (!bestDay || (days[k].sec || 0) > bestDay.sec) bestDay = { k, sec: days[k].sec || 0 }; });
+    const ks = Object.keys(days).filter(k => isStudyDay(days[k])).sort();
+    let best = { n: 0 }, run = 0, runStart = null, prev = null;
+    ks.forEach(k => {
+      const t = new Date(k + 'T00:00:00').getTime();
+      if (prev != null && U.dayKey(U.addDays(prev, 1)) === k) run++; else { run = 1; runStart = k; }
+      if (run > best.n) best = { n: run, from: runStart, to: k };
+      prev = t;
+    });
+    let bw = null;
+    for (let s = mondayOf(firstDay()); s <= U.startOfDay(); s = U.addDays(s, 7)) { const a = aggDays(s, 7); if (!bw || a.sec > bw.sec) bw = { s, sec: a.sec }; }
+    const dt = k => new Date(k + 'T00:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' });
+    const ts = t => t ? ' · ' + new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) : '';
+    const rec = [];
+    if (bestDay && bestDay.sec) rec.push(['Najlepszy dzień · ' + dt(bestDay.k), fmtDur(bestDay.sec)]);
+    if (best.n > 1) rec.push(['Najdłuższa seria · ' + dt(best.from) + '–' + dt(best.to), best.n + ' dni']);
+    if (bw && bw.sec) rec.push(['Najlepszy tydzień · od ' + new Date(bw.s).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }), fmtDur(bw.sec)]);
+    if (D().raceBest) rec.push(['Rekord rozgrzewki' + ts(D().raceBestAt), D().raceBest + ' trafień']);
+    if (D().bestCombo) rec.push(['Najlepsze combo' + ts(D().bestComboAt), '×' + D().bestCombo]);
+    if (!rec.length) return '<div class="small-note">Rekordy pojawią się po pierwszych sesjach.</div>';
+    return '<div class="rec2">' + rec.map(r => '<span>' + r[0] + '</span><b>' + r[1] + '</b>').join('') + '</div>';
+  }
+  function reportsTable() {
+    const thisMon = mondayOf(Date.now()), first = mondayOf(firstDay()), rows = [];
+    for (let s = thisMon; s >= first && rows.length < 52; s = U.addDays(s, -7)) {
+      const a = aggDays(s, 7), p = aggDays(U.addDays(s, -7), 7);
+      rows.push({ s, min: a.sec / 60, d: pctDelta(a.sec, p.sec), cur: s === thisMon });
+    }
+    if (!rows.length) return { html: '<div class="small-note">Raporty pojawią się po pierwszym tygodniu nauki.</div>', n: 0 };
+    const show = stRepAll ? rows : rows.slice(0, 4);
+    return { n: rows.length, html: '<div class="rep2">' + show.map(r =>
+      '<button class="rep2-row" data-rep="' + U.dayKey(r.s) + '" title="Otwórz raport tygodnia"><span>' + weekRangeLabel(r.s) + (r.cur ? ' <small>· w toku</small>' : '') + '</span><b>' + Math.round(r.min) + ' min</b>' +
+      (r.d == null || r.cur || r.d === 0 ? '<em></em>' : '<em class="' + (r.d > 0 ? 'up' : 'dn') + '">' + (r.d > 0 ? '▲ ' : '▼ ') + Math.abs(r.d) + '%</em>') + '</button>').join('') + '</div>' };
+  }
+  function badgeProg(id) {
+    const d = D(), m = {
+      streak3: [maxStreak(), 3, ' dni'], streak7: [maxStreak(), 7, ' dni'], streak30: [maxStreak(), 30, ' dni'], goal7: [goalDays(), 7, ''],
+      words50: [wordsLearned(), 50, ''], words100: [wordsLearned(), 100, ''], words250: [wordsLearned(), 250, ''],
+      combo10: [d.bestCombo || 0, 10, ''], combo25: [d.bestCombo || 0, 25, ''], race15: [d.raceBest || 0, 15, ''], race25: [d.raceBest || 0, 25, ''],
+      custom5: [Object.keys(d.custom || {}).length, 5, ''], xp1000: [d.xp, 1000, ''], xp5000: [d.xp, 5000, ''],
+      listen10: [(d.audio || []).length, 10, ''], talkGoal5: [(d.convos || []).filter(c => c.goal).length, 5, '']
+    }[id];
+    return m ? { cur: Math.min(m[0], m[1]), max: m[1], txt: fmtNum(Math.min(m[0], m[1])) + ' / ' + fmtNum(m[1]) + m[2] } : null;
+  }
+  function badgeChip(b, on) {
+    const at = (D().badges || {})[b.id], pr = on ? null : badgeProg(b.id);
+    const sub = on ? (at ? new Date(at).toLocaleDateString('pl-PL') : '') : pr ? pr.txt : b.desc;
+    return '<div class="bd2' + (on ? ' on' : '') + '" title="' + esc(b.desc) + '"><i>' + (on ? '★' : '') + '</i><div><b>' + esc(b.name) + '</b><small>' + esc(sub) + '</small>' +
+      (pr ? '<span class="bd2-p"><span style="width:' + Math.round(pr.cur / pr.max * 100) + '%"></span></span>' : '') + '</div></div>';
+  }
+  function badgesFlat() {
+    const got = D().badges || {}, on = BADGES.filter(b => got[b.id]), off = BADGES.filter(b => !got[b.id]);
+    const ranked = off.map(b => ({ b, p: badgeProg(b.id) })).sort((x, y) => (y.p ? y.p.cur / y.p.max : -1) - (x.p ? x.p.cur / x.p.max : -1));
+    const next = stBdAll ? ranked : ranked.slice(0, 3);
+    return '<div class="row between"><h3>Odznaki <span class="small-note">' + on.length + ' z ' + BADGES.length + '</span></h3>' + (off.length > 3 ? '<button class="lnk2" id="bdAll">' + (stBdAll ? 'zwiń' : 'wszystkie') + '</button>' : '') + '</div>' +
+      (on.length ? '<div class="bd2-grid">' + on.map(b => badgeChip(b, true)).join('') + '</div>' : '<div class="small-note">Pierwsza odznaka po pierwszej sesji.</div>') +
+      (next.length ? '<div class="st-lbl">' + (stBdAll ? 'Do zdobycia' : 'Następne do zdobycia') + '</div><div class="bd2-grid">' + next.map(x => badgeChip(x.b, false)).join('') + '</div>' : '');
+  }
   function renderStats(mode) {
     S = null;
     mode = mode === 'month' || mode === 'all' ? mode : 'week';
     if (checkBadges().length) Store.save();
     const sd = statsData(mode);
-    const earned = BADGES.filter(b => (D().badges || {})[b.id]).length;
+    const secName = mode === 'week' ? 'Ten tydzień' : mode === 'month' ? 'Ten miesiąc' : 'Od początku';
+    const skLegend = '<div class="legend">' + Object.keys(SK_COLORS).map(k => '<span><i style="background:' + SK_COLORS[k] + ';height:3px"></i>' + SKILL_NAME[k] + '</span>').join('') + '</div>';
+    const rep = reportsTable();
     app.innerHTML =
-      '<div class="wrap stats-flat">' +
+      '<div class="wrap stats-flat st2">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button>' +
       '<div class="ex-title"><b style="font-size:26px">Statystyki</b></div>' +
       '<div class="seg inset" role="tablist" aria-label="Zakres"><button class="btn' + (mode === 'week' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'week') + '" data-mode="week">Tydzień ' + K('1') + '</button><button class="btn' + (mode === 'month' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'month') + '" data-mode="month">Miesiąc ' + K('2') + '</button><button class="btn' + (mode === 'all' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'all') + '" data-mode="all">Od początku ' + K('3') + '</button></div></header>' +
-      '<section class="note raised"><div class="ic inset" style="color:#B9456B">' + IC.chart + '</div><div class="tx" style="font-size:18px;line-height:1.45">' + esc(insightText(sd)) + '</div></section>' +
-      '<section class="kpis">' + sd.kpis.map(k => kpiHtml(k, sd)).join('') + '</section>' +
-      '<section class="panel raised vm">' + vocabMapHtml() + '</section>' +
-      '<section class="panel raised tm">' + timeHtml() + '</section>' +
-      '<section class="lower">' +
-      '<div class="panel raised grow"><div class="row between"><h2>' + (mode === 'all' ? 'Czas nauki w kolejnych miesiącach' : 'Minuty nauki: ' + sd.curName.toLowerCase() + ' i ' + sd.prevName.toLowerCase()) + '</h2>' +
-      '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C2407A"></i>Miesiąc</span>' : '<span><i style="background:#C2407A"></i>' + sd.curName + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName + '</span>') + '<span><i class="dash"></i>Cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + (mode === 'week' ? ' / dzień' : mode === 'all' ? ' / miesiąc' : ' / tydzień') + '</span></div></div>' + barsHtml(sd) + '</div>' +
-      '<div class="panel raised side"><h2>Rekordy</h2>' + recordsHtml() + '</div></section>' +
-      '<section class="lower">' +
-      '<div class="panel raised grow"><div class="row between"><h2>Trafność według umiejętności</h2><div class="legend">' + Object.keys(SK_COLORS).map(k => '<span><i style="background:' + SK_COLORS[k] + ';height:3px"></i>' + SKILL_NAME[k] + '</span>').join('') + '</div></div>' + linesHtml(mode) + '</div>' +
-      '<div class="panel raised side"><h2>Powtórki w najbliższych dniach</h2>' + forecastHtml() + '</div></section>' +
-      '<section class="lower">' +
-      '<div class="panel raised grow" id="heatBox">' + heatTitle() + heatHtml() + '</div>' +
-      '<div class="panel raised side pg-panel"><h2>Poziom gracza</h2>' + playerLevelHtml() + '</div></section>' +
-      '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Poziom w czasie</h2>' +
-      '<div class="legend">' + Object.keys(SK_COLORS).map(k => '<span><i style="background:' + SK_COLORS[k] + ';height:3px"></i>' + SKILL_NAME[k] + '</span>').join('') + '</div></div>' + levelsChartHtml() + levelWhyHtml() +
-      sentLevelHtml() + '<div class="row between"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div></div>' +
-      '<div class="panel raised side"><h2>Raporty tygodniowe</h2>' + reportsArchiveHtml() + '</div></section>' +
-      '<section class="panel raised"><div class="row between"><h2>Odznaki</h2><span class="small-note">' + earned + ' z ' + BADGES.length + '</span></div><div class="badges">' + BADGES.map(b => badgeHtml(b, !!(D().badges || {})[b.id])).join('') + '</div></section>' +
+      '<div class="st-sh"><b>' + secName + '</b><small>zmienia się zakładkami u góry</small></div>' +
+      '<section class="st-f"><p class="st-ins">' + esc(insightText(sd)) + '</p><div class="st-kp">' + sd.kpis.map(k => kpiFlat(k, sd)).join('') + kpiTotal(sd) + '</div></section>' +
+      '<div class="st-g2">' +
+      '<section class="st-f"><div class="row between"><h3>' + (mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu') + '</h3>' +
+      '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C2407A"></i>miesiąc</span>' : '<span><i style="background:#C2407A"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div></div>' + barsHtml(sd) + '</section>' +
+      '<section class="st-f" id="accBox">' + accBoxHtml(mode, sd, skLegend) + '</section></div>' +
+      '<div class="st-sh"><b>Postęp</b><small>niezależny od zakładek</small></div>' +
+      '<section class="st-f vm">' + vocabMapHtml() + '</section>' +
+      '<div class="st-g2">' +
+      '<section class="st-f"><div class="row between"><h3>Poziom w czasie</h3>' + skLegend + '</div>' + levelsChartHtml() + sentLevelHtml() +
+      '<div class="st-test"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div>' + levelWhyHtml() + '</section>' +
+      '<section class="st-f pg-panel"><h3>Poziom gracza</h3>' + playerLevelHtml() + '</section></div>' +
+      '<section class="st-f st-rev"><b>Powtórki w najbliższych dniach</b>' + forecastLine() + '</section>' +
+      '<div class="st-sh"><b>Historia</b></div>' +
+      '<div class="st-g2">' +
+      '<section class="st-f" id="heatBox">' + heatTitle() + heatHtml() + '</section>' +
+      '<section class="st-f"><h3>Rekordy</h3>' + recordsFlat() + '</section></div>' +
+      '<div class="st-g2 rev2">' +
+      '<section class="st-f"><div class="row between"><h3>Raporty tygodniowe</h3>' + (rep.n > 4 ? '<button class="lnk2" id="repAll">' + (stRepAll ? 'zwiń' : 'pokaż wszystkie (' + rep.n + ')') + '</button>' : '') + '</div>' + rep.html + '</section>' +
+      '<section class="st-f" id="bdBox">' + badgesFlat() + '</section></div>' +
       '</div>';
     $('#back').onclick = () => go('home');
     $$('[data-mode]').forEach(b => b.onclick = () => renderStats(b.dataset.mode));
@@ -4103,6 +4211,11 @@
     if ($('#pvSweep')) $('#pvSweep').onclick = () => startSweep('pv', 'stats');
     const bindHeat = () => $$('[data-hy]').forEach(b => b.onclick = () => { heatYear = b.dataset.hy ? +b.dataset.hy : null; $('#heatBox').innerHTML = heatTitle() + heatHtml(); bindHeat(); });
     bindHeat();
+    const bindAcc = () => { const t = $('#accToggle'); if (t) t.onclick = () => { stAccLines = !stAccLines; $('#accBox').innerHTML = accBoxHtml(mode, sd, skLegend); bindAcc(); }; };
+    bindAcc();
+    const bindBd = () => { const t = $('#bdAll'); if (t) t.onclick = () => { stBdAll = !stBdAll; $('#bdBox').innerHTML = badgesFlat(); bindBd(); }; };
+    bindBd();
+    if ($('#repAll')) $('#repAll').onclick = () => { stRepAll = !stRepAll; const y = scrollY; renderStats(mode); scrollTo(0, y); };
     const lw = $('.lwhy'); if (lw) lw.ontoggle = () => { lwhyOpen = lw.open; };
     $$('[data-setlv]').forEach(b => b.onclick = () => {
       const [k, v] = b.dataset.setlv.split(':'); const lv = levels();
@@ -4116,6 +4229,10 @@
       if (e.key === 'Escape') { e.preventDefault(); go('home'); return; }
       if (e.key === '1') renderStats('week'); else if (e.key === '2') renderStats('month'); else if (e.key === '3') renderStats('all');
     };
+  }
+  function accBoxHtml(mode, sd, skLegend) {
+    return '<div class="row between"><h3>Trafność według umiejętności</h3><button class="lnk2" id="accToggle">' + (stAccLines ? 'teraz' : 'w czasie') + '</button></div>' +
+      (stAccLines ? skLegend + linesHtml(mode) : skillAccHtml(sd) + '<div class="small-note" style="margin-top:10px">' + (mode === 'all' ? 'ze wszystkich odpowiedzi' : 'w wybranym okresie') + '</div>');
   }
 
 
