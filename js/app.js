@@ -1416,7 +1416,7 @@
     app.innerHTML =
       '<div class="wrap narrow">' +
       '<header class="ex-head"><button class="btn" id="quit">' + IC.back + ' Przerwij ' + K('Esc') + '</button>' +
-      '<div class="ex-title"><b>' + (S.boss ? 'Boss tygodnia' : TP.title) + '</b><span>' + (S.topicId ? esc(S.custom) + ' · ' + (S.pos + 1) + '/' + Math.min(S.queue.length, S.guideMax) : S.guide && GUIDE ? 'Krok po kroku · krok ' + (GUIDE.i + 1) + ' z ' + GUIDE.steps.length + ' · ' + (S.pos + 1) + '/' + Math.min(S.queue.length, S.guideMax) : S.boss ? TP.title + ' · podwójne XP' : S.play ? (S.lim ? 'Graj · ' + limText() : 'Graj · bez limitu') : S.custom ? esc(S.custom) : S.quick ? 'Szybka sesja' : 'Blok ' + S.blockNo) + '</span></div>' +
+      '<div class="ex-title"><b>' + (S.boss ? 'Boss tygodnia' : TP.title) + '</b><span>' + (S.finishing ? 'Poprawka błędów · ' + Math.max(1, S.finN - (S.queue.length - S.pos) + 1) + '/' + S.finN : S.topicId ? esc(S.custom) + ' · ' + (S.pos + 1) + '/' + Math.min(S.queue.length, S.guideMax) : S.guide && GUIDE ? 'Krok po kroku · krok ' + (GUIDE.i + 1) + ' z ' + GUIDE.steps.length + ' · ' + (S.pos + 1) + '/' + Math.min(S.queue.length, S.guideMax) : S.boss ? TP.title + ' · podwójne XP' : S.play ? (S.lim ? 'Graj · ' + limText() : 'Graj · bez limitu') : S.custom ? esc(S.custom) : S.quick ? 'Szybka sesja' : 'Blok ' + S.blockNo) + '</span></div>' +
       '<div class="row" style="gap:12px"><div class="combo raised" id="combo">Combo ×' + S.combo + '</div>' +
       '<div class="timer inset deep" id="timer" title="' + (S.play || S.boss ? 'Czas gry' : 'Czas do końca bloku') + '">' + (S.play || S.boss ? (S.play ? limTimer() : U.mmss(S.activeSec)) : U.mmss(Math.max(0, blockSec - used))) + '</div></div></header>' +
       (S.boss ? bossBarHtml() : S.play ? (S.lim ? '<div class="bar thin inset"><div id="blockbar" style="width:' + limPct() + '%"></div></div>' : '') : '<div class="bar thin inset"><div id="blockbar" style="width:' + Math.min(100, used / blockSec * 100) + '%"></div></div>') +
@@ -2011,7 +2011,7 @@
       if (S.combo > D().bestCombo) { D().bestCombo = S.combo; D().bestComboAt = Date.now(); }
     } else {
       S.combo = 0;
-      S.queue.splice(Math.min(S.queue.length, S.pos + 4), 0, { id: c.id, isNew: false, relearn: true });
+      if (!S.finishing) S.queue.splice(Math.min(S.queue.length, S.pos + 4), 0, { id: c.id, isNew: false, relearn: true });
     }
     const wsc = isFirst ? scaleUpdate(it, kind, correct) : null;
     if (wsc) extra = Object.assign({}, extra, { wsc }, wsc.d > 0 && wsc.lv === 5 ? { stepMsg: '' } : {});
@@ -2164,7 +2164,9 @@
     S.pos++;
     resetCardState();
     if (S.boss && Object.keys(S.bossHit).length >= S.bossMax) { S.bossWon = true; return finishSession(true); }
-    if (limitDone()) return finishSession(true);
+    if (S.finishing) { if (S.pos >= S.queue.length) return finishSession(true); return renderExercise(); }
+    const quickEnd = S.quick && !S.play && !S.boss && !S.guide && S.activeSec - S.blockStart >= D().settings.blockMin * 60;
+    if (limitDone() || quickEnd) return startFinishing() ? renderExercise() : finishSession(true);
     if ((S.guide || S.topicId) && S.pos >= S.guideMax) return finishSession(true); // krok nie ciągnie się w nieskończoność przy powtarzanych błędach
     if (S.play && !S.guide && !S.topicId && S.pos >= S.queue.length - 2) S.queue = S.queue.concat(buildPlayQueue(S.play, 12, S.queue.slice(-6).map(q => q.id)));
     if (S.pos >= S.queue.length) return finishSession(true);
@@ -2175,6 +2177,16 @@
     renderExercise();
   }
 
+  /* po limicie: słowa źle wpisane w tej sesji, które jeszcze nie wróciły poprawnie — każde jeszcze raz, do 1 poprawnego */
+  function startFinishing() {
+    const ids = [];
+    S.queue.slice(S.pos).forEach(q => { if (q.relearn && ids.indexOf(q.id) < 0 && itemFor(q.id)) ids.push(q.id); });
+    if (!ids.length) return false;
+    S.queue = S.queue.slice(0, S.pos).concat(ids.map(id => ({ id, isNew: false, relearn: true })));
+    S.finishing = true; S.finN = ids.length;
+    toast('Czas minął — jeszcze ' + ids.length + ' ' + (ids.length === 1 ? 'słowo' : ids.length < 5 ? 'słowa' : 'słów') + ' do poprawienia, każde raz.', 4000);
+    return true;
+  }
   function blockDone() {
     S.paused = true;
     S.blockSound = true;
