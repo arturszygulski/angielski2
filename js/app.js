@@ -1225,7 +1225,7 @@
         '<div class="sentence"><span>' + esc(a) + '</span><span class="gap inset deep">' + (fbFull ? esc(ans0) : '______') + '</span><span>' + esc(b) + '</span></div>' +
         '<div class="options tnopts">' + S.chOpts.map((o, i) => { const cls = !fbFull ? '' : o === ans0 || (o === pick && S.fb.m === 'ai-ok') ? ' ok' : o === pick ? ' bad' : ' dim'; return '<button class="btn' + cls + '" data-copt="' + i + '"' + (fbFull ? ' tabindex="-1"' : '') + '><span class="k">' + (i + 1) + '</span>' + esc(o) + '</button>'; }).join('') + '</div>' +
         (fbFull ? '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>' : '');
-      controls = unsureBtn + '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn + '</div><div class="small-note">' + K('1') + '–' + K('4') + ' wybierz · gdy pójdzie Ci dobrze, wrócisz do wpisywania</div>';
+      controls = unsureBtn + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + '</div><div class="small-note">' + K('1') + '–' + K('4') + ' wybierz · gdy pójdzie Ci dobrze, wrócisz do wpisywania</div>';
     }
 
     else if (it.type === 'pvwrite') {
@@ -1234,7 +1234,7 @@
         '<div class="sentence"><span>' + esc(a) + '<b>' + esc(sp.verb) + '</b></span><span class="gap inset deep">' + (fbFull ? esc(sp.part) : '_____') + '</span><span>' + esc(b) + '</span></div>' +
         (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(sp.verb + ' ' + S.fb.ans) + '</s></div>' : '') + '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>'
           : '<div class="answer-box"><label for="ans">Partykuła (np. up, out, off…)</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="' + esc(sp.verb) + ' …" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
-      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Dwa razy szybko i dobrze = umiesz · błąd = wracają 4 propozycje</div>';
+      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Dwa razy szybko i dobrze = umiesz · błąd = wracają 4 propozycje</div>';
     }
 
     else if (it.type === 'cloze') {
@@ -1248,7 +1248,7 @@
         '<div class="answer-box"><label for="ans">Twoja odpowiedź</label>' +
         '<input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="wpisz brakujące słowo" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>';
       controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: ' + hintText + '</div>' : '') +
-        '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>' +
+        '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>' +
         '<div class="small-note">' + K('Shift+Enter') + ' sprawdź jako „nie jestem pewien” · ' + K('Enter') + ' ' + K('Enter') + ' przy pustym polu = nie wiem</div>';
     }
 
@@ -1295,7 +1295,7 @@
           '<input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="poprawna forma" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>';
       }
       controls = (S.errSel == null ? '' : unsureBtn + emptyNote) +
-        '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn + (S.errSel == null ? '' : checkBtn) + '</div>';
+        '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + (S.errSel == null ? '' : checkBtn) + '</div>';
     }
 
     else if (it.type === 'dictation') {
@@ -1313,7 +1313,7 @@
           '<div class="answer-box" style="max-width:760px"><label for="ans">Co słyszysz?</label>' +
           '<input id="ans" class="answer" style="font-size:22px" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="wpisz całe zdanie" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>';
       }
-      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn + checkBtn + '</div>';
+      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + checkBtn + '</div>';
     }
 
     else if (it.ts) {
@@ -1333,7 +1333,7 @@
           return '<button class="btn' + cls + '" data-popt="' + i + '"' + (fbFull ? ' tabindex="-1"' : '') + '><span class="k">' + (i + 1) + '</span>' + esc(verb) + ' <b>' + esc(o) + '</b></button>';
         }).join('') + '</div>' +
         (fbFull ? '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>' : '');
-      controls = unsureBtn + '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn + '</div>' +
+      controls = unsureBtn + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + '</div>' +
         '<div class="small-note">' + K('1') + '–' + K('4') + ' wybierz · ' + K('Alt+N') + ' przed wyborem = nie jestem pewien</div>';
     }
 
@@ -1344,7 +1344,7 @@
         body = '<div class="prompt-lbl">Przetłumacz na angielski</div>' + (err
           ? '<div class="fb bad" role="status">' + IC.alert + '<span>Nie udało się przygotować polskiego zdania: ' + esc(err) + '</span></div>'
           : '<div class="checking"><span class="spinner"></span>Przygotowuję polskie zdanie…</div>');
-        controls = '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + (err ? '<button class="btn" id="plRetry">Spróbuj ponownie</button>' : '') + '<button class="btn" id="skip" title="Nie mogę teraz mówić — pomiń">Pomiń ' + K('Alt+K') + '</button></div>';
+        controls = '<div class="row center" style="gap:14px;margin-top:4px">' + (err ? '<button class="btn" id="plRetry">Spróbuj ponownie</button>' : '') + '<button class="btn" id="skip" title="Nie mogę teraz mówić — pomiń">Pomiń ' + K('Alt+K') + '</button></div>';
         if (!err) ensurePL([it.id]).then(() => { if (S && cur() === c && S.phase === 'answer') renderExercise(); });
       } else {
         body =
@@ -1358,7 +1358,7 @@
               (Recog.supported() ? '<button class="btn mic-sm' + (S.listening ? ' on primary' : '') + '" id="mic" aria-label="' + (S.listening ? 'Zatrzymaj' : 'Powiedz (Alt+M)') + '">' + IC.micSm + '</button>' : '') + '</div>' +
               (S.recogErr ? '<div class="fb bad" role="status">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '') + '</div>');
         controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: ' + hintText + '</div>' : '') +
-          '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>' +
+          '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>' +
           '<div class="small-note">Liczy się, czy Anglik Cię zrozumie — nie musi być słowo w słowo.' + (Recog.supported() ? ' ' + K('Alt+M') + ' mów zamiast pisać.' : '') + '</div>';
       }
     }
@@ -1392,7 +1392,7 @@
             : '<div class="interim inset deep" id="interim" aria-live="polite">' + esc(S.interim || '') + '</div>') +
           (S.recogErr ? '<div class="fb bad" role="status" style="max-width:640px">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '');
       }
-      controls = '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn +
+      controls = '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn +
         '<button class="btn" id="skip" title="Nie mogę teraz mówić — pomiń">Pomiń ' + K('Alt+K') + '</button>' +
         (S.spPend && !S.listening ? '<button class="btn primary" id="check">Sprawdź ' + K('Enter') + '</button>' : '') + '</div>';
     }
@@ -5526,7 +5526,7 @@
           const cls = !fbFull ? '' : o === ts.correct[0] ? ' ok' : o === pick ? ' bad' : ' dim';
           return '<button class="btn' + cls + '" data-topt="' + i + '"' + (fbFull ? ' tabindex="-1"' : '') + '><span class="k">' + (i + 1) + '</span>' + esc(o) + '</button>';
         }).join('') + '</div>';
-      controls = unsureBtn + '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px">' + knownBtn + idkBtn + '</div><div class="small-note">' + K('1') + '–' + K('4') + ' wybierz</div>';
+      controls = unsureBtn + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + '</div><div class="small-note">' + K('1') + '–' + K('4') + ' wybierz</div>';
     } else if (it.type === 'tense_w') {
       body = '<div class="prompt-lbl">Wpisz czasownik w odpowiedniej formie</div>' +
         tenseSentenceHtml(ts, fbFull ? ts.correct[0] : '', fbFull) +
@@ -5534,7 +5534,7 @@
         (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(S.fb.ans) + '</s></div>' : '')
           : '<div class="answer-box"><label for="ans">Forma czasownika z nawiasu (' + esc(ts.base) + ')</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="np. was riding" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
       controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: to <b>' + esc(T.name) + '</b> — ' + esc(T.form[0][1]) + '</div>' : '') +
-        '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Który czas? ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>';
+        '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Który czas? ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>';
     } else {
       body = '<div class="prompt-lbl">Przetłumacz na angielski — uważaj na czas</div><div class="pl-sent">' + esc(ts.pl) + '</div>' +
         (fbFull
@@ -5543,7 +5543,7 @@
             (Recog.supported() ? '<button class="btn mic-sm' + (S.listening ? ' on primary' : '') + '" id="mic" aria-label="Powiedz (Alt+M)">' + IC.micSm + '</button>' : '') + '</div>' +
             (S.recogErr ? '<div class="fb bad" role="status">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '') + '</div>');
       controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: użyj czasu <b>' + esc(T.name) + '</b>.</div>' : '') +
-        '<div class="row center" style="gap:16px 72px;flex-wrap:wrap;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Który czas? ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>';
+        '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Który czas? ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>';
     }
     return { body, controls };
   }
