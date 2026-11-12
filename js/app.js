@@ -3945,7 +3945,7 @@
     const vals = sd.curBars.concat(sd.prevBars).filter(v => v != null);
     const maxV = Math.max(sd.goal * 1.25, Math.max.apply(null, vals.concat([1])));
     const step = maxV <= 30 ? 10 : maxV <= 60 ? 15 : maxV <= 120 ? 30 : maxV <= 240 ? 60 : 120;
-    const top = Math.ceil(maxV / step) * step, H = 220;
+    const top = Math.ceil(maxV / step) * step, H = sd.h || 220;
     let grid = '';
     for (let v = 0; v <= top; v += step) grid += '<div class="gl' + (v === 0 ? ' base' : '') + '" style="top:' + (H - v / top * H) + 'px"><span>' + v + '</span></div>';
     const goalTop = H - sd.goal / top * H;
@@ -3958,7 +3958,7 @@
     return '<div class="chart-bars" style="height:' + H + 'px">' + grid + '<div class="goal" style="top:' + goalTop + 'px"></div><div class="bcols">' + bars + '</div></div>' +
       '<div class="blabels">' + sd.labels.map((l, i) => '<span' + (sd.curBars[i] == null ? ' style="opacity:.55"' : '') + '>' + l + '</span>').join('') + '</div>';
   }
-  function linesHtml(mode) {
+  function linesHtml(mode, compact) {
     const today = U.startOfDay();
     const pts = [];
     if (mode === 'week') { const m0 = mondayOf(today); for (let i = 7; i >= 0; i--) { const s = U.addDays(m0, -7 * i); pts.push({ lab: U.dayKey(s).slice(5).split('-').reverse().join('.'), r: aggSkill(s, 7) }); } }
@@ -3967,11 +3967,11 @@
     const keys = ['vocab', 'grammar', 'listening', 'speaking'];
     const any = pts.some(p => keys.some(k => p.r[k][1] >= 3));
     if (!any) return '<div class="small-note" style="padding:30px 0;text-align:center">Wykres pojawi się, gdy zbierze się trochę odpowiedzi. Trafność każdej umiejętności zapisuje się od dziś.</div>';
-    const W = 660, X0 = 44, X1 = 540, Y = v => 200 - v / 100 * 180;
+    const W = compact ? 420 : 660, X0 = 40, X1 = compact ? 410 : 540, Y = compact ? (v => 206 - v / 100 * 194) : (v => 200 - v / 100 * 180);
     const xs = i => X0 + (pts.length === 1 ? 0 : i / (pts.length - 1) * (X1 - X0));
-    let svg = '<svg viewBox="0 0 ' + W + ' 240" role="img" aria-label="Trafność według umiejętności" class="lines">';
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + (compact ? 230 : 240) + '" role="img" aria-label="Trafność według umiejętności" class="lines">';
     [100, 75, 50, 25, 0].forEach(v => { svg += '<line x1="' + X0 + '" x2="' + X1 + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="' + (v === 0 ? '#B5AFA7' : '#CFCAC2') + '"/><text x="' + (X0 - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" font-size="12" fill="#5F5B55">' + v + '%</text>'; });
-    pts.forEach((p, i) => { if (i === 0 || i === pts.length - 1 || pts.length <= 6) svg += '<text x="' + xs(i) + '" y="224" text-anchor="middle" font-size="12" fill="#5F5B55">' + p.lab + '</text>'; });
+    pts.forEach((p, i) => { if (i === 0 || i === pts.length - 1 || pts.length <= 6) svg += '<text x="' + xs(i) + '" y="' + (compact ? 226 : 224) + '" text-anchor="middle" font-size="12" fill="#5F5B55">' + p.lab + '</text>'; });
     const ends = [];
     keys.forEach(k => {
       let d = '', last = null;
@@ -3987,7 +3987,7 @@
     });
     ends.sort((a, b) => a.y - b.y);
     for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 16) ends[i].y = ends[i - 1].y + 16;
-    ends.forEach(e => { svg += '<text x="' + (X1 + 12) + '" y="' + (e.y + 4) + '" font-size="13" fill="#3A3835">' + SKILL_NAME[e.k] + ' ' + e.v + '%</text>'; });
+    if (!compact) ends.forEach(e => { svg += '<text x="' + (X1 + 12) + '" y="' + (e.y + 4) + '" font-size="13" fill="#3A3835">' + SKILL_NAME[e.k] + ' ' + e.v + '%</text>'; });
     svg += '</svg>';
     return svg;
   }
@@ -4102,10 +4102,12 @@
   }
   function skillAccHtml(sd) {
     const r = aggSkill(sd.curStart, sd.elapsed), keys = ['vocab', 'listening', 'speaking', 'grammar'];
+    const f0 = firstDay(), all = aggSkill(f0, daysBetween(f0, U.startOfDay()) + 1), showAvg = sd.mode !== 'all';
     const rows = keys.filter(k => r[k][1] > 0);
-    if (!rows.length) return '<div class="small-note">Trafność pojawi się po pierwszych odpowiedziach w tym okresie.</div>';
-    return '<div class="sa-rows">' + rows.map(k => { const pc = Math.round(r[k][0] / r[k][1] * 100);
-      return '<div class="sa-row" title="' + esc(SKILL_NAME[k] + ': ' + r[k][0] + ' z ' + r[k][1] + ' poprawnie') + '"><span>' + SKILL_NAME[k] + '</span><div class="sa-bar"><i style="width:' + pc + '%;background:' + SK_COLORS[k] + '"></i></div><b>' + pc + '%</b></div>'; }).join('') + '</div>';
+    if (!rows.length) return '<h3>Trafność według umiejętności</h3><div class="small-note">Trafność pojawi się po pierwszych odpowiedziach w tym okresie.</div>';
+    return '<h3>Trafność według umiejętności</h3><div class="sa-rows">' + rows.map(k => { const pc = Math.round(r[k][0] / r[k][1] * 100);
+      return '<div class="sa-row" title="' + esc(SKILL_NAME[k] + ': ' + r[k][0] + ' z ' + r[k][1] + ' poprawnie') + '"><span>' + SKILL_NAME[k] + '</span><div class="sa-bar">' + '<i style="width:' + pc + '%;background:' + SK_COLORS[k] + '"></i>' + (showAvg && all[k][1] ? '<u style="left:' + Math.round(all[k][0] / all[k][1] * 100) + '%" title="średnia od początku ' + Math.round(all[k][0] / all[k][1] * 100) + '%"></u>' : '') + '</div><b>' + pc + '%</b></div>'; }).join('') + '</div>' +
+      '<div class="small-note" style="display:flex;gap:14px;flex-wrap:wrap">' + (sd.mode === 'all' ? 'ze wszystkich odpowiedzi' : '<span>' + (sd.mode === 'week' ? 'ten tydzień' : 'ten miesiąc') + '</span><span><i class="sa-leg"></i> średnia od początku</span>') + '</div>';
   }
   function forecastLine() {
     const c = D().cards, today = U.startOfDay(), n = [0, 0, 0, 0, 0, 0, 0];
@@ -4195,10 +4197,10 @@
       '<div class="seg inset" role="tablist" aria-label="Zakres"><button class="btn' + (mode === 'week' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'week') + '" data-mode="week">Tydzień ' + K('1') + '</button><button class="btn' + (mode === 'month' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'month') + '" data-mode="month">Miesiąc ' + K('2') + '</button><button class="btn' + (mode === 'all' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'all') + '" data-mode="all">Od początku ' + K('3') + '</button></div></header>' +
       '<div class="st-sh"><b>' + secName + '</b><small>zmienia się zakładkami u góry</small></div>' +
       '<section class="st-f"><p class="st-ins">' + esc(insightText(sd)) + '</p><div class="st-kp">' + sd.kpis.map(k => kpiFlat(k, sd)).join('') + kpiTotal(sd) + '</div></section>' +
-      '<div class="st-g2">' +
+      '<div class="st-g3">' +
       '<section class="st-f"><div class="row between"><h3>' + (mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu') + '</h3>' +
-      '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C8607F"></i>miesiąc</span>' : '<span><i style="background:#C8607F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div></div>' + barsHtml(sd) + '</section>' +
-      '<section class="st-f" id="accBox">' + accBoxHtml(mode, sd, skLegend) + '</section></div>' +
+      '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C8607F"></i>miesiąc</span>' : '<span><i style="background:#C8607F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div></div>' + barsHtml(Object.assign({}, sd, { h: 118 })) + '</section>' +
+      '<section class="st-f"><div class="acc2"><div>' + skillAccHtml(sd) + '</div><div class="acc2-l"><div class="small-note">w czasie</div>' + linesHtml(mode, true) + '</div></div></section></div>' +
       '<div class="st-sh"><b>Postęp</b><small>niezależny od zakładek</small></div>' +
       '<section class="st-f vm">' + vocabMapHtml() + '</section>' +
       '<div class="st-g2">' +
