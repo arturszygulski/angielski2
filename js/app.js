@@ -2766,18 +2766,20 @@
   function playerLevelHtml() {
     const li = levelInfo(D().xp), lv = li.level, pl = playerLevelDates();
     const fd = t => t ? new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric', year: '2-digit' }) : '';
-    const pos = l => ((Math.min(l, PL_MAX) - 1) / (PL_MAX - 1) * 100);
-    const me = Math.min(100, pos(lv) + (lv < PL_MAX ? li.into / li.need * (100 / (PL_MAX - 1)) : 0));
-    let ticks = '';
-    [1, 10, 20, 30, 40, 50].forEach((l, i) => {
-      const reached = lv >= l && pl[l];
-      ticks += '<span class="pl-tick" style="left:' + pos(l).toFixed(2) + '%"></span><span class="pl-tl' + (i === 0 ? ' first' : i === 5 ? ' last' : '') + '" style="left:' + pos(l).toFixed(2) + '%" title="' + (reached ? PL_RANKS[i] + ' — od ' + fd(pl[l]) : 'poziom ' + l) + '"><b>' + l + '</b>' + (reached ? '<em>' + new Date(pl[l]).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) + '</em>' : '') + '</span>';
+    /* kropki: jeden rząd na rangę (1–9, 10–19 … 40–49, 50); najechanie pokazuje datę */
+    let dots = '';
+    [[1, 9], [10, 19], [20, 29], [30, 39], [40, 49], [50, 50]].forEach((rg, i) => {
+      let row = '';
+      for (let l = rg[0]; l <= rg[1]; l++) {
+        const got = l <= lv, tip = got ? 'Poziom ' + l + ' — ' + (pl[l] ? fd(pl[l]) : 'osiągnięty') : 'Poziom ' + l + ' — jeszcze przed Tobą';
+        row += '<span class="pl-dot' + (got ? ' on' : '') + (l === lv ? ' me' : '') + '" data-tip="' + esc(tip) + '" tabindex="0" aria-label="' + esc(tip) + '"></span>';
+      }
+      dots += '<div class="pl-row' + (Math.min(5, Math.floor(lv / 10)) === i ? ' cur' : '') + '"><span class="pl-rn">' + PL_RANKS[i] + '</span><div class="pl-dots">' + row + '</div></div>';
     });
     const toMax = Math.max(0, xpForLevel(PL_MAX) - D().xp), ri = Math.min(5, Math.floor(lv / 10)), next = ri < 5 ? (ri + 1) * 10 : null;
     const hist = Object.keys(pl).map(Number).filter(l => l <= lv).sort((a, b) => b - a);
-    return '<div class="pl-top"><b>' + lv + '</b><div><span class="pink">' + plRank(lv) + '</span><small class="pl-ranks">' + PL_RANKS.map((r2, k) => '<i' + (k === Math.min(5, Math.floor(lv / 10)) ? ' class="on"' : '') + '>' + r2 + '</i>').join(' · ') + '</small><small>' + (pl[lv] ? 'poziom ' + lv + ' od ' + fd(pl[lv]) : '') + (next ? ' · ' + PL_RANKS[ri + 1] + ' od poziomu ' + next : lv >= PL_MAX ? ' · Mistrz +' + (lv - PL_MAX) : '') + '</small></div></div>' +
-      '<div class="pl-road"><div class="pl-track inset"><div style="width:' + me.toFixed(2) + '%"></div></div>' + ticks +
-      '<span class="pl-me" style="left:' + me.toFixed(2) + '%">Ty · ' + lv + '</span></div>' +
+    return '<div class="pl-top"><b>' + lv + '</b><div><span class="pink">' + plRank(lv) + '</span><small>' + (pl[lv] ? 'poziom ' + lv + ' od ' + fd(pl[lv]) : '') + (next ? ' · ' + PL_RANKS[ri + 1] + ' od poziomu ' + next : lv >= PL_MAX ? ' · Mistrz +' + (lv - PL_MAX) : '') + '</small></div></div>' +
+      '<div class="pl-grid">' + dots + '</div>' +
       '<div class="pl-two"><div><span>Za Tobą</span><b>' + fmtNum(D().xp) + ' XP</b> <small>· ' + Math.min(lv, PL_MAX) + ' ' + (lv === 1 ? 'poziom' : 'poziomów') + '</small></div>' +
       '<div><span>Przed Tobą do Mistrza</span><b>' + (toMax ? '~' + fmtNum(Math.round(toMax / 100) * 100) + ' XP' : '✓ osiągnięty') + '</b>' + (toMax ? ' <small>· ' + (PL_MAX - lv) + ' poziomów</small>' : '') + '</div></div>' +
       '<div class="pl-near"><span>do poziomu ' + (lv + 1) + '</span><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%"></div></div><span>' + fmtNum(li.need - li.into) + ' XP</span></div>' +

@@ -1063,3 +1063,15 @@ header.top { gap: 24px; align-items: center; }
 .pl-hl { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; margin-top: 8px; color: var(--ink-2); }
 .pl-hl b { color: var(--ink); }
 .pl-ranks { font-size: 11px !important; } .pl-ranks i { font-style: normal; } .pl-ranks i.on { color: var(--pink-ink); font-weight: 700; }
+
+/* Poziom gracza — kropki zamiast paska */
+.pl-grid { display: flex; flex-direction: column; gap: 7px; margin: 6px 0 4px; }
+.pl-row { display: grid; grid-template-columns: 68px 1fr; align-items: center; gap: 8px; }
+.pl-rn { font-size: 12px; color: var(--ink-2); }
+.pl-row.cur .pl-rn { color: var(--pink-ink); font-weight: 700; }
+.pl-dots { display: flex; gap: 5px; flex-wrap: nowrap; }
+.pl-dot { position: relative; flex: none; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 1.5px 1.5px 3px rgba(40,30,20,.28); background: #D0CBC4; cursor: default; outline: none; }
+.pl-dot.on { background: var(--pink); box-shadow: inset 1px 1px 2px rgba(80,20,40,.3); }
+.pl-dot.me { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--pink-ink); }
+.pl-dot[data-tip]:hover::after, .pl-dot[data-tip]:focus::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font: 600 12px var(--body); white-space: nowrap; padding: 6px 10px; border-radius: 8px; z-index: 20; pointer-events: none; }
+.pl-dot[data-tip]:hover::before, .pl-dot[data-tip]:focus::before { content: ''; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--ink); border-bottom: 0; z-index: 20; }
