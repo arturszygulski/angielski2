@@ -1141,3 +1141,5 @@ header.top { gap: 24px; align-items: center; }
 @media (max-width: 900px) { .ctl-row { gap: 12px 16px; } }
 /* mało przycisków (np. mówienie: Umiem to / Nie wiem / Pomiń) — szersze odstępy */
 .ctl-row:not(:has(> :nth-child(5))) { column-gap: 48px; }
+.pl-top span.pink { color: var(--ink); }
+.pl-row.cur .pl-rn { color: var(--ink); }
