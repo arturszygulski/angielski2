@@ -1000,3 +1000,7 @@ header.top { gap: 24px; align-items: center; }
 .hk-pop .hb { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; align-items: center; }
 .hk-pop .hb .btn { font-size: 13px; padding: 6px 14px; min-height: 0; border-radius: 999px; }
 .hk-pop .hk-in { width: 100%; box-sizing: border-box; font-family: inherit; font-size: 15px; resize: vertical; }
+
+/* Filmy obok głośnika na początku zdania */
+.sentence > .btn.spk-ic.yg-in { margin-right: 2px; }
+.sentence > .btn.spk-ic.yg-in svg { width: 22px; height: 22px; }

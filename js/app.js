@@ -1507,6 +1507,9 @@
     b.className = 'btn spk-ic'; b.innerHTML = IC.speaker;
     b.title = 'Odsłuchaj zdanie (' + key + ')'; b.setAttribute('aria-label', b.title);
     sent.insertBefore(b, sent.firstChild);
+    // Filmy (YouTube) razem z głośnikiem, przed nim
+    const y = document.getElementById('ygBtn');
+    if (y) { y.className = 'btn spk-ic yg-in'; sent.insertBefore(y, b); }
   }
   /* wspólny dolny rząd przycisków we wszystkich ćwiczeniach: Zgaduję | … | Sprawdź (pod cienką kreską) */
   function unifyControls() {
