@@ -407,7 +407,8 @@
   }
   function splitSentence(s) { const i = s.indexOf('_'); return [s.slice(0, i), s.slice(i + 1)]; }
   function shake(el) { if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); if (el.focus) el.focus(); }
-  function progress() { D().progressAt = Date.now(); }
+  function progress() {
+    try { playerLevelDates(); } catch (e) { } D().progressAt = Date.now(); }
 
   function matchAnswer(answers, ans) {
     const a = U.norm(ans), acc = answers.map(U.norm);
@@ -2744,6 +2745,44 @@
     while (xp >= acc + need) { acc += need; level++; need = 100 + (level - 1) * 50; }
     return { level, into: xp - acc, need };
   }
+  /* ---------- Poziom gracza: droga 1→50, rangi co 10 poziomów, daty awansów ---------- */
+  const PL_MAX = 50, PL_RANKS = ['Nowicjusz', 'Uczeń', 'Bywalec', 'Znawca', 'Ekspert', 'Mistrz'];
+  const plRank = lv => PL_RANKS[Math.min(5, Math.floor(lv / 10))];
+  function xpForLevel(lv) { let acc = 0; for (let l = 1; l < lv; l++) acc += 100 + (l - 1) * 50; return acc; }
+  /* daty osiągnięcia poziomów: przy pierwszym uruchomieniu odtworzone z XP zapisanego w dniach nauki, potem zapisywane na bieżąco */
+  function playerLevelDates() {
+    const d = D(), cur = levelInfo(d.xp).level;
+    let pl = d.plDates;
+    if (!pl) {
+      pl = {}; const keys = Object.keys(d.days).sort(); let sum = 0;
+      const dayXp = keys.map(k => d.days[k].xp || 0), known = dayXp.reduce((a, b) => a + b, 0), extra = Math.max(0, d.xp - known); // XP sprzed zapisywania w dniach → pierwszy dzień
+      keys.forEach((k, i) => { sum += dayXp[i] + (i === 0 ? extra : 0); const lv = levelInfo(sum).level; for (let l = 2; l <= lv; l++) if (!pl[l]) pl[l] = new Date(k + 'T12:00:00').getTime(); });
+      if (keys.length) pl[1] = new Date(keys[0] + 'T12:00:00').getTime();
+      d.plDates = pl;
+    }
+    for (let l = 2; l <= cur; l++) if (!pl[l]) pl[l] = Date.now();
+    return pl;
+  }
+  function playerLevelHtml() {
+    const li = levelInfo(D().xp), lv = li.level, pl = playerLevelDates();
+    const fd = t => t ? new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric', year: '2-digit' }) : '';
+    const pos = l => ((Math.min(l, PL_MAX) - 1) / (PL_MAX - 1) * 100);
+    const me = Math.min(100, pos(lv) + (lv < PL_MAX ? li.into / li.need * (100 / (PL_MAX - 1)) : 0));
+    let ticks = '';
+    [1, 10, 20, 30, 40, 50].forEach((l, i) => {
+      const reached = lv >= l && pl[l];
+      ticks += '<span class="pl-tick" style="left:' + pos(l).toFixed(2) + '%"></span><span class="pl-tl' + (i === 0 ? ' first' : i === 5 ? ' last' : '') + '" style="left:' + pos(l).toFixed(2) + '%" title="' + (reached ? PL_RANKS[i] + ' — od ' + fd(pl[l]) : 'poziom ' + l) + '"><b>' + l + '</b>' + (reached ? '<em>' + new Date(pl[l]).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) + '</em>' : '') + '</span>';
+    });
+    const toMax = Math.max(0, xpForLevel(PL_MAX) - D().xp), ri = Math.min(5, Math.floor(lv / 10)), next = ri < 5 ? (ri + 1) * 10 : null;
+    const hist = Object.keys(pl).map(Number).filter(l => l <= lv).sort((a, b) => b - a);
+    return '<div class="pl-top"><b>' + lv + '</b><div><span class="pink">' + plRank(lv) + '</span><small class="pl-ranks">' + PL_RANKS.map((r2, k) => '<i' + (k === Math.min(5, Math.floor(lv / 10)) ? ' class="on"' : '') + '>' + r2 + '</i>').join(' · ') + '</small><small>' + (pl[lv] ? 'poziom ' + lv + ' od ' + fd(pl[lv]) : '') + (next ? ' · ' + PL_RANKS[ri + 1] + ' od poziomu ' + next : lv >= PL_MAX ? ' · Mistrz +' + (lv - PL_MAX) : '') + '</small></div></div>' +
+      '<div class="pl-road"><div class="pl-track inset"><div style="width:' + me.toFixed(2) + '%"></div></div>' + ticks +
+      '<span class="pl-me" style="left:' + me.toFixed(2) + '%">Ty · ' + lv + '</span></div>' +
+      '<div class="pl-two"><div><span>Za Tobą</span><b>' + fmtNum(D().xp) + ' XP</b> <small>· ' + Math.min(lv, PL_MAX) + ' ' + (lv === 1 ? 'poziom' : 'poziomów') + '</small></div>' +
+      '<div><span>Przed Tobą do Mistrza</span><b>' + (toMax ? '~' + fmtNum(Math.round(toMax / 100) * 100) + ' XP' : '✓ osiągnięty') + '</b>' + (toMax ? ' <small>· ' + (PL_MAX - lv) + ' poziomów</small>' : '') + '</div></div>' +
+      '<div class="pl-near"><span>do poziomu ' + (lv + 1) + '</span><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%"></div></div><span>' + fmtNum(li.need - li.into) + ' XP</span></div>' +
+      (hist.length > 1 ? '<details class="pl-hist"><summary>Historia poziomów</summary><div class="pl-hl">' + hist.map(l => '<span><b>' + l + '</b> ' + fd(pl[l]) + '</span>').join('') + '</div></details>' : '');
+  }
   function mondayOf(t) { const d = new Date(U.startOfDay(t)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
   function weekKey(t) { return U.dayKey(mondayOf(t == null ? Date.now() : t)); }
   function navTile(nav, icon, title, sub, key, cls) {
@@ -4046,7 +4085,7 @@
       '<div class="panel raised side"><h2>Powtórki w najbliższych dniach</h2>' + forecastHtml() + '</div></section>' +
       '<section class="lower">' +
       '<div class="panel raised grow" id="heatBox">' + heatTitle() + heatHtml() + '</div>' +
-      '<div class="panel raised side"><h2>Poziom gracza</h2>' + (function () { const li = levelInfo(D().xp); return '<div class="lcd inset deep" style="min-width:0;padding:18px"><div class="num" style="font-size:56px">' + li.level + '</div><div class="lbl">' + fmtNum(D().xp) + ' XP · do następnego ' + (li.need - li.into) + '</div></div><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%;background:linear-gradient(90deg,#B06A00,#E8A33D)"></div></div>'; })() + '</div></section>' +
+      '<div class="panel raised side pg-panel"><h2>Poziom gracza</h2>' + playerLevelHtml() + '</div></section>' +
       '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Poziom w czasie</h2>' +
       '<div class="legend">' + Object.keys(SK_COLORS).map(k => '<span><i style="background:' + SK_COLORS[k] + ';height:3px"></i>' + SKILL_NAME[k] + '</span>').join('') + '</div></div>' + levelsChartHtml() + levelWhyHtml() +
       sentLevelHtml() + '<div class="row between"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div></div>' +

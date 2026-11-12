@@ -1035,3 +1035,31 @@ header.top { gap: 24px; align-items: center; }
 .rs-more { text-align: center; font-size: 15px; color: var(--ink-2); }
 @media (max-width: 760px) { .rs-row { grid-template-columns: 1fr auto auto; } .rs-tag { grid-column: 1 / -1; } }
 .rs-sec { position: relative; }
+
+/* Poziom gracza */
+.pg-panel.raised { background: none; box-shadow: none; border: 1.5px solid #BDB6AD; }
+.pl-top { display: flex; align-items: center; gap: 16px; }
+.pl-top > b { font: 700 60px var(--head); line-height: 1; }
+.pl-top > div { display: flex; flex-direction: column; min-width: 0; }
+.pl-top span { font: 700 22px var(--head); }
+.pl-top small { font-size: 13px; color: var(--ink-2); }
+.pl-road { position: relative; margin: 30px 8px 34px; }
+.pl-track { height: 14px; border-radius: 99px; overflow: hidden; }
+.pl-track > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--pink-2), var(--pink)); }
+.pl-tick { position: absolute; top: -4px; width: 1.5px; height: 22px; background: #A9A29A; transform: translateX(-50%); }
+.pl-tl { position: absolute; top: 24px; transform: translateX(-50%); font-size: 11px; color: var(--ink-2); white-space: nowrap; text-align: center; line-height: 1.25; }
+.pl-tl.first { transform: none; text-align: left; } .pl-tl.last { transform: translateX(-100%); text-align: right; }
+.pl-tl b { display: block; font-size: 12px; color: var(--ink); }
+.pl-tl em { display: block; font-style: normal; font-size: 10px; color: var(--pink-ink); }
+.pl-me { position: absolute; top: -30px; transform: translateX(-50%); font: 700 13px var(--head); color: var(--pink-ink); white-space: nowrap; }
+.pl-me::after { content: ''; position: absolute; left: 50%; top: 18px; width: 2px; height: 12px; background: var(--pink-ink); transform: translateX(-50%); }
+.pl-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pl-two > div { border-top: 1px solid #D2CCC4; padding-top: 10px; }
+.pl-two span { display: block; font-size: 13px; color: var(--ink-2); }
+.pl-two b { font: 700 19px var(--head); } .pl-two small { font-size: 12px; color: var(--ink-2); }
+.pl-near { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.pl-near .bar { flex: 1; }
+.pl-hist summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.pl-hl { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; margin-top: 8px; color: var(--ink-2); }
+.pl-hl b { color: var(--ink); }
+.pl-ranks { font-size: 11px !important; } .pl-ranks i { font-style: normal; } .pl-ranks i.on { color: var(--pink-ink); font-weight: 700; }
