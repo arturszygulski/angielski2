@@ -1404,7 +1404,7 @@
       (it.simple ? '' : '<button class="btn' + (D().cards[c.id] && D().cards[c.id].hard ? ' pressed' : '') + '" id="hardBtn" title="Dla mnie trudne — niech wraca częściej (kliknij jeszcze raz, by zdjąć)">Trudne ' + K('T') + '</button>') +
       (D().cards[c.id] && D().cards[c.id].state === 'known' ? '' : '<button class="btn" id="known">Umiem to ' + K('Alt+Enter') + '</button>') +
       '<button class="btn" id="next">Dalej ' + K('Enter') + '</button></div>' +
-      (it.w && !it.fromText ? '<button class="btn yg-ic" id="ygBtn" title="Filmy — posłuchaj słowa w filmach (V)" aria-label="Filmy (V)"' + (S.ygOpen ? ' disabled' : '') + '><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg></button>' : '') +
+      (it.w && !it.fromText ? '<button class="btn yg-ic" id="ygBtn" title="Filmy — posłuchaj słowa w filmach (V)" aria-label="Filmy (V)"' + (S.ygOpen ? ' disabled' : '') + '><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="4" fill="#C2584A"/><path d="M10 9.2v5.6l4.8-2.8z" fill="#fff"/></svg></button>' : '') +
       (fixInfo(it) ? '<button class="btn rep-ic" id="repBtn" title="Zdanie jest złe? (X)" aria-label="Zdanie jest złe? (X)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>' : '');
 
     app.innerHTML =
