@@ -566,6 +566,7 @@
 
   function go(name, arg) {
     keyHandler = null;
+    hookClose();
     const tst = document.querySelector('.toast'); if (tst) tst.remove();
     if (screen === 'yg' && name !== 'yg') ygTeardown();
     if (screen === 'reader' && name !== 'reader') stopReading();
@@ -876,6 +877,7 @@
     if ($('#mTest')) $('#mTest').onclick = () => startTest(true);
     $$('[data-stale]').forEach(b => b.onclick = () => goStale(b.dataset.stale));
     if ($('#wodGo')) $('#wodGo').onclick = wodPractice;
+    if ($('#wodHook')) $('#wodHook').onclick = e => { e.stopPropagation(); const w = wodWord(); if (w) hookToggle($('#wodHook'), w.id); };
     if ($('#wodSay')) $('#wodSay').onclick = () => { const w = wodWord(); if (w) Speech.speak(fullSentence({ w }), D().settings.rate || 0.95); };
     if ($('#vmHome')) $('#vmHome').onclick = () => go('stats');
     keyHandler = e => {
@@ -920,6 +922,7 @@
       '<div class="wod-tx"><div class="wod-lbl">Słowo dnia' + (p.src === 'hard' ? ' · sprawia Ci trudność' : p.src === 'weak' ? ' · warto utrwalić' : '') + '</div>' +
       '<div><span class="wod-w" lang="en">' + esc(w.answers[0]) + '</span> <span class="wod-pl">— ' + esc(w.pl) + '</span></div>' +
       '<div class="wod-s" lang="en"><i>' + esc(a) + '<b>' + esc(w.answers[0]) + '</b>' + esc(b) + '</i></div></div>' +
+      ((hookGet(w.id) && hookGet(w.id).t) || AI.enabled() ? hookBtnHtml('wodHook') : '') +
       '<button class="btn raised wod-go" id="wodGo" title="Krótka runda z tym słowem: zdanie, dyktando, mówienie, tłumaczenie">Ćwicz ' + K('W') + '</button></div>';
   }
   function wodPractice() {
@@ -1420,12 +1423,82 @@
 
     if (ph === 'answer') unifyControls();
     speakIcon();
+    if (ph === 'feedback') hookIcon(it);
     bindExercise(it, c);
   }
   /* który model AI odpowiedział — delikatny dopisek przy znaczku AI */
   function mdlShort(m) { m = String(m || ''); return /sonnet/i.test(m) ? 'Sonnet' : /haiku/i.test(m) ? 'Haiku' : /opus/i.test(m) ? 'Opus' : m; }
   function mdlTag(m) { return m ? '<i class="mdl" title="Odpowiedział model: ' + esc(m) + '"> · ' + esc(mdlShort(m)) + '</i>' : ''; }
   function aiTag(m) { return '<span class="ai-tag">AI' + mdlTag(m) + '</span>'; }
+  /* ---------- Haczyk pamięciowy: ikonka żarówki po błędzie przy słowach, okienko po kliknięciu (klawisz H) ---------- */
+  const HOOK_TYPES = { cloze: 1, choice: 1, particle: 1, pvwrite: 1 };
+  const HOOK_BUSY = {};
+  const LIGHTBULB = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
+  function hookWordId(it) { if (!it || !it.w || it.fromText || !it.id) return null; const id = it.id.indexOf(':') >= 0 ? it.id.slice(it.id.indexOf(':') + 1) : it.id; return WORDS.byId[id] ? id : null; }
+  function hookGet(wid) { return ((D().hooks || {})[wid]) || null; }
+  function hookFetch(wid, avoid) {
+    const w = WORDS.byId[wid]; if (!w || !AI.enabled() || HOOK_BUSY[wid]) return Promise.resolve(hookGet(wid));
+    HOOK_BUSY[wid] = true;
+    return AI.memHook(w.answers[0], w.pl, fullSentence({ w }), L[levels().vocab], avoid || [])
+      .then(r => {
+        const H = D().hooks = D().hooks || {}, prev = H[wid];
+        if (r.ok) H[wid] = { t: r.hook, m: AI.lastModel(), at: Date.now(), tried: ((prev && prev.tried) || []).concat(prev && prev.t && !prev.own ? [prev.t] : []).slice(-5) };
+        else if (!prev) H[wid] = { none: 1, at: Date.now() };
+        Store.save(); return H[wid];
+      })
+      .catch(() => hookGet(wid))
+      .then(x => { delete HOOK_BUSY[wid]; return x; });
+  }
+  function hookBtnHtml(id) { return '<button class="btn raised hk-btn" id="' + id + '" title="Haczyk — jak zapamiętać (H)" aria-label="Haczyk — jak zapamiętać (H)">' + LIGHTBULB + '</button>'; }
+  function hookIcon(it) {
+    const fb = S && S.fb; if (!fb || !HOOK_TYPES[it.type] || !(fb.kind === 'bad' || fb.kind === 'idk')) return;
+    const wid = hookWordId(it); if (!wid) return;
+    const h = hookGet(wid);
+    if (h && h.none && !h.t) return;
+    if (!h && !AI.enabled()) return;
+    const line = document.querySelector('.ex-card .fb > span'); if (!line) return;
+    const sm = line.querySelector('small');
+    const tmp = document.createElement('span'); tmp.innerHTML = hookBtnHtml('hkBtn'); const btn = tmp.firstChild;
+    if (sm) line.insertBefore(btn, sm); else line.appendChild(btn);
+    btn.onclick = e => { e.stopPropagation(); hookToggle(btn, wid); };
+    if (!h) { const sess = S; hookFetch(wid).then(x => { if (S === sess && S.phase === 'feedback' && x && x.none && !x.t) { const b = document.getElementById('hkBtn'); if (b && !document.querySelector('.hk-pop')) b.remove(); } else { const p = document.querySelector('.hk-pop'); if (p && p.dataset.wid === wid) hookRender(p, wid); } }); }
+  }
+  function hookClose() { const p = document.querySelector('.hk-pop'); if (p) p.remove(); document.removeEventListener('click', hookOutside, true); }
+  function hookOutside(e) { const p = document.querySelector('.hk-pop'); if (p && !p.contains(e.target) && !e.target.closest('.hk-btn')) hookClose(); }
+  function hookToggle(btn, wid) {
+    if (document.querySelector('.hk-pop')) { hookClose(); return; }
+    const box = btn.closest('.ex-card, header.top') || document.body;
+    const pop = document.createElement('div'); pop.className = 'hk-pop'; pop.dataset.wid = wid;
+    box.appendChild(pop);
+    const r = btn.getBoundingClientRect(), br = box.getBoundingClientRect(), W = Math.min(420, br.width - 24);
+    let left = r.right - br.left - W + 30; left = Math.max(12, Math.min(left, br.width - W - 12));
+    pop.style.width = W + 'px'; pop.style.left = left + 'px'; pop.style.top = (r.bottom - br.top + 12) + 'px';
+    pop.style.setProperty('--ax', Math.max(14, r.left + r.width / 2 - br.left - left - 7) + 'px');
+    hookRender(pop, wid);
+    if (!hookGet(wid) || (!hookGet(wid).t)) hookFetch(wid).then(() => { if (pop.isConnected) hookRender(pop, wid); });
+    setTimeout(() => document.addEventListener('click', hookOutside, true), 0);
+  }
+  function hookRender(pop, wid, editing) {
+    const h = hookGet(wid), busy = !!HOOK_BUSY[wid], w = WORDS.byId[wid];
+    const body = editing
+      ? '<textarea class="txt hk-in" rows="3" placeholder="Twoje skojarzenie — np. obraz, podobne polskie słowo…">' + esc(h && h.own ? h.t : '') + '</textarea><div class="hb"><button class="btn small" data-hk="cancel">Anuluj</button><button class="btn small primary" data-hk="save">Zapisz</button></div>'
+      : (busy && !(h && h.t) ? '<div class="checking"><span class="spinner"></span>AI szuka dobrego haczyka…</div>'
+        : h && h.t ? '<div class="hk-t">' + qaFmt(h.t) + '</div>'
+        : '<div class="small-note">' + (AI.enabled() ? 'AI nie znalazło dobrego haczyka do tego słowa. Możesz wpisać własny.' : 'Haczyki od AI wymagają klucza API. Możesz wpisać własny.') + '</div>') +
+        '<div class="hb">' + (h && h.t ? (h.own ? '<span class="small-note" style="margin-right:auto;align-self:center">Twój haczyk</span>' : '<span style="margin-right:auto;align-self:center">' + aiTag(h.m) + '</span>') : '') +
+        (AI.enabled() ? '<button class="btn small raised" data-hk="other"' + (busy ? ' disabled' : '') + '>' + (busy && h && h.t ? 'Szukam…' : 'Inny') + '</button>' : '') +
+        '<button class="btn small raised" data-hk="own">Mój</button></div>';
+    pop.innerHTML = '<div class="hl"><span>' + LIGHTBULB.replace('width="20" height="20"', 'width="14" height="14"') + ' Haczyk · <span lang="en">' + esc(w ? w.answers[0] : '') + '</span></span><button data-hk="x" aria-label="Zamknij">×</button></div>' + body;
+    pop.querySelectorAll('[data-hk]').forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      const k = b.dataset.hk;
+      if (k === 'x') return hookClose();
+      if (k === 'own') { hookRender(pop, wid, true); const t = pop.querySelector('.hk-in'); if (t) t.focus(); return; }
+      if (k === 'cancel') return hookRender(pop, wid);
+      if (k === 'save') { const v = (pop.querySelector('.hk-in').value || '').trim(); const H = D().hooks = D().hooks || {}; if (v) H[wid] = Object.assign({}, H[wid], { t: v, own: 1, none: 0, at: Date.now() }); Store.save(); return hookRender(pop, wid); }
+      if (k === 'other') { const cur = hookGet(wid), avoid = ((cur && cur.tried) || []).concat(cur && cur.t ? [cur.t] : []); if (cur && cur.own) { /* własny zostaje jako zapas */ } hookFetch(wid, avoid).then(() => { if (pop.isConnected) hookRender(pop, wid); }); hookRender(pop, wid); }
+    });
+  }
   /* „Odsłuchaj zdanie” rzadko używane: mała ikonka głośnika na początku zdania (klawisz bez zmian) */
   function speakIcon() {
     const b = document.getElementById('speak'), sent = document.querySelector('.ex-card .sentence');
@@ -1566,6 +1639,7 @@
         if ((plainKey(e, 'KeyM') || altKey(e, 'KeyM')) && $('#reMic')) { e.preventDefault(); retrySpeak(); return; }
         if (plainKey(e, 'KeyR') && !S.ygOpen && AI.enabled() && !it.topic && !S.topicId) { e.preventDefault(); openTopic(it); return; }
         if (plainKey(e, 'KeyT') && $('#hardBtn')) { e.preventDefault(); toggleHard(c); return; }
+        if (plainKey(e, 'KeyH') && $('#hkBtn')) { e.preventDefault(); $('#hkBtn').click(); return; }
         if ((altKey(e, 'KeyU') || plainKey(e, 'KeyU') || (e.key === 'Enter' && e.altKey)) && $('#known')) { e.preventDefault(); markKnown(); return; }
         if (plainKey(e, 'KeyE') && $('#exBtn') && S.exToggle) { e.preventDefault(); S.exToggle(); return; }
         if (plainKey(e, 'KeyZ') && $('#simpBtn')) { e.preventDefault(); simplifyCurrent(it); return; }
@@ -3442,6 +3516,10 @@
     if (!D().topics[TPX.tid]) loadTopic(TPX.tid, TPX.ctx);
   }
   window.addEventListener('keydown', e => {
+    if (document.querySelector('.hk-pop') && !QA.open) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); hookClose(); return; }
+      if (document.activeElement && document.activeElement.classList.contains('hk-in')) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const b = document.querySelector('[data-hk="save"]'); if (b) b.click(); } e.stopImmediatePropagation(); return; }
+    }
     if (QA.open) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); qaClose(); return; }
       if (e.altKey && e.code === 'KeyM') { e.preventDefault(); e.stopImmediatePropagation(); qaMic(); return; }

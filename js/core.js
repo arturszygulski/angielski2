@@ -475,6 +475,20 @@ window.AI = (function () {
       return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
     } finally { clearTimeout(timer); }
   }
+  /* haczyk pamięciowy dla Polaka; ok=false, gdy nie ma naprawdę dobrego pomysłu */
+  async function memHook(word, pl, sentence, levelName, avoid) {
+    const system = 'Jesteś pomysłowym nauczycielem angielskiego dla dorosłego Polaka (poziom ' + levelName + '). Wymyślasz haczyki pamięciowe (mnemotechniki). Odpowiadasz wyłącznie przez narzędzie.';
+    const user = 'Słowo/zwrot: "' + word + '" — znaczenie: ' + pl + '\nZdanie: "' + sentence + '"\n\n' +
+      'Wymyśl JEDEN krótki haczyk (1–3 zdania po polsku), który pomoże Polakowi zapamiętać znaczenie. Wybierz najlepszą technikę:\n' +
+      '- phrasal verbs: logika partykuły (np. off = z/od, up = do końca/w górę) + obraz sytuacji; dodaj, w jakich innych zwrotach działa ta sama partykuła;\n' +
+      '- podobne polskie brzmienie lub skojarzenie (tylko jeśli naturalne, nie na siłę);\n' +
+      '- obraz / mini-scenka;\n' +
+      '- ostrzeżenie przed „fałszywym przyjacielem” (np. eventually ≠ ewentualnie).\n' +
+      (avoid && avoid.length ? 'NIE powtarzaj tych pomysłów: ' + avoid.map(x => '„' + x + '”').join('; ') + '. Daj inny.\n' : '') +
+      'Jeśli nie masz naprawdę dobrego, trafnego haczyka — ok=false i pusty hook. Słaby haczyk jest gorszy niż żaden.';
+    const j = await callJSON(system, user + fmtJ('hook'), 500, 30000, { type: 'object', required: ['ok', 'hook'], properties: { ok: { type: 'boolean' }, hook: STR } });
+    return { ok: !!j.ok && !!String(j.hook || '').trim(), hook: String(j.hook || '').trim() };
+  }
   /* słowa i zwroty z rozmowy → propozycje do Moich słówek */
   async function chatWords(transcript, levelName) {
     const system = 'Jesteś nauczycielem angielskiego. Odpowiadasz wyłącznie przez narzędzie.';
@@ -660,7 +674,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */
