@@ -2783,7 +2783,7 @@
       '<div class="pl-two"><div><span>Za Tobą</span><b>' + fmtNum(D().xp) + ' XP</b> <small>· ' + Math.min(lv, PL_MAX) + ' ' + (lv === 1 ? 'poziom' : 'poziomów') + '</small></div>' +
       '<div><span>Przed Tobą do Mistrza</span><b>' + (toMax ? '~' + fmtNum(Math.round(toMax / 100) * 100) + ' XP' : '✓ osiągnięty') + '</b>' + (toMax ? ' <small>· ' + (PL_MAX - lv) + ' poziomów</small>' : '') + '</div></div>' +
       '<div class="pl-near"><span>do poziomu ' + (lv + 1) + '</span><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%"></div></div><span>' + fmtNum(li.need - li.into) + ' XP</span></div>' +
-      (hist.length > 1 ? '<details class="pl-hist"><summary>Historia poziomów</summary><div class="pl-hl">' + hist.map(l => '<span><b>' + l + '</b> ' + fd(pl[l]) + '</span>').join('') + '</div></details>' : '');
+'';
   }
   function mondayOf(t) { const d = new Date(U.startOfDay(t)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
   function weekKey(t) { return U.dayKey(mondayOf(t == null ? Date.now() : t)); }
