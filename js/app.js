@@ -182,7 +182,7 @@
     Sound.play('combo');
     if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
       const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
-      const cols = ['#C2407A', '#E0A145', '#5E9670', '#7E98BE', '#E8708F'];
+      const cols = ['#C8607F', '#D3A35C', '#5E9670', '#7E98BE', '#E8708F'];
       for (let i = 0; i < 46; i++) { const p = document.createElement('i'); p.style.left = (Math.random() * 100) + '%'; p.style.background = cols[i % cols.length]; p.style.animationDelay = (Math.random() * 0.35) + 's'; p.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px'); p.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg'); box.appendChild(p); }
       document.body.appendChild(box); setTimeout(() => box.remove(), 2200);
     }
@@ -2716,7 +2716,7 @@
   const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   function fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   /* ---------- Mapa słownictwa: postęp w całej bazie słów ---------- */
-  const VM_COL = { mast: '#5E9670', known: '#7E98BE', learn: '#E0A145' };
+  const VM_COL = { mast: '#5E9670', known: '#7E98BE', learn: '#D3A35C' };
   function vocabMap() {
     const c = D().cards, lv = WORDS.list.filter(w => !w.custom), rows = L.map(() => ({ mast: 0, known: 0, learn: 0, unseen: 0, total: 0 }));
     lv.forEach(w => {
@@ -2889,7 +2889,7 @@
   }
   function bossNoteHtml() {
     const b = (D().boss || {})[weekKey()];
-    if (b && b.won) return '<section class="note raised"><div class="ic inset" style="color:#B06A00">' + IC.trophy + '</div><div class="tx"><b>Boss pokonany' + (b.clean ? ' — bez błędu!' : '') + '</b><span>kolejny w poniedziałek</span></div></section>';
+    if (b && b.won) return '<section class="note raised"><div class="ic inset" style="color:#C39046">' + IC.trophy + '</div><div class="tx"><b>Boss pokonany' + (b.clean ? ' — bez błędu!' : '') + '</b><span>kolejny w poniedziałek</span></div></section>';
     const pool = bossPool();
     if (pool.length < 6) return '<section class="note raised locked"><div class="ic inset">' + IC.lock + '</div><div class="tx" title="Pojawi się, gdy uzbiera się co najmniej 6 trudnych elementów z ostatnich tygodni."><b>Boss tygodnia</b><span>trudnych: ' + pool.length + ' z 6</span></div></section>';
     return '<section class="note raised"><div class="ic inset" style="color:#B9456B">' + IC.trophy + '</div><div class="tx" title="Najtrudniejsze elementy z ostatnich tygodni · podwójne XP"><b>Boss tygodnia</b><span>' + pool.length + ' trudnych · ×2 XP' + (b ? ' · ostatnio ' + b.hits + '/' + b.max : '') + '</span></div>' +
@@ -2905,7 +2905,7 @@
   }
   function bossBarHtml() {
     const left = S.bossMax - Object.keys(S.bossHit).length;
-    return '<div class="boss-bar"><span class="small-note">Życie bossa</span><div class="bar thin inset" style="flex:1"><div style="width:' + (left / S.bossMax * 100) + '%;background:linear-gradient(90deg,#8E2F55,#C2407A)"></div></div><b>' + left + ' / ' + S.bossMax + '</b></div>';
+    return '<div class="boss-bar"><span class="small-note">Życie bossa</span><div class="bar thin inset" style="flex:1"><div style="width:' + (left / S.bossMax * 100) + '%;background:linear-gradient(90deg,#A54B6A,#C8607F)"></div></div><b>' + left + ' / ' + S.bossMax + '</b></div>';
   }
 
   /* ---------- Graj ---------- */
@@ -3760,7 +3760,7 @@
   }
 
   /* ---------- Statystyki ---------- */
-  const SK_COLORS = { vocab: '#C2407A', grammar: '#3F5FD0', listening: '#B06A00', speaking: '#008C7A' };
+  const SK_COLORS = { vocab: '#C8607F', grammar: '#5E7898', listening: '#C39046', speaking: '#789E66' };
   function aggDays(start, n) {
     const a = { sec: 0, xp: 0, correct: 0, total: 0, newCount: 0, days: 0, n };
     let t = start;
@@ -4197,7 +4197,7 @@
       '<section class="st-f"><p class="st-ins">' + esc(insightText(sd)) + '</p><div class="st-kp">' + sd.kpis.map(k => kpiFlat(k, sd)).join('') + kpiTotal(sd) + '</div></section>' +
       '<div class="st-g2">' +
       '<section class="st-f"><div class="row between"><h3>' + (mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu') + '</h3>' +
-      '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C2407A"></i>miesiąc</span>' : '<span><i style="background:#C2407A"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div></div>' + barsHtml(sd) + '</section>' +
+      '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C8607F"></i>miesiąc</span>' : '<span><i style="background:#C8607F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div></div>' + barsHtml(sd) + '</section>' +
       '<section class="st-f" id="accBox">' + accBoxHtml(mode, sd, skLegend) + '</section></div>' +
       '<div class="st-sh"><b>Postęp</b><small>niezależny od zakładek</small></div>' +
       '<section class="st-f vm">' + vocabMapHtml() + '</section>' +
@@ -5195,7 +5195,7 @@
   function monthTestDue() { return !!D().profile.placementDone && Date.now() >= nextTestAt(); }
   function monthTestNoteHtml() {
     if (!monthTestDue()) return '';
-    return '<section class="note raised"><div class="ic inset" style="color:#3F5FD0">' + IC.chart + '</div><div class="tx" title="Sprawdzisz, ile urosłeś — wynik trafi na wykres poziomu w Statystykach."><b>Test miesiąca</b><span>ok. 10 minut</span></div>' +
+    return '<section class="note raised"><div class="ic inset" style="color:#5E7898">' + IC.chart + '</div><div class="tx" title="Sprawdzisz, ile urosłeś — wynik trafi na wykres poziomu w Statystykach."><b>Test miesiąca</b><span>ok. 10 minut</span></div>' +
       '<button class="btn primary" id="mTest">Zrób test ' + K('P') + '</button></section>';
   }
   function finishMonthly() {
@@ -5421,7 +5421,7 @@
       '<section class="note raised"><div class="ic inset" style="color:#B9456B">' + IC.chart + '</div><div class="tx" style="font-size:18px;line-height:1.45">' + esc(insight) + '</div></section>' +
       '<section class="kpis">' + kpis + '</section>' +
       '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Minuty dzień po dniu</h2>' +
-      '<div class="legend"><span><i style="background:#C2407A"></i>Ten tydzień</span><span><i style="background:#ADA79F"></i>Tydzień wcześniej</span><span><i class="dash"></i>Cel ' + sd.goal + ' min</span></div></div>' + barsHtml(sd) + '</div>' +
+      '<div class="legend"><span><i style="background:#C8607F"></i>Ten tydzień</span><span><i style="background:#ADA79F"></i>Tydzień wcześniej</span><span><i class="dash"></i>Cel ' + sd.goal + ' min</span></div></div>' + barsHtml(sd) + '</div>' +
       '<div class="panel raised side"><h2>Umiejętności</h2>' + skRows + '</div></section>' +
       '<section class="lower"><div class="panel raised grow"><h2>Wyróżnienia</h2>' + (hi.length ? hi.map(x => '<div class="rec inset"><div class="small-note">' + esc(x[0]) + '</div><b>' + esc(x[1]) + '</b></div>').join('') : '<div class="small-note">W tym tygodniu bez wyróżnień — następny będzie lepszy.</div>') + '</div>' +
       '<div class="panel raised side"><h2>Szło najtrudniej</h2>' + (R.hard.length ? R.hard.map(x => '<div class="rec inset"><div class="small-note" style="min-width:0">' + esc(x.cat) + '</div><b>' + x.n + '×</b></div>').join('') + '<button class="btn small" id="toMist">Otwórz dziennik błędów ' + K('D') + '</button>' : '<div class="small-note">Brak zapisanych błędów w tym tygodniu.</div>') + '</div></section>' +
@@ -5635,15 +5635,15 @@
     s += '<line x1="' + X(0) + '" x2="' + X(100) + '" y1="' + Y + '" y2="' + Y + '" stroke="#ADA79F" stroke-width="2"/><path d="M' + (X(100) - 8) + ' ' + (Y - 6) + ' L' + X(100) + ' ' + Y + ' L' + (X(100) - 8) + ' ' + (Y + 6) + '" fill="none" stroke="#ADA79F" stroke-width="2"/>';
     s += '<line x1="' + NOW + '" x2="' + NOW + '" y1="' + (Y - 34) + '" y2="' + (Y + 14) + '" stroke="#B9456B" stroke-width="2"/><text x="' + NOW + '" y="' + (Y - 40) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#B9456B">TERAZ</text>';
     s += '<text x="' + X(4) + '" y="' + (Y + 34) + '" font-size="12" fill="#5F5B55">przeszłość</text><text x="' + X(96) + '" y="' + (Y + 34) + '" text-anchor="end" font-size="12" fill="#5F5B55">przyszłość</text>';
-    const C = '#3F5FD0';
+    const C = '#5E7898';
     (T.tl || []).forEach(e => {
       if (e.k === 'dot') s += '<circle cx="' + X(e.x) + '" cy="' + Y + '" r="9" fill="' + (e.hollow ? '#E3E0DC' : C) + '" stroke="' + C + '" stroke-width="3"' + (e.dashed ? ' stroke-dasharray="4 3" fill-opacity=".35"' : '') + '/>' + (e.label ? '<text x="' + X(e.x) + '" y="' + (Y - 16) + '" text-anchor="middle" font-size="14" font-weight="700" fill="' + C + '">' + e.label + '</text>' : '');
       else if (e.k === 'dots') e.xs.forEach(x => { s += '<circle cx="' + X(x) + '" cy="' + Y + '" r="6" fill="' + C + '"/>'; });
       else if (e.k === 'bar') s += '<rect x="' + X(e.x1) + '" y="' + (Y - 9) + '" width="' + (X(e.x2) - X(e.x1)) + '" height="18" rx="9" fill="' + C + '" fill-opacity=".85"/>' + (e.wave ? '<path d="M' + X(e.x1 + 2) + ' ' + Y + ' q 8 -6 16 0 t 16 0 t 16 0 t 16 0 t 16 0 t 16 0 t 16 0 t 16 0" fill="none" stroke="#fff" stroke-width="2" opacity=".8"/>' : '');
       else if (e.k === 'cross') s += '<g stroke="#C2584A" stroke-width="4" stroke-linecap="round"><line x1="' + (X(e.x) - 9) + '" y1="' + (Y - 20) + '" x2="' + (X(e.x) + 9) + '" y2="' + (Y - 2) + '"/><line x1="' + (X(e.x) + 9) + '" y1="' + (Y - 20) + '" x2="' + (X(e.x) - 9) + '" y2="' + (Y - 2) + '"/></g>';
       else if (e.k === 'arrow') s += '<path d="M' + X(e.x1) + ' ' + (Y - 4) + ' Q ' + ((X(e.x1) + X(e.x2)) / 2) + ' ' + (Y - 40) + ' ' + X(e.x2) + ' ' + (Y - 8) + '" fill="none" stroke="' + C + '" stroke-width="2.5"' + (e.dashed ? ' stroke-dasharray="6 4"' : '') + '/><path d="M' + (X(e.x2) - 10) + ' ' + (Y - 16) + ' L' + X(e.x2) + ' ' + (Y - 8) + ' L' + (X(e.x2) - 12) + ' ' + (Y - 4) + '" fill="none" stroke="' + C + '" stroke-width="2.5"/>';
-      else if (e.k === 'tick') s += '<line x1="' + X(e.x) + '" x2="' + X(e.x) + '" y1="' + (Y - 22) + '" y2="' + (Y + 12) + '" stroke="#B06A00" stroke-width="3"/>';
-      else if (e.k === 'deadline') s += '<line x1="' + X(e.x) + '" x2="' + X(e.x) + '" y1="' + (Y - 26) + '" y2="' + (Y + 16) + '" stroke="#B06A00" stroke-width="3"/><text x="' + X(e.x) + '" y="' + (Y - 32) + '" text-anchor="middle" font-size="12" fill="#8A5200">termin</text>';
+      else if (e.k === 'tick') s += '<line x1="' + X(e.x) + '" x2="' + X(e.x) + '" y1="' + (Y - 22) + '" y2="' + (Y + 12) + '" stroke="#C39046" stroke-width="3"/>';
+      else if (e.k === 'deadline') s += '<line x1="' + X(e.x) + '" x2="' + X(e.x) + '" y1="' + (Y - 26) + '" y2="' + (Y + 16) + '" stroke="#C39046" stroke-width="3"/><text x="' + X(e.x) + '" y="' + (Y - 32) + '" text-anchor="middle" font-size="12" fill="#8A5200">termin</text>';
     });
     return s + '</svg>';
   }
@@ -5662,7 +5662,7 @@
     const groups = [[0, 1, 'A1–A2'], [2, 2, 'B1'], [3, 4, 'B2–C1']];
     app.innerHTML =
       '<div class="wrap">' + backHeader('Czasy', 'lekcje z osią czasu i ćwiczenia w zdaniach') +
-      '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Mapa czasów</h2><div class="legend"><span><i style="background:#3F5FD0"></i>opanowane</span><span><i style="background:#A9B8EC"></i>w nauce</span><span><i style="background:var(--bg-in)"></i>nowe</span><span class="small-note">% = trafność</span></div></div>' + tenseMapHtml() + '</div>' +
+      '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Mapa czasów</h2><div class="legend"><span><i style="background:#5E7898"></i>opanowane</span><span><i style="background:#AEBBCB"></i>w nauce</span><span><i style="background:var(--bg-in)"></i>nowe</span><span class="small-note">% = trafność</span></div></div>' + tenseMapHtml() + '</div>' +
       '<div class="panel raised side"><h2>Ćwicz</h2><p class="small-note" style="margin:0">' + (open.length ? 'Mieszanka czasów, które już otworzyłeś (' + open.length + '). Ich zdania wchodzą też do codziennych sesji.' : 'Otwórz lekcję, żeby jej zdania pojawiały się w codziennych sesjach.') + '</p>' +
       '<button class="btn primary" id="tMix"' + (open.length ? '' : ' disabled') + '>Ćwicz otwarte czasy ' + K('Enter') + '</button>' +
       '<button class="btn" id="tLevel">Ćwicz czasy z mojego poziomu (' + L[lvl] + ')</button></div></section>' +
@@ -5772,7 +5772,7 @@
     [0, 0.5, 1].forEach(f => { const y = 10 + H - f * H; svg += '<line x1="30" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="#CFCAC2"/><text x="24" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#5F5B55">' + Math.round(f * max) + '</text>'; });
     xs.forEach((x, i) => {
       const h = (x.avgWords || 0) / max * H, cx = 40 + i * ((W - 50) / xs.length);
-      svg += '<rect x="' + cx.toFixed(1) + '" y="' + (10 + H - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(2, h).toFixed(1) + '" rx="4" fill="#008C7A"><title>' + esc(x.title) + ': średnio ' + (x.avgWords || 0) + ' słów na wypowiedź</title></rect>';
+      svg += '<rect x="' + cx.toFixed(1) + '" y="' + (10 + H - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(2, h).toFixed(1) + '" rx="4" fill="#789E66"><title>' + esc(x.title) + ': średnio ' + (x.avgWords || 0) + ' słów na wypowiedź</title></rect>';
       svg += '<text x="' + (cx + bw / 2).toFixed(1) + '" y="' + (H + 26) + '" text-anchor="middle" font-size="10" fill="#5F5B55">' + new Date(x.at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) + '</text>';
     });
     return '<div class="small-note">Średnio słów na wypowiedź — im dłuższe, tym swobodniej mówisz:</div>' + svg + '</svg>';
@@ -5988,7 +5988,7 @@
       '<header style="text-align:center"><h1 style="font-size:38px">Rozmowa zakończona</h1>' +
       '<p class="muted" style="font-size:18px;margin:6px 0 0">' + esc(X.scene.title) + ' · ' + (X.goalFinal ? '<b class="ok-ink">cel osiągnięty ✓</b>' : 'cel nieosiągnięty') + ' · +' + X.xp + ' XP' + (X.promo ? '<br><b class="pink">' + esc(X.promo) + '</b>' : '') + '</p></header>' +
       '<section class="kpis talk-kpis">' +
-      '<div class="kpi raised"><div class="small-note" style="font-size:15px">Zrozumiałość</div><span class="kpi-val">' + (Sm ? Sm.score + '%' : '—') + '</span><div class="bar thin inset"><div style="width:' + (Sm ? Sm.score : 0) + '%;background:linear-gradient(90deg,#008C7A,#4FB7A8)"></div></div></div>' +
+      '<div class="kpi raised"><div class="small-note" style="font-size:15px">Zrozumiałość</div><span class="kpi-val">' + (Sm ? Sm.score + '%' : '—') + '</span><div class="bar thin inset"><div style="width:' + (Sm ? Sm.score : 0) + '%;background:linear-gradient(90deg,#789E66,#A9C79A)"></div></div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Twoje wypowiedzi</div><span class="kpi-val">' + me.length + '</span><div class="small-note">niezrozumiane: ' + me.filter(m => m.ok === false).length + '</div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Średnio słów</div><span class="kpi-val">' + String(X.avg).replace('.', ',') + '</span><div class="small-note">na jedną wypowiedź</div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Podpowiedzi</div><span class="kpi-val">' + X.hintsUsed + '</span><div class="small-note">im mniej, tym samodzielniej</div></div></section>' +
@@ -6216,7 +6216,7 @@
       let d = 'M' + x(h[0].at).toFixed(1) + ' ' + y(h[0].lvl).toFixed(1);
       h.slice(1).forEach(e => { d += ' H' + x(e.at).toFixed(1) + ' V' + y(e.lvl).toFixed(1); });
       d += ' H' + x(t1).toFixed(1);
-      spark = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="spark" role="img" aria-label="Poziom zdań w czasie"><path d="' + d + '" fill="none" stroke="#008C7A" stroke-width="2.5"/></svg>';
+      spark = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="spark" role="img" aria-label="Poziom zdań w czasie"><path d="' + d + '" fill="none" stroke="#789E66" stroke-width="2.5"/></svg>';
     }
     return '<div class="sentlvl inset"><div><b>Poziom zdań: ' + L2 + '/5</b><div class="small-note">dobierany do tego, jak Ci idzie' + (acc != null ? ' · ostatnio ' + acc + '% dobrze' : '') + ' (≥85% → trudniejsze, ≤55% → prostsze)</div></div>' + spark + '</div>';
   }
