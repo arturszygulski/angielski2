@@ -364,6 +364,11 @@
   function goStale(k) { if (k === 'tense') go('tenses'); else if (k === 'listen' || k === 'talk' || k === 'texts') go(k); else startPlay(k); }
   /* „Co dalej?” po sesji: 3 rzeczy, których najdawniej nie robiłeś */
   const NEXT_DESC = { race: 'jak najwięcej słów na czas', order: 'gra: kafelki w dobrej kolejności', dictation: 'gra: posłuchaj i zapisz', speak: 'gra: mów do mikrofonu', error: 'gra: wskaż i popraw błąd', translate: 'gra: z polskiego na angielski', particle: 'gra: phrasal verbs', tense: 'lekcje i ćwiczenia czasów', listen: 'minuta słuchania i 4 pytania', talk: 'scenka z AI — mów i dogadaj się', texts: 'czytaj i ucz się z tekstów' };
+  function nextIdeasLine() {
+    const l = staleList(0, true).slice(0, 3);
+    if (!l.length) return '';
+    return '<div class="rs-more">Albo spróbuj: ' + l.map((x, i) => '<button class="lnk" data-next="' + x.k + '" title="' + esc(NEXT_DESC[x.k] || '') + ' (' + (i + 1) + ')">' + esc(USE_NAME[x.k]) + '</button>').join(' · ') + ' <span class="small-note">— dawno nie było</span></div>';
+  }
   function nextIdeasHtml() {
     const l = staleList(0, true).slice(0, 3);
     if (!l.length) return '';
@@ -1469,7 +1474,7 @@
   function hookOutside(e) { const p = document.querySelector('.hk-pop'); if (p && !p.contains(e.target) && !e.target.closest('.hk-btn')) hookClose(); }
   function hookToggle(btn, wid) {
     if (document.querySelector('.hk-pop')) { hookClose(); return; }
-    const box = btn.closest('.ex-card, header.top') || document.body;
+    const box = btn.closest('.ex-card, header.top, .rs-sec') || document.body;
     const pop = document.createElement('div'); pop.className = 'hk-pop'; pop.dataset.wid = wid;
     box.appendChild(pop);
     const r = btn.getBoundingClientRect(), br = box.getBoundingClientRect(), W = Math.min(420, br.width - 24);
@@ -2213,6 +2218,7 @@
       if (c.isNew) { if (c.newKind === 'extra') { t.newExtra = (t.newExtra || 0) + 1; S.newExtra++; } else { t.newCount++; S.newCount++; } }
     }
     if (S.boss) S.bossHit[id] = 1;
+    (S.knownIds = S.knownIds || []).push(id);
     const removed = [];
     for (let i = S.queue.length - 1; i > S.pos; i--) if (S.queue[i].id === id || prevFam.hasOwnProperty(S.queue[i].id)) removed.push(S.queue.splice(i, 1)[0]);
     const wasStruggled = S.struggled.includes(id);
@@ -2229,6 +2235,7 @@
           if (c.isNew) { if (c.newKind === 'extra') { t.newExtra = Math.max(0, (t.newExtra || 0) - 1); sess.newExtra--; } else { t.newCount = Math.max(0, t.newCount - 1); sess.newCount--; } }
         }
         if (wasStruggled && sess) sess.struggled.push(id);
+        if (sess && sess.knownIds) sess.knownIds = sess.knownIds.filter(x => x !== id);
         Store.save();
         if (S === sess && screen === 'exercise') {
           S.queue.splice(S.pos + 1, 0, Object.assign({}, c, { relearn: false }));
@@ -2282,42 +2289,67 @@
     const prevCards = {};
     const items = r.struggled.filter(id => itemFor(id) && D().cards[id] && D().cards[id].state !== 'known');
 
+    const WORD_T = { cloze: 1, choice: 1, particle: 1, pvwrite: 1 };
+    const known = (r.knownIds || []).filter((x, k, a) => a.indexOf(x) === k);
+    const newWords = (r.queue || []).filter(q => q.isNew && q.newKind !== 'extra' && r.first && r.first[q.id] != null).map(q => q.id).filter((x, k, a) => a.indexOf(x) === k);
+    const label = id => { const it = itemFor(id); if (!it) return esc(id); if (it.w && WORD_T[it.type]) return '<b lang="en">' + esc(it.w.answers[0]) + '</b> — ' + esc(it.w.pl); const f = fullSentence(it); return '<span lang="en">' + esc(f.length > 90 ? f.slice(0, 88) + '…' : f) + '</span>'; };
+    const short = id => { const it = itemFor(id); return it && it.w && it.w.answers[0] ? it.w.answers[0] : itemShort(id); };
+    let undoMode = false;
     const rowsHtml = () => items.map(id => {
-      const known = D().cards[id] && D().cards[id].state === 'known';
-      return '<div class="list-item inset"><div>' + itemLabel(id) + '</div>' +
-        '<button class="btn small' + (known ? ' done-state' : '') + '" data-id="' + esc(id) + '">' + (known ? '✓ Umiem — usunięte' : 'Umiem to') + '</button></div>';
+      const it = itemFor(id), kn = D().cards[id] && D().cards[id].state === 'known';
+      const wid = it && WORD_T[it.type] ? hookWordId(it) : null;
+      return '<div class="rs-row"><span class="rs-tag">' + esc((TYPES[it.type] || {}).tag || '') + '</span><span class="rs-t">' + label(id) + '</span>' +
+        (wid && (AI.enabled() || (hookGet(wid) && hookGet(wid).t)) ? '<button class="btn raised hk-btn rs-hk" data-hk-w="' + esc(wid) + '" title="Haczyk — jak zapamiętać" aria-label="Haczyk">' + LIGHTBULB + '</button>' : '<span></span>') +
+        '<button class="btn small raised' + (kn ? ' done-state' : '') + '" data-id="' + esc(id) + '">' + (kn ? '✓ Umiem' : 'Umiem to') + '</button></div>';
     }).join('');
+    const allKnown = () => known.concat(items.filter(id => D().cards[id] && D().cards[id].state === 'known' && known.indexOf(id) < 0));
+    const newHtml = () => {
+      const kn = allKnown(), up = (r.stepUps || []), ms = (r.mastered || []);
+      if (!newWords.length && !kn.length && !up.length && !ms.length) return '';
+      return '<section class="rs-sec"><h2>Dziś nowe</h2>' +
+        (newWords.filter(id => kn.indexOf(id) < 0).length ? '<div class="rs-chips">' + newWords.filter(id => kn.indexOf(id) < 0).slice(0, 20).map(id => { const it = itemFor(id); return '<span class="rs-chip"><b lang="en">' + esc(it && it.w ? it.w.answers[0] : short(id)) + '</b>' + (it && it.w ? ' <small>' + esc(it.w.pl) + '</small>' : '') + '</span>'; }).join('') + '</div>' : '') +
+        (kn.length ? '<div class="rs-lbl">Oznaczone „Umiem to” — nie będą powtarzane (' + kn.length + ') · <button class="lnk" id="rsUndo">' + (undoMode ? 'gotowe' : 'cofnij') + '</button>' + (undoMode ? ' <span>— kliknij słowo, które ma wrócić do nauki</span>' : '') + '</div><div class="rs-chips">' +
+          kn.map(id => undoMode ? '<button class="rs-chip rs-undo" data-undo="' + esc(id) + '" lang="en">' + esc(short(id)) + ' ↺</button>' : '<span class="rs-chip" lang="en">' + esc(short(id)) + '</span>').join('') + '</div>' : '') +
+        (up.length ? '<div class="rs-lbl">Następnym razem trudniej (' + up.length + ')</div><div class="rs-chips">' + up.slice(0, 12).map(id => '<span class="rs-chip" lang="en">' + esc(short(id)) + '</span>').join('') + '</div>' : '') +
+        (ms.length ? '<div class="rs-lbl">Opanowane — wrócą za ok. 3 tygodnie (' + ms.length + ')</div><div class="rs-chips">' + ms.slice(0, 12).map(id => '<span class="rs-chip ok" lang="en">' + esc(short(id)) + ' ✓</span>').join('') + '</div>' : '') +
+        '</section>';
+    };
+    const goalPct = Math.min(100, Math.round(t.sec / (goal * 60) * 100));
+    const kpi = (v, l, cls) => '<div class="rs-k"><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b><span>' + l + '</span></div>';
+    const kpis = [kpi(mins, mins === 1 ? 'minuta' : 'minut'), kpi('+' + r.xp, 'XP', 'pink'), kpi(acc + '%', 'poprawnych'), kpi('×' + r.maxCombo, 'najdłuższe combo'),
+      kpi(r.newCount + (r.newExtra ? ' + ' + r.newExtra : ''), r.newExtra ? 'nowe słowa + ćwiczenia' : 'nowe słowa')]
+      .concat(allKnown().length ? [kpi(allKnown().length, '„Umiem to”')] : [])
+      .concat(r.raceHits != null ? [kpi(r.raceHits, 'trafień w rozgrzewce')] : [])
+      .concat([kpi(str + ' ' + (str === 1 ? 'dzień' : 'dni'), 'seria')]);
 
     app.innerHTML =
-      '<div class="wrap narrow">' +
+      '<div class="wrap narrow rs">' +
       '<header style="text-align:center"><h1 style="font-size:40px">' + (r.lim ? 'Runda zakończona' : 'Sesja zakończona') + '</h1>' +
-      '<p class="muted" style="font-size:18px;margin:6px 0 0">' + (goalDone ? 'Świetna robota' + (D().profile.name ? ', ' + esc(D().profile.name) : '') + '. Cel dzienny zaliczony.' : 'Dobra robota. Do celu dziennego zostało ' + Math.max(1, Math.ceil((goal * 60 - t.sec) / 60)) + ' min.') + '</p></header>' +
-      (r.lim ? '<div class="row center" style="gap:20px"><button class="btn big" id="end">Wróć ' + K('Esc') + '</button><button class="btn big primary" id="more">Kolejna runda ' + K('Enter') + '</button></div>' : '<div class="row center" style="gap:20px"><button class="btn big" id="more">' + (r.tenseTids ? 'Jeszcze raz ' : r.textId ? 'Jeszcze raz z tekstu ' : r.play ? 'Zagraj jeszcze raz ' : 'Jeszcze jeden blok · ' + D().settings.blockMin + ' min ') + K('B') + '</button><button class="btn big primary" id="end">' + (r.tenseTids ? 'Wróć do czasów ' : r.textId ? 'Wróć do tekstu ' : r.play ? 'Wróć ' : 'Zakończ na dziś ') + K('Enter') + '</button></div>') +
-      nextIdeasHtml() +
+      '<p class="muted" style="font-size:18px;margin:6px 0 0">' + (goalDone ? 'Świetna robota' + (D().profile.name ? ', ' + esc(D().profile.name) : '') + '. Cel dzienny zaliczony ✓' : 'Dobra robota. Do celu dziennego zostało ' + Math.max(1, Math.ceil((goal * 60 - t.sec) / 60)) + ' min.') + '</p></header>' +
       (r.boss ? (r.bossWon
         ? '<div class="fb ok" style="margin:0 auto">' + IC.star + '<span><b>Boss pokonany!</b> ' + (r.bossClean && r.total > 0 ? 'Bez ani jednego błędu. ' : '') + 'Wszystkie trudne elementy z tego tygodnia zaliczone · podwójne XP.</span></div>'
         : '<div class="fb info" style="margin:0 auto">' + IC.question + '<span><b>Boss jeszcze stoi.</b> Pokonane: ' + Object.keys(r.bossHit).length + ' z ' + r.bossMax + '. Możesz wrócić do walki w tym tygodniu.</span></div>') : '') +
       r.promos.map(p => '<div class="fb ok" style="margin:0 auto">' + IC.star + '<span><b>Awans!</b> ' + esc(p) + '</span></div>').join('') +
-      (r.newBadges && r.newBadges.length ? '<section class="list-card raised" style="align-items:center;text-align:center"><h2 style="font-size:22px">Nowa odznaka!</h2><div class="badges">' + r.newBadges.map(b => badgeHtml(b, true)).join('') + '</div></section>' : '') +
-      '<section class="today raised" style="justify-content:center">' +
-      '<div class="lcd inset deep" style="min-width:200px"><div class="num">' + mins + '</div><div class="lbl">' + (mins === 1 ? 'minuta' : 'minut') + ' nauki</div></div>' +
-      '<div class="col" style="flex:0 1 320px"><div style="font-family:var(--head);font-weight:700;font-size:44px;line-height:1" class="pink">+' + r.xp + ' XP</div>' +
-      '<div class="row" style="gap:10px;font-size:18px">' + IC.flame + ' Seria: <b>' + str + ' ' + (str === 1 ? 'dzień' : 'dni') + '</b></div>' +
-      '<div class="bar thin inset"><div style="width:' + Math.min(100, Math.round(t.sec / (goal * 60) * 100)) + '%"></div></div></div></section>' +
-      '<section class="stats">' +
-      '<div class="stat raised"><span>Poprawne odpowiedzi</span><b>' + acc + '%</b></div>' +
-      '<div class="stat raised"><span>Najdłuższe combo</span><b>×' + r.maxCombo + '</b></div>' +
-      '<div class="stat raised"><span>Nowe słowa · ćwiczenia</span><b>' + r.newCount + ' · ' + r.newExtra + '</b></div>' +
-      (r.raceHits != null ? '<div class="stat raised"><span>Rozgrzewka</span><b>' + r.raceHits + ' trafień</b></div>' : '') +
-      '</section>' +
-      (items.length
-        ? '<section class="list-card raised"><div><h2 style="font-size:22px">Wróci wkrótce</h2><p class="muted" style="margin:4px 0 0">To sprawiało trudność albo było na niepewno. Jeśli już umiesz — oznacz, nie będzie powtarzane.</p></div><div class="col" id="rows">' + rowsHtml() + '</div></section>'
-        : '') +
+      (r.newBadges && r.newBadges.length ? '<section class="rs-sec" style="align-items:center;text-align:center"><h2>Nowa odznaka!</h2><div class="badges">' + r.newBadges.map(b => badgeHtml(b, true)).join('') + '</div></section>' : '') +
+      '<section class="rs-sum"><div class="rs-kpis">' + kpis.join('<div class="rs-sep"></div>') + '</div>' +
+      '<div class="rs-goal"><span>Cel dzienny <b>' + goal + ' min</b></span><div class="bar thin inset gbar"><div style="width:' + goalPct + '%"></div></div><span class="small-note">' + (goalDone ? '✓ zaliczony' : Math.floor(t.sec / 60) + ' z ' + goal + ' min') + '</span></div></section>' +
+      (items.length ? '<section class="rs-sec rs-trouble"><h2>Z czym był kłopot <small>wróci wkrótce · jeśli już umiesz, oznacz</small></h2><div id="rows">' + rowsHtml() + '</div></section>' : '') +
+      '<div id="rsNew">' + newHtml() + '</div>' +
       '<div class="row center small-note" id="syncLine">' + syncLineHtml() + '</div>' +
-      ((r.stepUps && r.stepUps.length) || (r.mastered && r.mastered.length) ? '<section class="list-card raised"><h2 style="font-size:22px">Postępy w trudności</h2>' +
-        (r.stepUps && r.stepUps.length ? '<div class="small-note">Następnym razem trudniej (' + r.stepUps.length + '):</div><div class="chips">' + r.stepUps.slice(0, 12).map(id => '<span class="chip inset">' + esc(itemShort(id)) + '</span>').join('') + '</div>' : '') +
-        (r.mastered && r.mastered.length ? '<div class="small-note">Opanowane — wrócą za ok. 3 tygodnie (' + r.mastered.length + '):</div><div class="chips">' + r.mastered.slice(0, 12).map(id => '<span class="chip okchip">' + esc(itemShort(id)) + '</span>').join('') + '</div>' : '') + '</section>' : '') +
+      (r.lim ? '<div class="row center" style="gap:20px"><button class="btn big" id="end">Wróć ' + K('Esc') + '</button><button class="btn big primary" id="more">Kolejna runda ' + K('Enter') + '</button></div>' : '<div class="row center" style="gap:20px"><button class="btn big" id="more">' + (r.tenseTids ? 'Jeszcze raz ' : r.textId ? 'Jeszcze raz z tekstu ' : r.play ? 'Zagraj jeszcze raz ' : 'Jeszcze jeden blok · ' + D().settings.blockMin + ' min ') + K('B') + '</button><button class="btn big primary" id="end">' + (r.tenseTids ? 'Wróć do czasów ' : r.textId ? 'Wróć do tekstu ' : r.play ? 'Wróć ' : 'Zakończ na dziś ') + K('Enter') + '</button></div>') +
+      nextIdeasLine() +
       '</div>';
+    const bindNew = () => {
+      const u = $('#rsUndo'); if (u) u.onclick = () => { undoMode = !undoMode; $('#rsNew').innerHTML = newHtml(); bindNew(); };
+      $$('[data-undo]').forEach(b => b.onclick = () => {
+        const id = b.dataset.undo;
+        knownFamily(id).concat([id]).forEach(x => { const k = D().cards[x]; if (k && k.state === 'known') { k.state = 'review'; delete k.knownAt; k.due = U.addDays(U.startOfDay(), 1); } });
+        const ki = known.indexOf(id); if (ki >= 0) known.splice(ki, 1);
+        progress(); Store.save(); toast(short(id) + ' — wróci do nauki od jutra.');
+        $('#rsNew').innerHTML = newHtml(); bindNew(); if ($('#rows')) { $('#rows').innerHTML = rowsHtml(); bindRows(); }
+      });
+    };
+    const bindHooks = () => $$('[data-hk-w]').forEach(b => b.onclick = e => { e.stopPropagation(); hookToggle(b, b.dataset.hkW); });
 
     const bindRows = () => $$('#rows [data-id]').forEach(b => b.onclick = () => {
       const id = b.dataset.id, card = D().cards[id];
@@ -2325,9 +2357,10 @@
       if (card.state === 'known') { fam.forEach(x => { if (prevCards[x] === null) delete D().cards[x]; else if (prevCards[x]) D().cards[x] = prevCards[x]; }); }
       else fam.forEach(x => { prevCards[x] = D().cards[x] ? Object.assign({}, D().cards[x]) : null; D().cards[x] = Object.assign({ reps: 0, lapses: 0, added: Date.now() }, D().cards[x] || {}, { state: 'known', knownAt: Date.now() }); });
       progress(); Store.save();
-      $('#rows').innerHTML = rowsHtml(); bindRows();
+      $('#rows').innerHTML = rowsHtml(); bindRows(); bindHooks();
+      if ($('#rsNew')) { $('#rsNew').innerHTML = newHtml(); bindNew(); }
     });
-    bindRows();
+    bindRows(); bindNew(); bindHooks();
     const rT = r.textId && (D().texts || {})[r.textId];
     const again = () => r.tenseTids ? startTenseSession(r.tenseTids, r.custom) : rT ? startTextSession(rT) : r.play ? startPlay(r.play) : startSession(false, (dueIds().length || newLeftToday() || newExtraLeftToday()) ? 0 : 5); // gdy plan na dziś zrobiony — blok z 5 dodatkowymi nowymi
     $('#more').onclick = again;
@@ -2339,7 +2372,7 @@
       if (e.key === 'Enter' && document.activeElement === document.body) { e.preventDefault(); if (r.lim) again(); else $('#end').click(); return; }
       if (e.key === 'Escape' && r.lim) { e.preventDefault(); $('#end').click(); return; }
       if (plainKey(e, 'KeyB')) { e.preventDefault(); again(); return; }
-      if (!e.altKey && !e.ctrlKey && /^[1-3]$/.test(e.key)) { const b = app.querySelector('[data-next]:nth-child(' + e.key + ')'); if (b) { e.preventDefault(); b.click(); } }
+      if (!e.altKey && !e.ctrlKey && /^[1-3]$/.test(e.key)) { const b = $$('[data-next]')[+e.key - 1]; if (b) { e.preventDefault(); b.click(); } }
     };
     $$('[data-next]').forEach(b => b.onclick = () => { S = null; goStale(b.dataset.next); });
   }
