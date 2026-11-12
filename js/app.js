@@ -1435,6 +1435,7 @@
   const HOOK_BUSY = {};
   const LIGHTBULB = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
   function hookWordId(it) { if (!it || !it.w || it.fromText || !it.id) return null; const id = it.id.indexOf(':') >= 0 ? it.id.slice(it.id.indexOf(':') + 1) : it.id; return WORDS.byId[id] ? id : null; }
+  const c0 = it => (cur() || {}).id || it.id;
   function hookGet(wid) { return ((D().hooks || {})[wid]) || null; }
   function hookFetch(wid, avoid) {
     const w = WORDS.byId[wid]; if (!w || !AI.enabled() || HOOK_BUSY[wid]) return Promise.resolve(hookGet(wid));
@@ -1451,17 +1452,18 @@
   }
   function hookBtnHtml(id) { return '<button class="btn raised hk-btn" id="' + id + '" title="Haczyk — jak zapamiętać (H)" aria-label="Haczyk — jak zapamiętać (H)">' + LIGHTBULB + '</button>'; }
   function hookIcon(it) {
-    const fb = S && S.fb; if (!fb || !HOOK_TYPES[it.type] || !(fb.kind === 'bad' || fb.kind === 'idk')) return;
+    const fb = S && S.fb; if (!fb || !HOOK_TYPES[it.type]) return;
     const wid = hookWordId(it); if (!wid) return;
     const h = hookGet(wid);
-    if (h && h.none && !h.t) return;
+    const weak = fb.kind === 'bad' || fb.kind === 'idk' || fb.kind === 'uns' || S.unsure || (D().cards[c0(it)] || {}).hard; // błąd, „Zgaduję” albo „Trudne” — haczyk przygotowany od razu
+    if (h && h.none && !h.t && weak) return;
     if (!h && !AI.enabled()) return;
     const line = document.querySelector('.ex-card .fb > span'); if (!line) return;
     const sm = line.querySelector('small');
     const tmp = document.createElement('span'); tmp.innerHTML = hookBtnHtml('hkBtn'); const btn = tmp.firstChild;
     if (sm) line.insertBefore(btn, sm); else line.appendChild(btn);
     btn.onclick = e => { e.stopPropagation(); hookToggle(btn, wid); };
-    if (!h) { const sess = S; hookFetch(wid).then(x => { if (S === sess && S.phase === 'feedback' && x && x.none && !x.t) { const b = document.getElementById('hkBtn'); if (b && !document.querySelector('.hk-pop')) b.remove(); } else { const p = document.querySelector('.hk-pop'); if (p && p.dataset.wid === wid) hookRender(p, wid); } }); }
+    if (!h && weak) { const sess = S; hookFetch(wid).then(x => { if (S === sess && S.phase === 'feedback' && x && x.none && !x.t) { const b = document.getElementById('hkBtn'); if (b && !document.querySelector('.hk-pop')) b.remove(); } else { const p = document.querySelector('.hk-pop'); if (p && p.dataset.wid === wid) hookRender(p, wid); } }); }
   }
   function hookClose() { const p = document.querySelector('.hk-pop'); if (p) p.remove(); document.removeEventListener('click', hookOutside, true); }
   function hookOutside(e) { const p = document.querySelector('.hk-pop'); if (p && !p.contains(e.target) && !e.target.closest('.hk-btn')) hookClose(); }
@@ -2146,6 +2148,7 @@
     if (card.due > Date.now() + U.DAY) card.due = Date.now() + Math.round((card.due - Date.now()) / 2);
     if (!S.struggled.includes(c.id)) S.struggled.push(c.id);
     Store.save(); toast('Oznaczone jako trudne — będzie wracać częściej.'); renderExercise();
+    const wid = hookWordId(curView(c)); if (wid && HOOK_TYPES[curView(c).type] && !hookGet(wid) && AI.enabled()) hookFetch(wid);
   }
   function hardIds() { const cc = D().cards; return Object.keys(cc).filter(id => cc[id].hard && itemFor(id) && typeEnabled(itemFor(id).type)); }
   function next() {
