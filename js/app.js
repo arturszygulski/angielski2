@@ -815,21 +815,16 @@
 
     app.innerHTML =
       '<div class="wrap">' +
-      '<header class="top"><div class="hello"><div class="logo raised">' + IC.spark + '</div>' +
-      '<div><h1>' + (name ? 'Cześć, ' + esc(name) : 'Cześć!') + '</h1><p>Angielski codziennie.</p></div></div>' +
-      '<div class="row" style="gap:14px">' +
+      '<header class="top">' + wodHtml() +
+      '<div class="row top-r" style="gap:18px"><div class="sw-col">' +
       '<span id="syncChipBox">' + syncChipHtml() + '</span>' +
-      '<button class="btn pill small" id="aiChip" title="Ustawienia AI">' + (AI.enabled() ? '<span style="width:9px;height:9px;border-radius:50%;background:#5D9A6E"></span> AI włączone' : '<span style="width:9px;height:9px;border-radius:50%;background:#B5AFA7"></span> AI wyłączone') + '</button>' +
-      '<div class="chip head inset">Poziom ' + L[overallLevel()] + '</div>' +
+      '<button class="sw ' + (AI.enabled() ? 'on' : 'off') + '" id="aiChip" title="' + (AI.enabled() ? 'AI włączone — ustawienia AI' : 'AI wyłączone — wpisz klucz API w ustawieniach') + '"><span class="tr"></span>AI</button></div>' +
       '<button class="btn round" id="settings" aria-label="Ustawienia (O)" title="Ustawienia (O)">' + IC.gear + '</button></div></header>' +
 
       '<section class="today2">' +
-      '<div class="t2-day"><div class="t2-wd">' + WEEKDAYS[now.getDay()] + '</div>' +
-      '<div class="t2-date">' + now.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) + (str ? ' · seria ' + str + ' ' + (str === 1 ? 'dzień' : 'dni') : '') + '</div>' +
-      '<div class="t2-min"><span>Dziś <b>' + Math.floor(t.sec / 60) + '</b> z ' + st.goalMin + ' min</span>' + (pct >= 100 ? '<span class="small-note">cel ✓</span>' : '<span class="small-note">' + pct + '%</span>') + '</div>' +
-      '<div class="bar thin inset"><div style="width:' + pct + '%"></div></div></div>' +
+      weekHtml() +
       '<div class="t2-plan"><h4>Plan na dziś</h4><div><span>Powtórki</span><b>' + due + '</b></div><div><span>Nowe słowa</span><b>' + freshW + '</b></div><div><span>Nowe ćwiczenia</span><b>' + freshX + '</b></div></div>' +
-      '<div class="t2-act">' +
+      '<div class="t2-right"><div class="t2-act">' +
       '<button class="btn t2-guide" id="guide" title="Program układa plan i prowadzi Cię krok po kroku"><b>' + (GUIDE && GUIDE.i < GUIDE.steps.length ? 'Wróć<br>do planu' : 'Krok<br>po kroku') + '</b>' + K('L') + '</button>' +
       '<div class="t2-main">' +
       (nothing
@@ -841,9 +836,10 @@
         const sl = staleList().slice(0, 2);
         if (!sl.length) return '';
         const ago = x => x.d == null ? 'dawno albo wcale' : 'ostatnio ' + x.d + ' dni temu';
-        return '<div class="t2-foot" title="' + esc(sl.map(x => USE_NAME[x.k] + ' — ' + ago(x)).join(' · ')) + '"><span>Dawno nie było:</span>' +
-          sl.map((x, i) => '<button class="btn small" data-stale="' + x.k + '">' + esc(USE_NAME[x.k]) + (i === 0 ? ' ' + K('N') : '') + '</button>').join('') + '</div>';
-      })() +
+        return '<div class="t2-stale" title="' + esc(sl.map(x => USE_NAME[x.k] + ' — ' + ago(x)).join(' · ')) + '"><span>Dawno nie było:</span>' +
+          sl.map((x, i) => '<button class="lnk" data-stale="' + x.k + '"' + (i === 0 ? ' title="klawisz N"' : '') + '>' + esc(USE_NAME[x.k]) + '</button>').join('') + '</div>';
+      })() + '</div>' +
+      '<div class="t2-goal"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div></div>' +
       '</section>' +
       '<nav class="nav-tiles" aria-label="Więcej"><span class="nav-sep" aria-hidden="true"></span>' +
       navTile('talk', IC.chat, 'Rozmowa', 'scenki z AI — mów i dogadaj się', 'R') +
@@ -855,12 +851,6 @@
       navTile('listen', IC.headphones, 'Audycja', 'minuta słuchania i 4 pytania', 'A') +
       navTile('mistakes', IC.list, 'Dziennik błędów', 'co sprawia trudność', 'D', 'tint') +
       '</nav>' +
-      '<section class="two-bars">' +
-      '<div class="col"><div class="bar-head"><span>Cel dzienny</span><b class="pink">' + pct + '%</b></div>' +
-      '<div class="bar inset"><div style="width:' + pct + '%"></div></div></div>' +
-      (function () { const v = vocabMap(), kn = v.tot.mast + v.tot.known, lv2 = levelInfo(d.xp); return '<button class="col vm-home" id="vmHome" title="Mapa słownictwa — w Statystykach"><div class="bar-head"><span>Słownictwo: <b>' + fmtNum(kn) + '</b> z ' + fmtNum(v.tot.total) + ' · ' + Math.round(kn / v.tot.total * 100) + '%</span><span class="small-note">etap ' + L[v.cur] + ' · ' + v.curPct + '% · gracz poz. ' + lv2.level + '</span></div>' +
-        '<div class="bar inset">' + vmBar(v.tot).replace('vm-bar inset', 'vm-bar') + '</div></button>'; })() +
-      '</section>' +
 
       '<section class="lower"><div class="skills">' + tiles + '</div>' +
       '<div class="cal cal-flat"><div class="row between" style="align-items:baseline"><b style="font-family:var(--head);font-size:20px">' + MONTHS[m] + '</b>' +
@@ -869,10 +859,6 @@
       '<div class="cal-grid">' + cal + '</div></div></section>' +
 
       '<div class="notes-row">' +
-      (needBackup
-        ? '<section class="note raised"><div class="ic inset">' + IC.save + '</div><div class="tx"><b>Zabezpiecz postępy</b><span>kopia na Dysku Google</span></div>' +
-          '<button class="btn primary" id="toSync">Ustaw</button></section>'
-        : '') +
       monthTestNoteHtml() +
       bossNoteHtml() +
       '</div></div>';
@@ -889,10 +875,13 @@
     if ($('#bossGo')) $('#bossGo').onclick = startBoss;
     if ($('#mTest')) $('#mTest').onclick = () => startTest(true);
     $$('[data-stale]').forEach(b => b.onclick = () => goStale(b.dataset.stale));
+    if ($('#wodGo')) $('#wodGo').onclick = wodPractice;
+    if ($('#wodSay')) $('#wodSay').onclick = () => { const w = wodWord(); if (w) Speech.speak(fullSentence({ w }), D().settings.rate || 0.95); };
     if ($('#vmHome')) $('#vmHome').onclick = () => go('stats');
     keyHandler = e => {
       if (e.repeat) return;
       if (plainKey(e, 'KeyN') && $('[data-stale]')) { e.preventDefault(); $('[data-stale]').click(); return; }
+      if (plainKey(e, 'KeyW') && $('#wodGo')) { e.preventDefault(); wodPractice(); return; }
       if (e.key === 'Enter' && document.activeElement === document.body) { const b = $('#start') || $('#extra'); if (b) { e.preventDefault(); b.click(); } return; }
       if (plainKey(e, 'KeyS') && $('#quick')) { e.preventDefault(); $('#quick').click(); return; }
       if (plainKey(e, 'KeyL')) { e.preventDefault(); $('#guide').click(); return; }
@@ -903,6 +892,57 @@
       if (plainKey(e, 'KeyB') && $('#bossGo')) { e.preventDefault(); startBoss(); }
     };
     maybeTopUp(false);
+  }
+
+  /* ---------- Słowo dnia: słowo, które sprawia trudność (otwarte błędy, trudne), stałe przez cały dzień ---------- */
+  const baseWordId = id => { const it = itemFor(id); if (!it || !it.w || it.fromText) return null; const wid = id.indexOf(':') >= 0 ? id.slice(id.indexOf(':') + 1) : id; return WORDS.byId[wid] ? wid : null; };
+  function wodPick() {
+    const today = U.dayKey(), cur = D().wod;
+    if (cur && cur.day === today && WORDS.byId[cur.id]) return cur;
+    const seen = {}, hard = [], c = D().cards;
+    (D().mistakes || []).slice().reverse().forEach(m => { if (!mistakeOpen(m)) return; const id = baseWordId(m.id); if (id && !seen[id]) { seen[id] = 1; hard.push(id); } });
+    Object.keys(c).forEach(id => { if (c[id].hard) { const b = baseWordId(id); if (b && !seen[b]) { seen[b] = 1; hard.push(b); } } });
+    let pool = hard.slice(0, 15), src = 'hard';
+    if (!pool.length) { pool = Object.keys(c).filter(id => WORDS.byId[id] && c[id].state !== 'known').sort((a, b) => (c[a].s || 0) - (c[b].s || 0)).slice(0, 15); src = 'weak'; }
+    if (!pool.length) { pool = WORDS.list.filter(w => w.lvl === levels().vocab && !w.custom).slice(0, 50).map(w => w.id); src = 'new'; }
+    if (!pool.length) return null;
+    let h = 0; for (const ch of today) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const pick = { day: today, id: pool[h % pool.length], src };
+    D().wod = pick; Store.save();
+    return pick;
+  }
+  function wodWord() { const p = wodPick(); return p ? WORDS.byId[p.id] : null; }
+  function wodHtml() {
+    const p = wodPick(), w = p && WORDS.byId[p.id];
+    if (!w) return '<div class="wod"></div>';
+    const [a, b] = splitSentence(w.s);
+    return '<div class="wod"><button class="btn raised wod-say" id="wodSay" aria-label="Odsłuchaj zdanie" title="Odsłuchaj zdanie">' + IC.speaker + '</button>' +
+      '<div class="wod-tx"><div class="wod-lbl">Słowo dnia' + (p.src === 'hard' ? ' · sprawia Ci trudność' : p.src === 'weak' ? ' · warto utrwalić' : '') + '</div>' +
+      '<div><span class="wod-w" lang="en">' + esc(w.answers[0]) + '</span> <span class="wod-pl">— ' + esc(w.pl) + '</span></div>' +
+      '<div class="wod-s" lang="en"><i>' + esc(a) + '<b>' + esc(w.answers[0]) + '</b>' + esc(b) + '</i></div></div>' +
+      '<button class="btn raised wod-go" id="wodGo" title="Krótka runda z tym słowem: zdanie, dyktando, mówienie, tłumaczenie">Ćwicz ' + K('W') + '</button></div>';
+  }
+  function wodPractice() {
+    const w = wodWord(); if (!w) return;
+    const ids = ['', 'dic:', 'say:', 'tr:', 'ord:'].map(pr => pr + w.id).filter(id => { const it = itemFor(id); return it && typeEnabled(it.type); });
+    if (!ids.length) return;
+    newSession({ custom: 'Słowo dnia: ' + w.answers[0], queue: ids.map(id => ({ id, isNew: false })) });
+    go('exercise');
+  }
+  /* ---------- Twój tydzień vs poprzedni: ostatnie 7 dni i 7 dni wcześniej ---------- */
+  function weekStats(from, to) {
+    let sec = 0, nw = 0;
+    for (let t = from; t < to; t = U.addDays(t, 1)) { const x = D().days[U.dayKey(t)]; if (x) { sec += x.sec || 0; nw += (x.newCount || 0) + (x.newExtra || 0); } }
+    const ok = D().okAt || {}, ids = {};
+    (D().mistakes || []).forEach(m => { const a = ok[m.id]; if (a && a > m.at && U.dayKey(a) !== U.dayKey(m.at) && a >= from && a < to) ids[m.id] = 1; });
+    return { min: Math.round(sec / 60), nw, closed: Object.keys(ids).length };
+  }
+  function weekHtml() {
+    const end = U.addDays(U.startOfDay(), 1), mid = U.addDays(end, -7), start = U.addDays(end, -14);
+    const a = weekStats(mid, end), b = weekStats(start, mid);
+    const row = (lbl, x, y) => { const d = x - y; return '<div><span>' + lbl + '</span><span class="v"><b>' + x + '</b>' + (d > 0 ? '<em class="up">▲ ' + d + '</em>' : d < 0 ? '<em class="dn">▼ ' + (-d) + '</em>' : '<em class="eq">=</em>') + '</span></div>'; };
+    return '<div class="t2-plan t2-week" title="Ostatnie 7 dni w porównaniu z 7 dniami wcześniej"><h4>Twój tydzień vs poprzedni</h4>' +
+      row('Minuty', a.min, b.min) + row('Nowe słowa', a.nw, b.nw) + row('Zamknięte błędy', a.closed, b.closed) + '</div>';
   }
 
   /* ================= SESJA ================= */
@@ -2244,7 +2284,7 @@
     else if (syncState.busy) { ok = true; label = 'Dysk — zapisuję…'; title = ''; }
     else if (!syncState.ok) { label = 'Dysk — błąd'; title = syncState.status || 'Ostatni zapis się nie udał.'; }
     else { ok = true; label = 'Dysk Google'; title = 'Synchronizacja działa · folder: ' + st.syncFolder + (D().lastSync ? ' · ostatni zapis: ' + fmtTime(D().lastSync) : ''); }
-    return '<button class="btn pill small" id="syncChip" title="' + esc(title) + '">' + dot(ok ? '#5D9A6E' : '#C2584A') + label + '</button>';
+    return '<button class="sw ' + (ok ? 'on' : 'off') + '" id="syncChip" title="' + esc(label + (title ? ' — ' + title : '')) + '"><span class="tr"></span>Dysk Google</button>';
   }
   function bindSyncChip() { const b = document.getElementById('syncChip'); if (b) b.onclick = () => syncState.needsPerm ? connectSync() : go('settings'); }
   function bindSyncLine() { const b = document.getElementById('syncRetry'); if (b) b.onclick = () => syncNow(true); }
@@ -2594,7 +2634,7 @@
   function mondayOf(t) { const d = new Date(U.startOfDay(t)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
   function weekKey(t) { return U.dayKey(mondayOf(t == null ? Date.now() : t)); }
   function navTile(nav, icon, title, sub, key, cls) {
-    return '<button class="btn nav-tile raised' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '"><span class="ic inset">' + icon + '</span><span class="tx"><b>' + title + '</b><small>' + sub + '</small></span>' + K(key) + '</button>';
+    return '<button class="btn nav-tile raised' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '" title="' + esc(sub) + '"><span class="ic inset">' + icon + '</span><span class="tx"><b>' + title + '</b><small>' + sub + '</small></span>' + K(key) + '</button>';
   }
   function backHeader(title, sub) {
     return '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button>' +
