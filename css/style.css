@@ -1200,3 +1200,4 @@ header.top { gap: 24px; align-items: center; }
 .btn:is(.tile, .etok, .chip-w, .chipbtn, .tp-opt, .hint-opt, .tmap-row, .topic, .scene, .tlesson, .pair, .rep-row, .ex-topic, .game) { font-family: var(--body); font-weight: 400; }
 .wod-btns { display: flex; flex-direction: column; gap: 8px; flex: none; }
 .wod-btns .btn.wod-go { justify-content: center; }
+.btn.chal-btn { width: 48px; height: 48px; min-height: 0; padding: 0; border-radius: 50%; color: #5E7898; font: 700 19px var(--head); letter-spacing: -1px; }

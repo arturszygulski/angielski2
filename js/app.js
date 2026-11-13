@@ -3063,7 +3063,7 @@
         ? '<div class="row center" style="gap:14px"><button class="btn" id="swIdk">Nie wiem</button><button class="btn primary" id="swOk">Sprawdź ' + K('Enter') + '</button></div><div class="small-note">' + K('Enter') + ' przy pustym polu = nie wiem</div>'
         : X.busy ? ''
         : X.res === 'bad'
-          ? '<div class="row center" style="gap:14px">' + (X.ans && !X.ai && AI.enabled() ? '<button class="btn" id="swChal" title="Uważasz, że Twoja odpowiedź też jest dobra? AI oceni i wyjaśni.">Challenge — AI sprawdzi ' + K('C') + '</button>' : '') + '<button class="btn primary" id="swNext">Dalej ' + K('Enter') + '</button></div>'
+          ? '<div class="row center" style="gap:14px">' + (X.ans && !X.ai && AI.enabled() ? '<button class="btn chal-btn" id="swChal" title="Challenge — AI sprawdzi (C). Uważasz, że Twoja odpowiedź też jest dobra? AI oceni i wyjaśni." aria-label="Challenge — AI sprawdzi (C)">?!</button>' : '') + '<button class="btn primary" id="swNext">Dalej ' + K('Enter') + '</button></div>'
           : '<div class="row center" style="gap:14px"><button class="btn" id="swLearn">Jeszcze poćwiczę ' + K('N') + '</button><button class="btn primary" id="swKnow">Umiem — nie pokazuj ' + K('Enter') + '</button></div>';
       body = '<main class="ex-card raised"><div class="prompt-word race-word">' + esc(w.pl) + '</div>' + exSentHtml(w, !show, 'ex-s race-ex') + fb +
         '<div class="answer-box"><label for="ans">Po angielsku</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off"' + (show ? ' disabled value="' + esc(X.ans) + '"' : '') + '></div>' + btns + '</main>';
