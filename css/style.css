@@ -975,8 +975,8 @@ header.top { gap: 24px; align-items: center; }
 .t2-goal > span { font-size: 16px; white-space: nowrap; } .t2-goal b { font: 700 17px var(--head); margin-left: 6px; }
 .t2-goal .bar { flex: 1; }
 .gbar > div { background: linear-gradient(90deg, #B9CBE0, #5E7898) !important; }
-.btn.t2-quick { background: var(--bg) !important; color: var(--slate) !important; border: 0; }
-.btn.t2-quick .kbd { background: none !important; color: var(--slate) !important; border-color: currentColor; }
+.btn.t2-quick { background: var(--bg) !important; color: var(--ink) !important; border: 0; }
+.btn.t2-quick .kbd { background: none !important; color: var(--ink) !important; border-color: currentColor; }
 .nav-tile .tx small { display: none; }
 .cal-flat .cal-dow div { color: var(--ink-2) !important; } .cal-flat .cal-dow div:nth-child(n+6) { color: var(--pink-ink) !important; }
 .cal-day.is-today { background: var(--slate) !important; color: #fff !important; box-shadow: none !important; }
