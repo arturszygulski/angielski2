@@ -3019,6 +3019,19 @@
     go('sweep');
   }
   function sweepMarkKnown(w) { const now = Date.now(); knownFamily(w.id).forEach(x => { D().cards[x] = Object.assign({ reps: 0, lapses: 0, added: now }, D().cards[x] || {}, { state: 'known', knownAt: now }); }); }
+  /* Challenge: AI ocenia, czy odpowiedź uznana za złą też pasuje (jak challenge w tenisie); uznana → zapamiętana jako dobra */
+  async function sweepChallenge() {
+    const X = SW; if (!X || X.busy || X.res !== 'bad' || !X.ans) return;
+    const w = X.list[X.i], i = X.i;
+    X.busy = true; renderSweep();
+    let ai;
+    try { const r = await AI.checkAnswer(w, X.ans); ai = { ok: r.acceptable, expl: r.explanation, m: AI.lastModel() }; }
+    catch (e) { ai = { ok: false, expl: 'Nie udało się sprawdzić: ' + AI.humanError(e), m: '' }; }
+    if (SW !== X || X.i !== i) return;
+    X.busy = false; X.ai = ai;
+    if (ai.ok) { X.res = 'ok'; const ao = D().altOk = D().altOk || {}; ao[w.id] = (ao[w.id] || []).concat([X.ans.toLowerCase()]); Store.save(); Sound.play('ok'); }
+    renderSweep();
+  }
   function sweepDecide(known) {
     const X = SW, w = X.list[X.i];
     if (known) { sweepMarkKnown(w); X.known++; }
@@ -3026,7 +3039,7 @@
     else { (D().swept = D().swept || {})[w.id] = 1; X.learn++; } // poziom bieżący i wyższe: nieznane zostają w zwykłej kolejce nowych słów
     const t = Store.today(); if (X.res !== 'bad') { t.total++; t.correct++; } else t.total++;
     progress(); Store.save();
-    X.i++; X.phase = 'q'; X.res = ''; X.ans = '';
+    X.i++; X.phase = 'q'; X.res = ''; X.ans = ''; X.ai = null; X.busy = false;
     renderSweep();
   }
   function renderSweep() {
@@ -3042,13 +3055,15 @@
         '<div class="row center" style="gap:16px">' + (sweepLeft(X.lvl) ? '<button class="btn big primary" id="swMore">Kolejna porcja ' + K('Enter') + '</button>' : '') + '<button class="btn big" id="swBack">Wróć ' + K('Esc') + '</button></div></main>';
     } else {
       const w = X.list[X.i], show = X.phase === 'show';
-      const fb = !show ? '' : X.res === 'bad'
-        ? '<div class="fb bad" role="status" style="max-width:600px">' + IC.alert + '<span>' + (X.ans ? 'Ty: <s>' + esc(X.ans) + '</s> → ' : '') + 'Poprawnie: <b>' + esc(w.answers[0]) + '</b> · ' + (swLearn(X, w) ? 'trafi do nauki' : 'zostaje w kolejce nowych słów') + '</span></div>'
+      const aiLine = X.ai ? '<div class="fb ' + (X.ai.ok ? 'ok' : 'bad') + ' sw-ai" role="status" style="max-width:600px">' + (X.ai.ok ? IC.check : IC.alert) + '<span><b>Challenge: ' + (X.ai.ok ? 'uznane ✓' : 'nie uznane') + '</b> ' + aiTag(X.ai.m) + '<br>' + qaFmt(X.ai.expl) + '</span></div>' : '';
+      const fb = !show ? '' : X.busy ? '<div class="checking"><span class="spinner"></span>AI sprawdza Twoją odpowiedź…</div>' : (X.ai && X.ai.ok) ? aiLine : X.res === 'bad'
+        ? '<div class="fb bad" role="status" style="max-width:600px">' + IC.alert + '<span>' + (X.ans ? 'Ty: <s>' + esc(X.ans) + '</s> → ' : '') + 'Poprawnie: <b>' + esc(w.answers[0]) + '</b> · ' + (swLearn(X, w) ? 'trafi do nauki' : 'zostaje w kolejce nowych słów') + '</span></div>' + aiLine
         : '<div class="fb ok" role="status" style="max-width:600px">' + IC.check + '<span><b>' + (X.res === 'typo' ? 'Prawie — literówka.' : 'Dobrze!') + '</b> ' + esc(w.answers[0]) + '</span></div>';
       const btns = !show
         ? '<div class="row center" style="gap:14px"><button class="btn" id="swIdk">Nie wiem</button><button class="btn primary" id="swOk">Sprawdź ' + K('Enter') + '</button></div><div class="small-note">' + K('Enter') + ' przy pustym polu = nie wiem</div>'
+        : X.busy ? ''
         : X.res === 'bad'
-          ? '<div class="row center"><button class="btn primary" id="swNext">Dalej ' + K('Enter') + '</button></div>'
+          ? '<div class="row center" style="gap:14px">' + (X.ans && !X.ai && AI.enabled() ? '<button class="btn" id="swChal" title="Uważasz, że Twoja odpowiedź też jest dobra? AI oceni i wyjaśni.">Challenge — AI sprawdzi ' + K('C') + '</button>' : '') + '<button class="btn primary" id="swNext">Dalej ' + K('Enter') + '</button></div>'
           : '<div class="row center" style="gap:14px"><button class="btn" id="swLearn">Jeszcze poćwiczę ' + K('N') + '</button><button class="btn primary" id="swKnow">Umiem — nie pokazuj ' + K('Enter') + '</button></div>';
       body = '<main class="ex-card raised"><div class="prompt-word race-word">' + esc(w.pl) + '</div>' + exSentHtml(w, !show, 'ex-s race-ex') + fb +
         '<div class="answer-box"><label for="ans">Po angielsku</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off"' + (show ? ' disabled value="' + esc(X.ans) + '"' : '') + '></div>' + btns + '</main>';
@@ -3062,13 +3077,15 @@
       const w = X.list[X.i], a = idk ? '' : ($('#ans').value || '').trim();
       if (!a && !idk) idk = true;
       const m = a ? matchAnswer(w.answers, a) : 'wrong';
-      X.ans = a; X.res = m === 'exact' ? 'ok' : m === 'typo' ? 'typo' : 'bad'; X.phase = 'show';
+      const alt = a && altOkList(w).indexOf(a.toLowerCase()) >= 0;
+      X.ans = a; X.res = m === 'exact' || alt ? 'ok' : m === 'typo' ? 'typo' : 'bad'; X.phase = 'show'; X.ai = null;
       if (X.res !== 'bad') Sound.play('ok');
       renderSweep();
     };
     if ($('#swOk')) $('#swOk').onclick = () => check(false);
     if ($('#swIdk')) $('#swIdk').onclick = () => check(true);
     if ($('#swNext')) $('#swNext').onclick = () => sweepDecide(false);
+    if ($('#swChal')) $('#swChal').onclick = sweepChallenge;
     if ($('#swLearn')) $('#swLearn').onclick = () => sweepDecide(false);
     if ($('#swKnow')) $('#swKnow').onclick = () => sweepDecide(true);
     const inp = $('#ans'); if (inp && !inp.disabled) inp.focus();
@@ -3079,6 +3096,7 @@
       if (X.phase === 'q') { if (e.key === 'Enter') { e.preventDefault(); check(false); } return; }
       if (e.key === 'Enter') { e.preventDefault(); ($('#swKnow') || $('#swNext')).click(); return; }
       if (plainKey(e, 'KeyN') && $('#swLearn')) { e.preventDefault(); $('#swLearn').click(); }
+      if (plainKey(e, 'KeyC') && $('#swChal')) { e.preventDefault(); $('#swChal').click(); }
     };
   }
   function startPlay(type) {
