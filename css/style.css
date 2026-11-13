@@ -1191,3 +1191,4 @@ header.top { gap: 24px; align-items: center; }
 .note.bs-note.locked .ic { box-shadow: none; color: var(--ink-3); }
 .note.bs-note.locked .tx b { color: var(--ink-2); }
 .note.bs-note.locked .tx span { color: var(--ink-3); }
+.notes-row:empty { display: none; }
