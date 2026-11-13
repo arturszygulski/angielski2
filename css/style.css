@@ -1178,3 +1178,11 @@ header.top { gap: 24px; align-items: center; }
 .note.mt-note #mTest { background: linear-gradient(135deg, #EEF2F7, #DCE4EE); color: #3E5677; box-shadow: 3px 4px 8px rgba(70,110,175,.38), -4px -4px 9px rgba(240,245,251,.9); }
 .note.mt-note #mTest:hover { box-shadow: 4px 5px 10px rgba(70,110,175,.45), -4px -4px 10px rgba(240,245,251,.95); }
 .note.mt-note #mTest .kbd { color: #3E5677 !important; }
+/* Boss tygodnia na stronie głównej — miodowa belka (jak niebieska belka testu) */
+.note.bs-note { background: linear-gradient(90deg, #EFE6D8, #E5D0AE); box-shadow: 6px 6px 14px rgba(150,105,40,.38), -6px -6px 14px rgba(245,238,236,.9); }
+.note.bs-note .ic { background: transparent; color: #6B4A12; box-shadow: inset 3px 3px 7px rgba(150,105,40,.38), inset -3px -3px 7px rgba(250,244,242,.85); }
+.note.bs-note .tx b { color: #6B4A12; }
+.note.bs-note .tx span { color: #9A6B2A; }
+.note.bs-note #bossGo { background: linear-gradient(135deg, #F8F2E8, #EEE0C8); color: #6B4A12; box-shadow: 3px 4px 8px rgba(150,105,40,.38), -4px -4px 9px rgba(250,244,242,.9); }
+.note.bs-note #bossGo:hover { box-shadow: 4px 5px 10px rgba(150,105,40,.45), -4px -4px 10px rgba(250,244,242,.95); }
+.note.bs-note #bossGo .kbd { color: #6B4A12 !important; }

@@ -2902,10 +2902,10 @@
   }
   function bossNoteHtml() {
     const b = (D().boss || {})[weekKey()];
-    if (b && b.won) return '<section class="note raised"><div class="ic inset" style="color:#C39046">' + IC.trophy + '</div><div class="tx"><b>Boss pokonany' + (b.clean ? ' — bez błędu!' : '') + '</b><span>kolejny w poniedziałek</span></div></section>';
+    if (b && b.won) return '<section class="note raised bs-note"><div class="ic inset">' + IC.trophy + '</div><div class="tx"><b>Boss pokonany' + (b.clean ? ' — bez błędu!' : '') + '</b><span>kolejny w poniedziałek</span></div></section>';
     const pool = bossPool();
-    if (pool.length < 6) return '<section class="note raised locked"><div class="ic inset">' + IC.lock + '</div><div class="tx" title="Pojawi się, gdy uzbiera się co najmniej 6 trudnych elementów z ostatnich tygodni."><b>Boss tygodnia</b><span>trudnych: ' + pool.length + ' z 6</span></div></section>';
-    return '<section class="note raised"><div class="ic inset" style="color:#B9456B">' + IC.trophy + '</div><div class="tx" title="Najtrudniejsze elementy z ostatnich tygodni · podwójne XP"><b>Boss tygodnia</b><span>' + pool.length + ' trudnych · ×2 XP' + (b ? ' · ostatnio ' + b.hits + '/' + b.max : '') + '</span></div>' +
+    if (pool.length < 6) return '<section class="note raised locked bs-note"><div class="ic inset">' + IC.lock + '</div><div class="tx" title="Pojawi się, gdy uzbiera się co najmniej 6 trudnych elementów z ostatnich tygodni."><b>Boss tygodnia</b><span>trudnych: ' + pool.length + ' z 6</span></div></section>';
+    return '<section class="note raised bs-note"><div class="ic inset">' + IC.trophy + '</div><div class="tx" title="Najtrudniejsze elementy z ostatnich tygodni · podwójne XP"><b>Boss tygodnia</b><span>' + pool.length + ' trudnych · ×2 XP' + (b ? ' · ostatnio ' + b.hits + '/' + b.max : '') + '</span></div>' +
       '<button class="btn primary" id="bossGo">Walcz ' + K('B') + '</button></section>';
   }
   function startBoss() {
