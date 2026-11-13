@@ -1186,3 +1186,8 @@ header.top { gap: 24px; align-items: center; }
 .note.bs-note #bossGo { background: linear-gradient(135deg, #F8F2E8, #EEE0C8); color: #6B4A12; box-shadow: 3px 4px 8px rgba(150,105,40,.38), -4px -4px 9px rgba(250,244,242,.9); }
 .note.bs-note #bossGo:hover { box-shadow: 4px 5px 10px rgba(150,105,40,.45), -4px -4px 10px rgba(250,244,242,.95); }
 .note.bs-note #bossGo .kbd { color: #6B4A12 !important; }
+/* Boss zablokowany: sama ramka, bez koloru i cieni */
+.note.bs-note.locked { background: none; box-shadow: none; border: 1.5px solid #BDB6AD; opacity: 1; }
+.note.bs-note.locked .ic { box-shadow: none; color: var(--ink-3); }
+.note.bs-note.locked .tx b { color: var(--ink-2); }
+.note.bs-note.locked .tx span { color: var(--ink-3); }
