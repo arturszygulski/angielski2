@@ -1170,3 +1170,11 @@ header.top { gap: 24px; align-items: center; }
 .skill.v2.inset { box-shadow: none; background: transparent; overflow: visible; }
 .skill.v2 .bands { z-index: 1; }
 .skill.v2.inset::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--bg); box-shadow: inset 6px 6px 14px var(--sh-in-d), inset -6px -6px 14px var(--sh-l); filter: blur(4px); z-index: 0; pointer-events: none; }
+/* Test miesiąca na stronie głównej — niebieska belka (gradient, niebieskie napisy i cienie) */
+.note.mt-note { background: linear-gradient(90deg, #E1E7EE, #C9D5E3); box-shadow: 6px 6px 14px rgba(62,92,135,.42), -6px -6px 14px rgba(232,239,247,.9); }
+.note.mt-note .ic { background: transparent; color: #3E5677; box-shadow: inset 3px 3px 7px rgba(62,92,135,.42), inset -3px -3px 7px rgba(240,245,251,.85); }
+.note.mt-note .tx b { color: #3E5677; }
+.note.mt-note .tx span { color: #5E7898; }
+.note.mt-note #mTest { background: linear-gradient(135deg, #EEF2F7, #DCE4EE); color: #3E5677; box-shadow: 3px 4px 8px rgba(70,110,175,.38), -4px -4px 9px rgba(240,245,251,.9); }
+.note.mt-note #mTest:hover { box-shadow: 4px 5px 10px rgba(70,110,175,.45), -4px -4px 10px rgba(240,245,251,.95); }
+.note.mt-note #mTest .kbd { color: #3E5677 !important; }

@@ -5210,7 +5210,7 @@
   function monthTestDue() { return !!D().profile.placementDone && Date.now() >= nextTestAt(); }
   function monthTestNoteHtml() {
     if (!monthTestDue()) return '';
-    return '<section class="note raised"><div class="ic inset" style="color:#5E7898">' + IC.chart + '</div><div class="tx" title="Sprawdzisz, ile urosłeś — wynik trafi na wykres poziomu w Statystykach."><b>Test miesiąca</b><span>ok. 10 minut</span></div>' +
+    return '<section class="note raised mt-note"><div class="ic inset">' + IC.chart + '</div><div class="tx" title="Sprawdzisz, ile urosłeś — wynik trafi na wykres poziomu w Statystykach."><b>Test miesiąca</b><span>ok. 10 minut</span></div>' +
       '<button class="btn primary" id="mTest">Zrób test ' + K('P') + '</button></section>';
   }
   function finishMonthly() {
