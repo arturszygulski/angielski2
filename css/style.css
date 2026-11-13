@@ -1166,3 +1166,7 @@ header.top { gap: 24px; align-items: center; }
 /* przełączniki Dysk/AI — cień w kolorze przełącznika (wersja A) */
 .sw.off .tr { background: #D295A0; box-shadow: inset 2px 2px 4px rgba(140,55,75,.45); }
 .sw.on .tr { background: #7FA889; box-shadow: inset 2px 2px 4px rgba(40,85,55,.45); }
+/* kolumny umiejętności: wklęsłość z rozmytą krawędzią (bez ostrego kantu) */
+.skill.v2.inset { box-shadow: none; background: transparent; overflow: visible; }
+.skill.v2 .bands { z-index: 1; }
+.skill.v2.inset::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--bg); box-shadow: inset 6px 6px 14px var(--sh-in-d), inset -6px -6px 14px var(--sh-l); filter: blur(4px); z-index: 0; pointer-events: none; }
