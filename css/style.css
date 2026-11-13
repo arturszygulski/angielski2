@@ -1195,6 +1195,8 @@ header.top { gap: 24px; align-items: center; }
 
 /* Jednolity font przycisków: przyciski działania — Quicksand pogrubiony (niska specyficzność, żeby nie psuć rozmiarów);
    przyciski z treścią do nauki (odpowiedzi, kafelki słów, wybory) zostają w Atkinson dla czytelności */
-:where(.btn) { font-family: var(--head); font-weight: 700; }
-:where(.options, .lopts, .pvopts, .qopts) :where(.btn),
-:where(.btn):where(.tile, .etok, .chip-w, .chipbtn, .tp-opt, .hint-opt, .tmap-row, .topic, .scene, .tlesson, .pair, .rep-row, .ex-topic, .game) { font-family: var(--body); font-weight: 400; }
+.btn { font-family: var(--head); font-weight: 700; }
+:is(.options, .lopts, .pvopts, .qopts) .btn,
+.btn:is(.tile, .etok, .chip-w, .chipbtn, .tp-opt, .hint-opt, .tmap-row, .topic, .scene, .tlesson, .pair, .rep-row, .ex-topic, .game) { font-family: var(--body); font-weight: 400; }
+.wod-btns { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.wod-btns .btn.wod-go { justify-content: center; }

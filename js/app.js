@@ -883,6 +883,7 @@
     if ($('#mTest')) $('#mTest').onclick = () => startTest(true);
     $$('[data-stale]').forEach(b => b.onclick = () => goStale(b.dataset.stale));
     if ($('#wodGo')) $('#wodGo').onclick = wodPractice;
+    if ($('#wodKnown')) $('#wodKnown').onclick = wodKnown;
     if ($('#wodHook')) $('#wodHook').onclick = e => { e.stopPropagation(); const w = wodWord(); if (w) hookToggle($('#wodHook'), w.id); };
     if ($('#wodSay')) $('#wodSay').onclick = () => { const w = wodWord(); if (w) Speech.speak(fullSentence({ w }), D().settings.rate || 0.95); };
     if ($('#vmHome')) $('#vmHome').onclick = () => go('stats');
@@ -908,11 +909,12 @@
     const today = U.dayKey(), cur = D().wod;
     if (cur && cur.day === today && WORDS.byId[cur.id]) return cur;
     const seen = {}, hard = [], c = D().cards;
-    (D().mistakes || []).slice().reverse().forEach(m => { if (!mistakeOpen(m)) return; const id = baseWordId(m.id); if (id && !seen[id]) { seen[id] = 1; hard.push(id); } });
-    Object.keys(c).forEach(id => { if (c[id].hard) { const b = baseWordId(id); if (b && !seen[b]) { seen[b] = 1; hard.push(b); } } });
+    const isKnown = id => c[id] && c[id].state === 'known';
+    (D().mistakes || []).slice().reverse().forEach(m => { if (!mistakeOpen(m)) return; const id = baseWordId(m.id); if (id && !seen[id] && !isKnown(id)) { seen[id] = 1; hard.push(id); } });
+    Object.keys(c).forEach(id => { if (c[id].hard) { const b = baseWordId(id); if (b && !seen[b] && !isKnown(b)) { seen[b] = 1; hard.push(b); } } });
     let pool = hard.slice(0, 15), src = 'hard';
     if (!pool.length) { pool = Object.keys(c).filter(id => WORDS.byId[id] && c[id].state !== 'known').sort((a, b) => (c[a].s || 0) - (c[b].s || 0)).slice(0, 15); src = 'weak'; }
-    if (!pool.length) { pool = WORDS.list.filter(w => w.lvl === levels().vocab && !w.custom).slice(0, 50).map(w => w.id); src = 'new'; }
+    if (!pool.length) { pool = WORDS.list.filter(w => w.lvl === levels().vocab && !w.custom && !c[w.id]).slice(0, 50).map(w => w.id); src = 'new'; }
     if (!pool.length) return null;
     let h = 0; for (const ch of today) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const pick = { day: today, id: pool[h % pool.length], src };
@@ -929,7 +931,16 @@
       '<div><span class="wod-w" lang="en">' + esc(w.answers[0]) + '</span> <span class="wod-pl">— ' + esc(w.pl) + '</span></div>' +
       '<div class="wod-s" lang="en"><i>' + esc(a) + '<b>' + esc(w.answers[0]) + '</b>' + esc(b) + '</i></div></div>' +
       ((hookGet(w.id) && hookGet(w.id).t) || AI.enabled() ? hookBtnHtml('wodHook') : '') +
-      '<button class="btn raised wod-go" id="wodGo" title="Krótka runda z tym słowem: zdanie, dyktando, mówienie, tłumaczenie">Ćwicz ' + K('W') + '</button></div>';
+      '<div class="wod-btns"><button class="btn raised wod-go" id="wodGo" title="Krótka runda z tym słowem: zdanie, dyktando, mówienie, tłumaczenie">Ćwicz ' + K('W') + '</button>' +
+      '<button class="btn raised wod-go" id="wodKnown" title="Znam to słowo — trafi do znanych, a słowo dnia zmieni się na inne">Umiem</button></div></div>';
+  }
+  /* „Umiem” w Słowie dnia: słowo (z rodziną ćwiczeń) do znanych, nowe słowo dnia; z cofnięciem */
+  function wodKnown() {
+    const w = wodWord(); if (!w) return;
+    const d = D(), ids = [w.id].concat(knownFamily(w.id).filter(x => x !== w.id)), prev = {}, prevWod = d.wod;
+    ids.forEach(x => { prev[x] = d.cards[x] ? Object.assign({}, d.cards[x]) : null; const c = Object.assign({ reps: 0, lapses: 0, added: Date.now() }, d.cards[x] || {}, { state: 'known', knownAt: Date.now() }); delete c.hard; d.cards[x] = c; });
+    d.wod = null; progress(); Store.save(); go('home');
+    toast('„' + w.answers[0] + '” — w znanych. Nowe słowo dnia.', { label: 'Cofnij', fn: () => { ids.forEach(x => { if (prev[x]) d.cards[x] = prev[x]; else delete d.cards[x]; }); d.wod = prevWod; progress(); Store.save(); go('home'); } });
   }
   function wodPractice() {
     const w = wodWord(); if (!w) return;
