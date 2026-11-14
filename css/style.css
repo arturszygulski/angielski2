@@ -1238,3 +1238,19 @@ header.top { gap: 24px; align-items: center; }
 .bk-tab.on { background: #EBD5DC; color: var(--pink-ink); width: 62px; box-shadow: 3px 2px 6px rgba(150,60,90,.3); }
 .bk-tab.empty { color: #C4BEB6; box-shadow: none; background: transparent; border: 1px dashed #CFC9C1; border-left: 0; cursor: default; }
 @media (max-width: 760px) { .bk-cols { column-count: 1; } .bk-page { padding: 20px 18px; } .bk-page h3 { font-size: 48px; } }
+/* --- Mój słownik v2: stały układ, zakładki na całą wysokość --- */
+.bk-wrap { max-width: 1240px; }
+.own-col { display: flex; flex-direction: column; gap: 24px; }
+.book { grid-template-columns: minmax(0, 1fr) 56px; align-items: stretch; }
+.bk-page { height: 820px; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; border-radius: 26px 0 0 26px; position: relative; z-index: 1; background: var(--bg); }
+.bk-page .bk-cols { flex: 1; min-height: 0; column-fill: auto; }
+.bk-page h3 { display: flex; align-items: baseline; gap: 4px; }
+.bk-page h3 span { font-size: .6em; color: var(--pink); }
+.bk-page h3.bk-q span { display: none; }
+.bk-pg { margin-top: auto; padding-top: 14px; }
+.bk-tabs { padding: 14px 0; gap: 2px; height: 820px; box-sizing: border-box; }
+.bk-tab { flex: 1; height: auto; width: 46px; min-height: 0; margin-left: 0; border-radius: 0 10px 10px 0; border: 1.5px solid #BDB6AD; border-left: 0; background: #D0CAC2; color: var(--ink-2); box-shadow: inset 7px 0 7px -5px rgba(60,50,40,.28), 2px 1px 3px rgba(60,50,40,.12); position: relative; }
+.bk-tab small { color: var(--ink-3); }
+.bk-tab.on { width: 52px; margin-left: -1.5px; background: var(--bg); color: var(--ink); box-shadow: 2px 1px 3px rgba(60,50,40,.12); z-index: 2; border-left: 0; }
+.bk-tab.on small { color: var(--ink-2); }
+.bk-tab.empty { background: transparent; color: #C4BEB6; box-shadow: none; border: 1px dashed #CFC9C1; border-left: 0; }

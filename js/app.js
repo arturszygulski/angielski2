@@ -3708,7 +3708,7 @@
   /* ---------- Mój słownik: książka z zakładkami A–Z (wszystkie poznane słowa) ---------- */
   let wTab = 'dict';
   const BK = { letter: null, page: 0, q: '', open: null };
-  const BK_PER = 40;
+  const BK_PER = 30;
   function bkHead(w) { return w.answers[0].replace(/^(to|a|an|the)\s+/i, ''); }
   function bkStat(id) { const c = D().cards[id]; return !c ? null : c.state === 'known' ? 'known' : ((c.s || 0) >= 10 || c.mastered || wordLv(id) >= 5) ? 'mast' : 'learn'; }
   function bkWords() { const c = D().cards; return WORDS.list.filter(w => c[w.id]); }
@@ -3732,11 +3732,11 @@
         (open ? '<div class="bk-act"><span class="small-note">' + since + (hasS ? ' · <i lang="en">' + esc(a) + '<b>' + esc(w.answers[0]) + '</b>' + esc(b2) + '</i>' : '') + '</span>' +
           (st !== 'learn' ? '<button class="btn raised" data-bkback="' + esc(w.id) + '">Przywróć do nauki</button>' : '<span class="small-note">już w nauce</span>') + '</div>' : '') + '</div>';
     }).join('');
-    const tabs = L2.map(x => { const k = (by[x] || []).length; return '<button class="bk-tab' + (!q && x === BK.letter ? ' on' : '') + (k ? '' : ' empty') + '"' + (k ? ' data-bkl="' + x + '"' : ' disabled') + '>' + x + (k ? '<small>' + k + '</small>' : '') + '</button>'; }).join('');
+    const tabs = L2.map(x => { const k = (by[x] || []).length; return '<button class="bk-tab' + (!q && x === BK.letter ? ' on' : '') + (k ? '' : ' empty') + '"' + (k ? ' data-bkl="' + x + '"' : ' disabled') + ' title="' + x + ': ' + k + '">' + x + (k ? '<small>' + k + '</small>' : '') + '</button>'; }).join('');
     const pager = pages > 1 ? '<div class="bk-pg"><button class="btn raised" id="bkPrev"' + (BK.page ? '' : ' disabled') + ' aria-label="Poprzednia strona">‹</button><span>strona ' + (BK.page + 1) + ' z ' + pages + '</span><button class="btn raised" id="bkNext"' + (BK.page < pages - 1 ? '' : ' disabled') + ' aria-label="Następna strona">›</button></div>' : '';
     return '<div class="book"><div class="bk-page">' +
       (q ? '<h3 class="bk-q">„' + esc(BK.q.trim()) + '”</h3><div class="bk-sub">' + (list.length ? 'znaleziono ' + list.length : 'nic nie znaleziono — może jeszcze tego słowa nie poznałeś') + '</div>'
-        : '<h3>' + BK.letter + '</h3><div class="bk-sub">' + list.length + ' ' + (list.length === 1 ? 'słowo' : 'słów') + ' na literę ' + BK.letter + ' · kliknij słowo — szczegóły i „Przywróć do nauki”</div>') +
+        : '<h3>' + BK.letter + '<span>' + BK.letter.toLowerCase() + '</span></h3><div class="bk-sub">' + list.length + ' ' + (list.length === 1 ? 'słowo' : 'słów') + ' na literę ' + BK.letter + ' · kliknij słowo — szczegóły i „Przywróć do nauki”</div>') +
       (all.length ? '<div class="bk-cols">' + ent + '</div>' : '<p class="small-note">Słownik zapełni się, gdy zaczniesz się uczyć — każde poznane słowo trafi tutaj.</p>') + pager + '</div>' +
       '<div class="bk-tabs">' + tabs + '</div></div>';
   }
@@ -3787,9 +3787,10 @@
     const ids = Object.keys(cust).sort((a, b) => cust[b].added - cust[a].added);
     const ai = AI.enabled();
     app.innerHTML =
-      '<div class="wrap narrow">' +
+      '<div class="wrap bk-wrap">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
       '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn on" role="tab" aria-selected="true">Moje własne (' + nOwn + ')</button></div></header>' +
+      '<div class="own-col">' +
       '<section class="set-card raised"><h2>Dodaj słowo</h2>' +
       '<div class="field"><label for="cw">Po angielsku</label><div class="ctl"><input id="cw" class="txt" autocomplete="off" spellcheck="false" placeholder="np. take for granted"></div></div>' +
       '<div class="field"><label for="cp">Po polsku</label><div class="ctl"><input id="cp" class="txt" autocomplete="off" placeholder="' + (ai ? 'opcjonalnie — AI uzupełni' : 'znaczenie') + '"></div></div>' +
@@ -3815,7 +3816,7 @@
             '<div class="row" style="gap:10px">' + wordDots(id, true) + '<span class="chip ' + (st2[1] === 'ok' ? 'okchip' : 'inset') + '">' + st2[0] + '</span><button class="btn small" data-del="' + esc(id) + '" aria-label="Usuń ' + esc(c.answers[0]) + '">Usuń</button></div></div>';
         }).join('') + '</div>'
         : '<p class="small-note" style="margin:0">Jeszcze nic. Dodane słowa pojawią się w sesjach i wszystkich grach.</p>') +
-      '</section></div>';
+      '</section></div></div>';
     const msg = (t, ok) => { const el = $('#cMsg'); el.innerHTML = t ? '<span class="status ' + (ok ? 'ok' : 'bad') + '">' + esc(t) + '</span>' : ''; };
     const genAI = async () => {
       const w = $('#cw').value.trim(); if (!w) { msg('Najpierw wpisz słowo.'); $('#cw').focus(); return null; }
