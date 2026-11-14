@@ -836,7 +836,10 @@
       '<button class="btn t2-guide" id="guide" title="Program układa plan i prowadzi Cię krok po kroku"><b>' + (GUIDE && GUIDE.i < GUIDE.steps.length ? 'Wróć<br>do planu' : 'Krok<br>po kroku') + '</b>' + K('L') + '</button>' +
       '<div class="t2-main">' +
       (nothing
-        ? '<button class="btn big primary t2-go" id="extra">Dodatkowe słowa ' + K('Enter') + '</button><span class="small-note" style="text-align:center">Na dziś wszystko zrobione.</span>'
+        ? (function () { const td = Store.today(), mn = Math.round((td.sec || 0) / 60), nw = (td.newCount || 0) + (td.newExtra || 0), parts = [];
+            if (mn) parts.push(mn + ' min'); if (td.reviews) parts.push(td.reviews + ' ' + (td.reviews === 1 ? 'powtórka' : td.reviews % 10 >= 2 && td.reviews % 10 <= 4 && (td.reviews % 100 < 12 || td.reviews % 100 > 14) ? 'powtórki' : 'powtórek')); if (nw) parts.push(nw + ' ' + (nw === 1 ? 'nowe słowo' : nw % 10 >= 2 && nw % 10 <= 4 && (nw % 100 < 12 || nw % 100 > 14) ? 'nowe słowa' : 'nowych słów'));
+            return '<div class="t2-done"><span class="t2-done-ic">' + IC.check + '</span><div class="t2-done-tx"><b>Plan na dziś zrobiony</b>' + (parts.length ? '<small>' + parts.map(x => '<span>' + x + '</span>').join(' · ') + '</small>' : '') + '</div>' +
+              '<button class="btn" id="extra" title="Porcja nowych słów ponad dzienny plan">Więcej słów ' + K('Enter') + '</button></div>'; })()
         : '<button class="btn big primary t2-go" id="start">Zacznij sesję ' + K('Enter') + '</button>' +
           '<button class="btn t2-quick" id="quick">Szybka sesja · ' + st.blockMin + ' min ' + K('S') + '</button>') +
       '</div></div>' +

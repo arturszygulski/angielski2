@@ -1369,3 +1369,16 @@ input.tr-in { height: 48px; }
 .tr-banner { border: 1.5px solid #9FC3A9; background: #DCE8DF; border-radius: 20px; padding: 14px 20px; display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .tr-banner .btn { background: #D8E6DC; color: #24412D; box-shadow: 4px 4px 9px rgba(60,120,80,.32), -4px -4px 9px rgba(245,252,247,.85); width: 170px; justify-content: center; }
 @media (max-width: 760px) { .tr-modes { grid-template-columns: 1fr; } .tr-sent { font-size: 23px; } .tr-card { padding: 20px 18px; } .tr-cmp { grid-template-columns: 1fr; } }
+/* plan dnia zrobiony — zielona belka (cienie w kolorze tła) */
+.t2-done { display: flex; align-items: center; gap: 14px; border-radius: 22px; padding: 14px 16px 14px 18px; background: #DCE8DF; color: #24412D; height: 100%; box-sizing: border-box; min-height: 96px; }
+.t2-done-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #5D9A6E; color: #fff; }
+.t2-done-ic svg { width: 24px; height: 24px; }
+.t2-done-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.t2-done-tx b { font: 700 19px var(--head); white-space: nowrap; }
+.t2-done-tx small { font-size: 13px; color: #3F6B4E; line-height: 1.5; }
+.t2-done-tx small span { white-space: nowrap; }
+.t2-done .btn { flex: none; background: #D8E6DC !important; color: #24412D !important; box-shadow: 4px 4px 9px rgba(60,120,80,.32), -4px -4px 9px rgba(245,252,247,.85) !important; font-size: 15px; padding: 10px 16px; min-height: 0; }
+.t2-done .btn .kbd { color: #24412D !important; }
+.t2-done { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px 14px; }
+.t2-done-tx b { white-space: normal; }
+.t2-done .btn { grid-column: 1 / -1; justify-self: end; }
