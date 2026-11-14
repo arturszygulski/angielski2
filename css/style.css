@@ -1278,3 +1278,19 @@ header.top { gap: 24px; align-items: center; }
 @media (max-width: 900px) { .own-col { grid-template-rows: none; } .own-col > .set-card:last-child { grid-row: auto; } }
 .own-col textarea.txt.area { flex: 0 0 auto; }
 .own-col textarea.txt.area { min-height: 90px; height: 90px; }
+/* Moje własne: lewa kolumna dochodzi do dołu, lista jak w słowniku */
+.own-col { grid-template-rows: auto auto 1fr; }
+.own-col > .set-card:nth-last-child(2) { grid-row-end: -1; align-self: stretch; }
+.own-col > .set-card:last-child { display: flex; flex-direction: column; }
+.own-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.bk-e.own-e { grid-template-columns: 12px 26px minmax(0, 1fr) auto; align-items: center; padding: 5px 4px; }
+.own-tx { min-width: 0; }
+.own-tx b { font: 700 16px var(--head); }
+.own-tx span { color: var(--ink-2); font-size: 14px; }
+.own-tx .src-tag { font-style: normal; font-size: 11px; color: var(--ink-3); margin-left: 4px; }
+.own-s { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.own-r { display: flex; align-items: center; gap: 10px; }
+.own-r small { font: 700 11px var(--body); color: var(--ink-3); }
+.own-del { width: 26px; height: 26px; border-radius: 50%; border: 0; background: none; color: var(--ink-3); font: 400 20px/1 var(--body); cursor: pointer; padding: 0 0 2px; }
+.own-del:hover { color: var(--bad-ink); background: rgba(0,0,0,.05); }
+@media (max-width: 900px) { .own-col > .set-card:nth-last-child(2) { grid-row-end: auto; } }

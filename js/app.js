@@ -3762,6 +3762,22 @@
     if ($('#bkPrev')) $('#bkPrev').onclick = () => { BK.page--; BK.open = null; r(); };
     if ($('#bkNext')) $('#bkNext').onclick = () => { BK.page++; BK.open = null; r(); };
   }
+  let ownPage = 0;
+  const OWN_PER = 14;
+  function ownListHtml(ids) {
+    const cust = D().custom || {}, pages = Math.max(1, Math.ceil(ids.length / OWN_PER)); ownPage = Math.min(ownPage, pages - 1);
+    const COL = { 'nowe': '#CFC9C1', 'w nauce': '#D3A35C', 'opanowane': '#5E9670', 'znane': '#7E98BE' };
+    const rows = ids.slice(ownPage * OWN_PER, ownPage * OWN_PER + OWN_PER).map(id => {
+      const c = cust[id], st2 = customStatus(id);
+      const tag = c.textId ? 'z tekstu: ' + esc(c.textTitle || '') : c.ai ? 'od AI' : '';
+      return '<div class="bk-e own-e"><i style="background:' + COL[st2[0]] + '" title="' + st2[0] + '"></i>' +
+        '<button class="bk-spk" data-ownsay="' + esc(id) + '" title="Posłuchaj">' + IC.speaker + '</button>' +
+        '<div class="own-tx"><b lang="en">' + esc(c.answers[0]) + '</b> <span>— ' + esc(c.pl) + '</span>' + (tag ? ' <em class="src-tag">' + tag + '</em>' : '') +
+        '<div class="own-s" lang="en">' + esc(c.s.replace('_', c.answers[0])) + '</div></div>' +
+        '<span class="own-r"><small>' + (L[c.lvl] || '') + '</small><button class="own-del" data-del="' + esc(id) + '" title="Usuń" aria-label="Usuń ' + esc(c.answers[0]) + '">×</button></span></div>';
+    }).join('');
+    return '<div class="own-list">' + rows + '</div>' + (pages > 1 ? '<div class="bk-pg"><button class="btn raised" id="owPrev"' + (ownPage ? '' : ' disabled') + '>‹</button><span>strona ' + (ownPage + 1) + ' z ' + pages + '</span><button class="btn raised" id="owNext"' + (ownPage < pages - 1 ? '' : ' disabled') + '>›</button></div>' : '');
+  }
   function renderWords(tab) {
     S = null;
     if (tab) wTab = tab;
@@ -3808,13 +3824,7 @@
         '<div class="row between"><span class="small-note">Nieznanych słów na poziomie ' + L[levels().vocab] + ': <b>' + WORDS.list.filter(w => w.lvl === levels().vocab && !D().cards[w.id]).length + '</b></span><button class="btn" id="topUp">Dobierz 30 nowych słów</button></div><div id="tuMsg"></div></section>' : '') +
       '<section class="set-card raised"><h2>Twoje słowa (' + ids.length + ')</h2>' +
       (ids.length
-        ? '<p class="small-note desc" style="margin:0">Własne słowa i słowa z tekstów mają pierwszeństwo przed bazą. Słowa od AI wchodzą razem z bazą, według poziomu.</p><div class="known-list">' + ids.map(id => {
-          const c = cust[id], st2 = customStatus(id);
-          const tag = c.textId ? '<span class="src-tag">z tekstu: ' + esc(c.textTitle || '') + '</span>' : c.ai ? '<span class="src-tag">od AI · ' + L[c.lvl] + '</span>' : '';
-          return '<div class="list-item inset"><div><span class="w" style="font-size:18px">' + esc(c.answers[0]) + '</span><span class="p"> — ' + esc(c.pl) + '</span>' + tag +
-            '<div class="small-note">' + esc(c.s.replace('_', c.answers[0])) + '</div></div>' +
-            '<div class="row" style="gap:10px">' + wordDots(id, true) + '<span class="chip ' + (st2[1] === 'ok' ? 'okchip' : 'inset') + '">' + st2[0] + '</span><button class="btn small" data-del="' + esc(id) + '" aria-label="Usuń ' + esc(c.answers[0]) + '">Usuń</button></div></div>';
-        }).join('') + '</div>'
+        ? '<p class="small-note desc" style="margin:0">Własne słowa i słowa z tekstów mają pierwszeństwo przed bazą. Słowa od AI wchodzą razem z bazą, według poziomu.</p>' + ownListHtml(ids)
         : '<p class="small-note" style="margin:0">Jeszcze nic. Dodane słowa pojawią się w sesjach i wszystkich grach.</p>') +
       '</section></div></div>';
     const msg = (t, ok) => { const el = $('#cMsg'); el.innerHTML = t ? '<span class="status ' + (ok ? 'ok' : 'bad') + '">' + esc(t) + '</span>' : ''; };
@@ -3840,6 +3850,9 @@
     };
     $('#back').onclick = () => go('home');
     $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
+    if ($('#owPrev')) $('#owPrev').onclick = () => { ownPage--; renderWords(); };
+    if ($('#owNext')) $('#owNext').onclick = () => { ownPage++; renderWords(); };
+    $$('[data-ownsay]').forEach(b => b.onclick = () => { const w = WORDS.byId[b.dataset.ownsay]; if (w) Speech.speak(w.answers[0], D().settings.rate || 0.95); });
     $('#cAdd').onclick = add;
     if ($('#topUp')) $('#topUp').onclick = async () => {
       $('#topUp').disabled = true;
