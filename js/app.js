@@ -2301,7 +2301,7 @@
     S = null;
     if (res.topicId) { const T = (D().topics || {})[res.topicId]; if (T) { T.res = { total: res.total, correct: res.correct, xp: res.xp, at: Date.now() }; Store.save(); } if (res.total) Sound.play('block'); syncAfterSession(); return go('topic'); }
     if (res.guide) { if (completed && res.total) Sound.play('block'); guideStepDone({ total: res.total, correct: res.correct, xp: res.xp, promos }); syncAfterSession(); return; }
-    if (res.total === 0 && res.raceHits == null && !res.boss) return go(res.play && res.play !== 'text' && res.play !== 'tense' ? 'play' : 'home');
+    if (res.total === 0 && res.raceHits == null && !res.boss) return go(res.textId && (D().texts || {})[res.textId] ? 'texts' : res.play && res.play !== 'text' && res.play !== 'tense' ? 'play' : 'home');
     if (completed && !res.blockSound) Sound.play('block');
     go('result', res);
     syncAfterSession();
@@ -2364,7 +2364,7 @@
       (items.length ? '<section class="rs-sec rs-trouble"><h2>Z czym był kłopot <small>wróci wkrótce · jeśli już umiesz, oznacz</small></h2><div id="rows">' + rowsHtml() + '</div></section>' : '') +
       '<div id="rsNew">' + newHtml() + '</div>' +
       '<div class="row center small-note" id="syncLine">' + syncLineHtml() + '</div>' +
-      (r.lim ? '<div class="row center" style="gap:20px"><button class="btn big" id="end">Wróć ' + K('Esc') + '</button><button class="btn big primary" id="more">Kolejna runda ' + K('Enter') + '</button></div>' : '<div class="row center" style="gap:20px"><button class="btn big" id="more">' + (r.tenseTids ? 'Jeszcze raz ' : r.textId ? 'Jeszcze raz z tekstu ' : r.play ? 'Zagraj jeszcze raz ' : 'Jeszcze jeden blok · ' + D().settings.blockMin + ' min ') + K('B') + '</button><button class="btn big primary" id="end">' + (r.tenseTids ? 'Wróć do czasów ' : r.textId ? 'Wróć do tekstu ' : r.play ? 'Wróć ' : 'Zakończ na dziś ') + K('Enter') + '</button></div>') +
+      (r.lim ? '<div class="row center" style="gap:20px"><button class="btn big" id="end">Wróć ' + K('Esc') + '</button><button class="btn big primary" id="more">Kolejna runda ' + K('Enter') + '</button></div>' : '<div class="row center" style="gap:20px"><button class="btn big" id="more">' + (r.tenseTids ? 'Jeszcze raz ' : r.textId ? 'Jeszcze raz z tekstu ' : r.play ? 'Zagraj jeszcze raz ' : 'Jeszcze jeden blok · ' + D().settings.blockMin + ' min ') + K('B') + '</button><button class="btn big primary" id="end">' + (r.tenseTids ? 'Wróć do czasów ' : r.textId ? 'Wróć do Moich tekstów ' : r.play ? 'Wróć ' : 'Zakończ na dziś ') + K('Enter') + '</button></div>') +
       nextIdeasLine() +
       '</div>';
     const bindNew = () => {
@@ -2392,7 +2392,7 @@
     const rT = r.textId && (D().texts || {})[r.textId];
     const again = () => r.tenseTids ? startTenseSession(r.tenseTids, r.custom) : rT ? startTextSession(rT) : r.play ? startPlay(r.play) : startSession(false, (dueIds().length || newLeftToday() || newExtraLeftToday()) ? 0 : 5); // gdy plan na dziś zrobiony — blok z 5 dodatkowymi nowymi
     $('#more').onclick = again;
-    $('#end').onclick = () => r.tenseTids ? go('tenses') : rT ? go('reader', r.textId) : go(r.play ? 'play' : 'home');
+    $('#end').onclick = () => r.tenseTids ? go('tenses') : rT ? go('texts') : go(r.play ? 'play' : 'home');
     bindSyncLine();
     if (r.newBadges && r.newBadges.length) setTimeout(() => Sound.play('combo'), 500);
     keyHandler = e => {
@@ -4821,11 +4821,10 @@
           (i < 9 ? K(String(i + 1)) : '') + '</div>' +
           '<div class="small-note">' + (trDone ? 'Tłumacz z AI: <b>' + trDone + ' z ' + st.sents + ' zdań</b> · dobrze ' + trOk + ' · ' : '') + 'zaznaczone do nauki: <b>' + st.marked + '</b> · w nauce: <b>' + st.learn + '</b> · opanowane: <b>' + st.done + '</b></div>' +
           (trDone ? '<div class="bar thin inset"><div style="width:' + Math.round(trDone / st.sents * 100) + '%;background:linear-gradient(90deg,#B9CBE0,#5E7898)"></div></div>' : '<div class="bar thin inset"><div style="width:' + pct + '%;background:linear-gradient(90deg,#3E8A5A,#7DBB8E)"></div></div>') + '</div>' +
-          '<div class="tbtns"><button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button>' +
-          '<button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu</button>' +
+          '<div class="tbtns"><button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu</button>' +
           (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
           '<button class="btn small" data-tread="' + T.id + '">Czytaj</button>' +
-          (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + (i === 0 ? ' ' + K('T') : '') + '</button>' : '') + '</div></div>';
+          (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + (i === 0 ? ' ' + K('T') : '') + '</button>' : '') + '<button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button></div></div>';
       }).join('')
         : '<section class="note raised"><div class="ic inset">' + IC.book + '</div><div class="tx"><b>Jeszcze nie masz tekstów</b><span>Dodaj pierwszy — np. transkrypcję ulubionego filmu o technice albo artykuł o nauce.</span></div></section>') +
       '</section></div>';
