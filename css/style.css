@@ -1254,3 +1254,27 @@ header.top { gap: 24px; align-items: center; }
 .bk-tab.on { width: 52px; margin-left: -1.5px; background: var(--bg); color: var(--ink); box-shadow: 2px 1px 3px rgba(60,50,40,.12); z-index: 2; border-left: 0; }
 .bk-tab.on small { color: var(--ink-2); }
 .bk-tab.empty { background: transparent; color: #C4BEB6; box-shadow: none; border: 1px dashed #CFC9C1; border-left: 0; }
+/* Moje własne — mieści się na jednym ekranie: lewa kolumna dodawanie, prawa lista z przewijaniem w środku */
+.own-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: min-content; gap: 18px 24px; height: 820px; align-content: start; }
+.own-col > .set-card { grid-column: 1; padding: 18px 24px; gap: 12px; border-radius: 26px; }
+.own-col > .set-card h2 { font-size: 19px; margin: 0; }
+.own-col > .set-card:last-child { grid-column: 2; grid-row: 1 / span 20; height: 820px; box-sizing: border-box; min-height: 0; }
+.own-col > .set-card:last-child .known-list { max-height: none; flex: 1; min-height: 0; }
+.own-col .field { gap: 6px 14px; }
+.own-col textarea.txt.area { min-height: 90px; }
+@media (max-width: 900px) { .own-col { grid-template-columns: minmax(0, 1fr); height: auto; } .own-col > .set-card, .own-col > .set-card:last-child { grid-column: 1; grid-row: auto; height: auto; } .own-col > .set-card:last-child .known-list { max-height: 420px; } }
+/* wysokość książki i „Moje własne” dopasowana do okna (bez przewijania strony) */
+.bk-wrap { --bkH: clamp(540px, calc(100vh - 250px), 820px); }
+.bk-page, .bk-tabs { height: var(--bkH); }
+.own-col { height: calc(var(--bkH) + 66px); }
+.own-col > .set-card:last-child { height: calc(var(--bkH) + 66px); }
+.own-col textarea.txt.area { min-height: 64px; height: 64px; }
+.own-col .txt { height: 44px; }
+.own-col > .set-card { padding: 16px 22px; gap: 10px; }
+.own-col .field label { flex: 0 0 150px; }
+.own-col { grid-template-rows: auto auto auto 1fr; grid-auto-rows: auto; }
+.own-col > .set-card:last-child { grid-row: 1 / -1; }
+.own-col > .set-card:not(:last-child) { align-self: start; }
+@media (max-width: 900px) { .own-col { grid-template-rows: none; } .own-col > .set-card:last-child { grid-row: auto; } }
+.own-col textarea.txt.area { flex: 0 0 auto; }
+.own-col textarea.txt.area { min-height: 90px; height: 90px; }
