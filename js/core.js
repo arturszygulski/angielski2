@@ -328,6 +328,45 @@ window.AI = (function () {
     const user = (context ? 'Kontekst: "' + context + '"\n\n' : '') + 'Przetłumacz na naturalny polski to zdanie:\n"' + sentence + '"\nPodaj tylko tłumaczenie.';
     return (await call(system, user, 400)).trim().replace(/^"|"$/g, '');
   }
+  /* ---------- Tłumacz z AI (praca z tekstem zdanie po zdaniu) ---------- */
+  async function trIntro(title, text, unknown, level) {
+    const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka. Przygotowujesz go do pracy z tekstem. Odpowiadasz wyłącznie jednym obiektem JSON.';
+    const user = 'Tytuł: "' + title + '"\nPoziom ucznia (słownictwo): ' + level + '\nTekst (zdania ponumerowane):\n' + text + '\n\n' +
+      'Słowa z tekstu, których uczeń prawdopodobnie nie zna: ' + (unknown.join(', ') || '(brak)') + '\n\n' +
+      'Zwróć: "summary" — 2–3 zdania po polsku, o czym jest tekst (co ciekawego się z niego dowie); "level" — poziom tekstu (np. "B1" albo "B1–B2"); ' +
+      '"keywords" — 4–8 najważniejszych dla zrozumienia słów/zwrotów z listy nieznanych (w formie słownikowej, zwroty całe, np. "be capable of"), z polskim znaczeniem w tym tekście; ' +
+      '"hard" — numery zdań trudnych gramatycznie albo idiomatycznie dla ucznia (niezależnie od słów), najwyżej co trzecie zdanie; ' +
+      '"unknown" — słowa i zwroty z tekstu (dokładnie w formie z tekstu), których uczeń na tym poziomie najpewniej nie zna — weź pod uwagę listę wyżej, ale usuń z niej słowa łatwe i dodaj trudne, których na niej brakuje (bez nazw własnych).';
+    const j = await callJSON(system, user + fmtJ('summary'), 1500, 60000, { type: 'object', required: ['summary', 'level', 'keywords', 'hard', 'unknown'], properties: { summary: STR, level: STR, keywords: { type: 'array', items: { type: 'object', required: ['w', 'pl'], properties: { w: STR, pl: STR } } }, hard: { type: 'array', items: { type: 'integer' } }, unknown: { type: 'array', items: STR } } });
+    return { summary: String(j.summary || ''), level: String(j.level || ''), keywords: (j.keywords || []).slice(0, 8), hard: (j.hard || []).map(Number).filter(n => n >= 0), unknown: (j.unknown || []).map(String) };
+  }
+  async function trJudge(o) {
+    const system = 'Jesteś życzliwym, konkretnym nauczycielem angielskiego dla dorosłego Polaka (poziom ok. ' + o.level + '). Uczeń czyta angielski tekst zdanie po zdaniu i tłumaczy je na polski. Odpowiadasz wyłącznie jednym obiektem JSON.';
+    const user = 'O czym jest tekst: ' + o.summary + '\nPoprzednie zdanie: "' + (o.prev || '') + '"\nZDANIE: "' + o.sentence + '"\nNastępne zdanie: "' + (o.next || '') + '"\n\n' +
+      (o.translation ? 'Tłumaczenie ucznia: "' + o.translation + '"\n' : 'Uczeń tłumaczył w głowie — nie ocenisz tłumaczenia, tylko je pokaż i skomentuj zdanie.\n') +
+      (o.think ? 'Jak uczeń to zrozumiał / co myślał (jego słowa): "' + o.think + '"\n' : '') +
+      'Słowa zaznaczone jako NIEZNANE: ' + (o.red.join(', ') || '(brak)') + '\nSłowa zaznaczone jako „domyślam się”: ' + (o.yellow.join(', ') || '(brak)') + '\n\n' +
+      'Zwróć:\n"verdict": "ok" (sens oddany, drobiazgi), "almost" (sens częściowo), "wrong" (sens nie oddany)' + (o.translation ? '' : ' — tu zawsze "self"') + ';\n' +
+      '"headline": jedno krótkie zdanie werdyktu po polsku;\n"better": naturalne polskie tłumaczenie całego zdania;\n' +
+      '"comment": 2–4 zdania po polsku: odnieś się do tłumaczenia ucznia i — jeśli coś napisał — do jego toku myślenia (co dobrze zgadł, gdzie się pomylił i dlaczego, odpowiedz na jego pytania);\n' +
+      '"learn": 1–3 krótkie punkty „warto zapamiętać” z TEGO zdania: czas/konstrukcja gramatyczna, kolokacja, fałszywy przyjaciel, rzadkie lub częste słowo, różne tłumaczenia słowa (każdy punkt: "kind" jeden z "grammar","word","usage" i "text");\n' +
+      '"words": słowa/zwroty do nauki: wszystkie NIEZNANE i „domyślam się” oraz te, które uczeń wyraźnie przetłumaczył źle mimo braku zaznaczenia. Dla każdego: "surface" — dokładnie ten fragment, jak stoi w zdaniu; "phrase" — forma słownikowa albo cały zwrot (np. "be capable of" zamiast "capable"); "pl" — znaczenie w tym zdaniu; "kind": "red", "yellow" albo "missed"; "note" — krótka uwaga (np. „częste, B1”, „dobrze się domyśliłeś”, „przetłumaczyłeś jako …”).';
+    const j = await callJSON(system, user + fmtJ('comment, learn.text, headline'), 1200, 40000, { type: 'object', required: ['verdict', 'headline', 'better', 'comment', 'learn', 'words'], properties: {
+      verdict: { type: 'string', enum: ['ok', 'almost', 'wrong', 'self'] }, headline: STR, better: STR, comment: STR,
+      learn: { type: 'array', items: { type: 'object', required: ['kind', 'text'], properties: { kind: STR, text: STR } } },
+      words: { type: 'array', items: { type: 'object', required: ['surface', 'phrase', 'pl', 'kind'], properties: { surface: STR, phrase: STR, pl: STR, kind: STR, note: STR } } } } });
+    return j;
+  }
+  async function trRetell(o) {
+    const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka (poziom ok. ' + o.level + '). Uczeń streszcza po angielsku przeczytany tekst. Odpowiadasz wyłącznie jednym obiektem JSON.';
+    const user = 'Tekst (fragment): ' + o.text + '\n\nStreszczenie ucznia: "' + o.retell + '"\n\nZwróć: "corrected" — jego streszczenie poprawione (zachowaj jego myśli i styl, popraw błędy, minimalnie); "comment" — 2–3 zdania po polsku: co dobrze, najważniejsze błędy i dlaczego, czy dobrze zrozumiał tekst; "phrases" — 2–4 zwroty z tekstu, których mógł użyć (z polskim znaczeniem, jako "phrase — znaczenie").';
+    return callJSON(system, user + fmtJ('comment'), 900, 40000, { type: 'object', required: ['corrected', 'comment', 'phrases'], properties: { corrected: STR, comment: STR, phrases: { type: 'array', items: STR } } });
+  }
+  async function trBack(o) {
+    const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka. Uczeń tłumaczy z powrotem na angielski zdanie, które wczoraj czytał w oryginale. Odpowiadasz wyłącznie jednym obiektem JSON.';
+    const user = 'Polskie zdanie: "' + o.pl + '"\nOryginał angielski: "' + o.original + '"\nWersja ucznia: "' + o.answer + '"\n\nZwróć: "ok" — true, jeśli wersja ucznia jest poprawna i naturalna (nie musi być identyczna z oryginałem); "comment" — 1–3 zdania po polsku: czym różni się od oryginału, co z oryginału warto przejąć (konkretne zwroty), błędy.';
+    return callJSON(system, user + fmtJ('comment'), 500, 30000, { type: 'object', required: ['ok', 'comment'], properties: { ok: { type: 'boolean' }, comment: STR } });
+  }
   async function askAboutText(question, phrase, sentence, context, history) {
     const system = 'Jesteś cierpliwym nauczycielem angielskiego dla dorosłego Polaka. Odpowiadasz po polsku, krótko i konkretnie (do 5 zdań), z angielskimi przykładami tam, gdzie pomagają.';
     const msgs = [];
@@ -674,7 +713,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

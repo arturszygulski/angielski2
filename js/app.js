@@ -531,7 +531,7 @@
   /* czas nauki: liczy się tylko, gdy okno programu jest aktywne (inny program kliknięty = stop od razu)
      i był ruch myszą / klawiatura w ostatnich 15 s — chyba że mówi lektor, słucha mikrofon albo czekasz na AI */
   const IDLE_SEC = 15, IDLE_SEC_VIDEO = 60;
-  const TIME_MOD = { talk: 'talk', listen: 'listen', reader: 'texts', tense: 'tenses', test: 'test', sweep: 'ex', topic: 'ex' };
+  const TIME_MOD = { talk: 'talk', listen: 'listen', reader: 'texts', trx: 'texts', tense: 'tenses', test: 'test', sweep: 'ex', topic: 'ex' };
   const audioOn = () => { try { return !!(window.speechSynthesis && speechSynthesis.speaking); } catch (e) { return false; } };
   const winActive = () => !document.hidden && (typeof document.hasFocus !== 'function' || document.hasFocus());
   const recentInput = lim => Date.now() - lastInput <= lim * 1000;
@@ -578,11 +578,12 @@
     if (screen === 'reader' && name !== 'reader') stopReading();
     if (screen === 'listen' && name !== 'listen') stopListen();
     if (screen === 'talk' && name !== 'talk') stopTalkAudio();
+    if (screen === 'trx' && name !== 'trx' && TR && TR.mic) { Recog.stop(); TR.mic = null; }
     registerCustom();
     screen = name;
     window.scrollTo(0, 0);
     ({ welcome: renderWelcome, home: renderHome, exercise: renderExercise, race: renderRace, result: renderResult, settings: renderSettings,
-       play: renderPlayMenu, yg: renderYG, words: renderWords, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
+       play: renderPlayMenu, yg: renderYG, words: renderWords, trx: renderTrx, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
     qaFabSync();
   }
 
@@ -4454,13 +4455,349 @@
   function contextOf(T, i) { return [T.sents[i - 1], T.sents[i + 1]].filter(Boolean).map(x => x.t).join(' '); }
   function markAt(T, s, k) { return Object.values(T.marks || {}).find(m => m.s === s && k >= m.a && k <= m.b); }
 
+  /* ================= TŁUMACZ Z AI — tekst zdanie po zdaniu ================= */
+  const TR_PART = 30;
+  const TR_STOP = new Set('a an the and or but if so as at by for from in into of off on onto out over to up with about after before than then that this these those there here what which who whom whose when where why how all any some no not only own same such too very can could will would shall should may might must do does did done be is am are was were been being have has had having i me my mine you your yours he him his she her hers it its we us our ours they them their theirs myself yourself itself one two three just also more most much many each other again once both few further under until while because through during against between'.split(' '));
+  let TR = null;
+  function trData(T) { T.tr = T.tr || { pos: 0, part: 0, done: {} }; T.tr.done = T.tr.done || {}; return T.tr; }
+  function trNorm(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  /* nieznane słowa: lista AI z wprowadzenia (bez tych, które już masz w nauce/znanych) */
+  function trUnknownSet(T) {
+    const tr = trData(T), c = D().cards, set = new Set();
+    ((tr.intro && tr.intro.unknown) || []).forEach(u => {
+      const low = u.toLowerCase().trim(); if (!low) return;
+      const base = WORDS.list.find(w => w.answers.some(a => a.toLowerCase() === low));
+      if (base && c[base.id]) return;
+      if (Object.values(T.marks || {}).some(m => m.phrase.toLowerCase() === low && c[m.id])) return;
+      set.add(low);
+    });
+    return set;
+  }
+  function trSentUnknown(T, i, set) {
+    const t = ' ' + T.sents[i].t.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ') + ' ';
+    let n = 0; set.forEach(u => { if (t.indexOf(' ' + u + ' ') >= 0) n++; });
+    return n;
+  }
+  /* kandydaci do wprowadzenia AI: słowa z bazy powyżej Twojego poziomu bez karty + długie słowa spoza bazy */
+  function trCandidates(T) {
+    const lv = levels().vocab, c = D().cards, out = new Set();
+    T.sents.forEach(s => tokenize(s.t).forEach(tk => {
+      const low = tk.w.toLowerCase(); if (TR_STOP.has(low) || low.length < 4 || /\d/.test(low)) return;
+      const forms = [low, low.replace(/s$/, ''), low.replace(/es$/, ''), low.replace(/ed$/, ''), low.replace(/d$/, ''), low.replace(/ing$/, ''), low.replace(/ing$/, 'e'), low.replace(/ies$/, 'y'), low.replace(/ied$/, 'y'), low.replace(/ly$/, '')];
+      const base = WORDS.list.find(w => forms.indexOf(w.answers[0].toLowerCase()) >= 0);
+      if (base) { if (!c[base.id] && base.lvl >= lv) out.add(tk.w); }
+      else if (low.length >= 7 && tk.w[0] === low[0]) out.add(tk.w);
+    }));
+    return [...out].slice(0, 80);
+  }
+  function trPartRange(T, part) { const a = part * TR_PART; return [a, Math.min(T.sents.length, a + TR_PART)]; }
+  function trParts(T) { return Math.max(1, Math.ceil(T.sents.length / TR_PART)); }
+  function trBuildList(T) {
+    const tr = trData(T), [a, b] = trPartRange(T, tr.part || 0), set = trUnknownSet(T), hard = new Set((tr.intro && tr.intro.hard) || []), list = [];
+    for (let i = a; i < b; i++) if (tr.mode !== 'hard' || hard.has(i) || trSentUnknown(T, i, set) > 0) list.push(i);
+    if (!list.length) for (let i = a; i < b; i++) list.push(i);
+    tr.list = list;
+  }
+  function trBackDue(T) {
+    const tr = T.tr; if (!tr) return [];
+    const today = U.startOfDay();
+    return Object.keys(tr.done).map(Number).filter(i => { const d = tr.done[i]; return d.better && !d.back && d.at < today; }).slice(0, 5);
+  }
+  function startTrx(id, view) {
+    const T = D().texts[id]; if (!T) return;
+    stopReading();
+    const tr = trData(T);
+    TR = { id, view: view || (tr.list && tr.pos < tr.list.length ? 'sent' : tr.list && tr.list.length && tr.pos >= tr.list.length ? 'done' : 'intro'), marks: {}, ans: '', think: '', busy: false, err: '', fb: null, qa: [], banner: false };
+    if (view === 'back') { TR.backList = trBackDue(T); TR.bi = 0; TR.bAns = ''; TR.bRes = null; TR.bOk = 0; }
+    go('trx', id);
+  }
+  function renderTrx() {
+    screen = 'trx';
+    if (!TR) return go('texts');
+    const T = D().texts[TR.id]; if (!T) return go('texts');
+    const tr = trData(T), ai = AI.enabled();
+    const head = (sub, right) => '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b>Tłumacz z AI</b><span>' + sub + '</span></div><div class="tr-right">' + (right || '') + '</div></header>';
+    let html = '';
+    if (!ai) {
+      html = head(esc(T.title)) + '<section class="tr-f"><p style="margin:0">Tłumacz z AI potrzebuje klucza API — ustaw go w Ustawieniach.</p></section>';
+    } else if (TR.view === 'intro') {
+      const it = tr.intro;
+      if (!it) {
+        html = head(esc(T.title)) + '<section class="tr-f">' + (TR.err ? '<div class="fb bad">' + IC.alert + '<span>' + esc(TR.err) + '</span></div><div class="row"><button class="btn primary" id="trRetry">Spróbuj jeszcze raz</button></div>' : '<div class="checking"><span class="spinner"></span>AI czyta cały tekst i przygotowuje wprowadzenie…</div>') + '</section>';
+      } else {
+        const set = trUnknownSet(T), [a, b] = trPartRange(T, tr.part || 0), hard = new Set(it.hard || []);
+        let nh = 0; for (let i = a; i < b; i++) if (hard.has(i) || trSentUnknown(T, i, set) > 0) nh++;
+        const n = b - a, parts = trParts(T);
+        html = head(esc(T.title) + (parts > 1 ? ' · część ' + ((tr.part || 0) + 1) + ' z ' + parts : '')) +
+          '<section class="tr-f"><div class="row between"><h2>O czym jest ten tekst</h2>' + aiTag(it.m) + '</div><p class="tr-sum">' + qaFmt(it.summary) + '</p>' +
+          '<div class="tr-kv"><div><b>' + esc(it.level || '—') + '</b><span>poziom tekstu</span></div><div><b>' + n + '</b><span>' + (parts > 1 ? 'zdań w tej części' : 'zdań') + '</span></div><div><b>' + nh + '</b><span>trudnych dla Ciebie</span></div><div><b>' + set.size + '</b><span>słów spoza Twojego słownika</span></div></div>' +
+          (it.keywords && it.keywords.length ? '<div><div class="small-note" style="margin-bottom:6px">Warto znać przed lekturą</div><div class="tr-chips">' + it.keywords.map(k => '<span class="tr-chip"><b lang="en">' + esc(k.w) + '</b> <small>' + esc(k.pl) + '</small></span>').join('') + '</div></div>' : '') + '</section>' +
+          '<h2 class="tr-h2">Jak chcesz pracować? <span class="small-note">kliknij, żeby zacząć</span></h2>' +
+          '<div class="tr-modes"><button class="btn tr-mode" data-trmode="hard"><b class="pink">Tylko trudne zdania (' + nh + ')</b><span>Łatwe przeczytasz na końcu z lektorem — ok. ' + Math.max(2, Math.round(nh * 1.3)) + ' min</span>' + K('1') + '</button>' +
+          '<button class="btn tr-mode" data-trmode="all"><b>Wszystkie zdania (' + n + ')</b><span>Dokładnie, zdanie po zdaniu — ok. ' + Math.max(3, Math.round(n * 1.1)) + ' min</span>' + K('2') + '</button></div>';
+      }
+    } else if (TR.view === 'sent' || TR.view === 'fb') {
+      const si = tr.list[tr.pos], sn = T.sents[si], toks = tokenize(sn.t), set = trUnknownSet(T), hardSet = new Set((tr.intro && tr.intro.hard) || []);
+      const okN = Object.values(tr.done).filter(d => d.v === 'ok').length, wN = tr.words || 0;
+      const right = '<span class="small-note">dobrze ' + okN + ' · nowe słowa ' + wN + '</span>';
+      const [pa, pb] = trPartRange(T, tr.part || 0), inList = new Set(tr.list);
+      let prog = ''; for (let i = pa; i < pb; i++) prog += '<i class="' + (i === si ? 'c' : tr.done[i] ? 'd' : !inList.has(i) ? 'e' : (hardSet.has(i) || trSentUnknown(T, i, set)) ? 'h' : '') + '"></i>';
+      const isHard = hardSet.has(si) || trSentUnknown(T, si, set) > 0;
+      const sub = 'zdanie ' + (si - pa + 1) + ' z ' + (pb - pa) + (isHard ? ' · trudne' : '') + (trParts(T) > 1 ? ' · część ' + ((tr.part || 0) + 1) + '/' + trParts(T) : '');
+      const dup = TR.view === 'sent' && (() => { const k = trNorm(sn.t); const j = Object.keys(tr.done).map(Number).find(x => x !== si && tr.done[x].v === 'ok' && trNorm(T.sents[x].t) === k); return j == null ? null : tr.done[j]; })();
+      const sentHtml = (clickable) => { let out = '', last = 0; toks.forEach((tk, k) => { out += esc(sn.t.slice(last, tk.a)); const m = TR.marks[k]; out += '<span class="tr-w' + (m === 'r' ? ' r' : m === 'y' ? ' y' : '') + '"' + (clickable ? ' data-trk="' + k + '"' : '') + ' lang="en">' + esc(tk.w) + '</span>'; last = tk.b; }); return out + esc(sn.t.slice(last)); };
+      html = head(sub, right) + '<div class="tr-prog">' + prog + '</div>';
+      if (dup) {
+        html += '<section class="tr-f tr-card"><div class="tr-sent tr-dup" lang="en">' + esc(sn.t) + '</div><div class="small-note" style="text-align:center">To zdanie już było i przetłumaczyłeś je dobrze:</div><div class="tr-dupt">' + esc(dup.ans || dup.better) + '</div></section>' +
+          '<div class="tr-under"><button class="btn primary" id="trDupNext">Dalej ' + K('Enter') + '</button></div>';
+        TR.dup = true;
+      } else if (TR.view === 'sent') {
+        TR.dup = false;
+        const prev = si > 0 ? T.sents[si - 1].t : '';
+        html += '<section class="tr-f tr-card">' + (prev ? '<div class="small-note tr-prev" lang="en">' + esc(prev.length > 140 ? '…' + prev.slice(-140) : prev) + ' <i>(poprzednie zdanie)</i></div>' : '') +
+          '<div class="tr-sent">' + sentHtml(true) + '</div>' +
+          '<div class="row center"><button class="btn small" id="trSay">' + IC.speaker + ' Posłuchaj ' + K('S') + '</button></div>' +
+          '<div class="tr-hint">Kliknij słowo: raz <b class="r">nie znam</b> · drugi raz <b class="y">domyślam się</b> · trzeci raz — znam (domyślnie wszystkie są znane)</div>' +
+          '<div class="tr-lbl"><b>Twoje tłumaczenie</b><span>pisz albo dyktuj po polsku · Enter — sprawdź, Shift+Enter — nowa linia</span></div>' +
+          '<div class="tr-ta"><textarea id="trAns" rows="2" class="tr-in" placeholder="Jak brzmi to zdanie po polsku?">' + esc(TR.ans) + '</textarea>' + (Recog.supported() ? '<button class="btn tr-mic' + (TR.mic === 'trAns' ? ' on' : '') + '" data-trmic="trAns" title="Dyktuj po polsku" aria-label="Dyktuj tłumaczenie">' + IC.mic + '</button>' : '') + '</div>' +
+          '<div class="tr-lbl"><b>Jak to zrozumiałeś? <span>(opcjonalnie — swobodnie, co myślałeś, czego nie byłeś pewien)</span></b></div>' +
+          '<div class="tr-ta"><textarea id="trThink" rows="2" class="tr-in" placeholder="np. nie znałem tego słowa, z kontekstu wyszło mi, że…">' + esc(TR.think) + '</textarea>' + (Recog.supported() ? '<button class="btn tr-mic' + (TR.mic === 'trThink' ? ' on' : '') + '" data-trmic="trThink" title="Dyktuj po polsku" aria-label="Dyktuj">' + IC.mic + '</button>' : '') + '</div>' +
+          (TR.busy ? '<div class="checking"><span class="spinner"></span>AI czyta Twoje tłumaczenie…</div>' : TR.err ? '<div class="fb bad">' + IC.alert + '<span>' + esc(TR.err) + '</span></div>' : '') +
+          '</section>' +
+          '<div class="tr-under between"><button class="btn" id="trHead"' + (TR.busy ? ' disabled' : '') + '>Tłumaczę w głowie — pokaż ' + K('Alt+G') + '</button><button class="btn primary" id="trCheck"' + (TR.busy ? ' disabled' : '') + '>Sprawdź ' + K('Enter') + '</button></div>';
+      } else {
+        const f = TR.fb, d = tr.done[si] || {};
+        const vMap = { ok: ['ok', IC.check, 'Dobrze'], almost: ['unsure', IC.alert, 'Prawie'], wrong: ['bad', IC.alert, 'Nie całkiem'], self: ['unsure', IC.check, 'Tłumaczenie'] };
+        const v = vMap[f.verdict] || vMap.self;
+        const KIC = { grammar: '⏱', word: '📈', usage: '🔗' };
+        html += '<section class="tr-f tr-card"><div class="tr-sent tr-small" lang="en">' + sentHtml(false) + '</div>' +
+          '<div class="fb ' + v[0] + '" role="status">' + v[1] + '<span><b>' + v[2] + (f.verdict === 'self' ? '' : ' — ') + '</b>' + (f.verdict === 'self' ? '' : qaFmt(f.headline)) + '</span></div>' +
+          (f.verdict === 'self' && d.self == null ? '<div class="tr-self">Zrozumiałeś to tak samo? <button class="btn small" data-trself="1">Tak ' + K('1') + '</button><button class="btn small" data-trself="0">Nie całkiem ' + K('2') + '</button></div>' : '') +
+          '<div class="tr-cmp">' + (TR.lastAns ? '<span>Twoje</span><div>' + esc(TR.lastAns) + '</div>' : '') + '<span>' + (TR.lastAns ? 'Lepiej' : 'Tłumaczenie') + '</span><div class="tr-better">' + esc(f.better) + '</div></div>' +
+          '<div class="row between"><b class="tr-h3">Komentarz</b>' + aiTag(f.m) + '</div><div class="tr-aic">' + qaFmt(f.comment) + '</div>' +
+          (f.learn && f.learn.length ? '<div class="tr-learn"><b class="tr-h3">Warto zapamiętać</b>' + f.learn.map(l => '<div><span>' + (KIC[l.kind] || '•') + '</span><span>' + qaFmt(l.text) + '</span></div>').join('') + '</div>' : '') +
+          (f.words && f.words.length ? '<div><b class="tr-h3">Słowa z tego zdania</b>' + f.words.map((w, k) => '<div class="tr-wrow"><i class="' + (w.kind === 'red' ? 'r' : w.kind === 'yellow' ? 'y' : 'm') + '"></i><span><b lang="en">' + esc(w.phrase || w.surface) + '</b> — ' + esc(w.pl) + (w.note ? ' <span class="small-note">· ' + qaFmt(w.note) + '</span>' : '') + '</span>' +
+            (w.added ? '<span class="small-note">✓ dodane do nauki</span>' : w.known ? '<span class="small-note">znasz</span>' : '<span class="row" style="gap:8px"><button class="btn small" data-trwk="' + k + '">Znam</button><button class="btn small primary" data-trwa="' + k + '">Do nauki</button></span>') + '</div>').join('') + '</div>' : '') +
+          (TR.qa.length ? '<div class="tr-qa">' + TR.qa.map(q => '<div class="tr-q">' + esc(q.q) + '</div><div class="tr-a">' + (q.a ? qaFmt(q.a) : '<span class="spinner"></span>') + '</div>').join('') + '</div>' : '') +
+          (TR.ask ? '<div class="tr-ta"><input id="trAsk" class="tr-in" placeholder="Zapytaj o to zdanie… (Enter)" autocomplete="off"></div>' : '') +
+          '</section>' +
+          '<div class="tr-under"><button class="btn" id="trMore">Zapytaj o to zdanie ' + K('Alt+E') + '</button><button class="btn primary" id="trNext">Dalej ' + K('Enter') + '</button></div>';
+        if (TR.banner) {
+          const rest = tr.list.slice(tr.pos + 1), hs = new Set((tr.intro && tr.intro.hard) || []), hrest = rest.filter(i => hs.has(i));
+          html += '<div class="tr-banner"><span><b>Do końca ' + (trParts(T) > 1 ? 'tej części' : 'tekstu') + ' nie ma już słów spoza Twojego słownika.</b> ' + (hrest.length ? 'Zostały ' + hrest.length + ' trudniejsze zdania (gramatyka). ' : '') + 'Resztę możesz przeczytać swobodnie z lektorem.</span><span class="row" style="gap:14px;flex:none">' +
+            (hrest.length ? '<button class="btn" id="trOnlyHard">Tylko ' + hrest.length + ' trudne</button>' : '<button class="btn" id="trKeep">Tłumacz dalej</button>') + '<button class="btn" id="trRestRead">Czytaj resztę</button></span></div>';
+        }
+      }
+    } else if (TR.view === 'done') {
+      const [pa, pb] = trPartRange(T, tr.part || 0), ds = []; for (let i = pa; i < pb; i++) if (tr.done[i]) ds.push(tr.done[i]);
+      const c = v => ds.filter(d => d.v === v).length, learn = [];
+      ds.forEach(d => (d.learn || []).forEach(l => { if (l.kind === 'grammar' && learn.length < 5 && learn.indexOf(l.text) < 0) learn.push(l.text); }));
+      const parts = trParts(T), more = (tr.part || 0) < parts - 1;
+      html = head(esc(T.title) + (parts > 1 ? ' · część ' + ((tr.part || 0) + 1) + ' z ' + parts : '')) +
+        '<section class="tr-f"><h2>' + (more ? 'Część zrobiona' : 'Tekst zrobiony') + '</h2>' +
+        '<div class="tr-kv"><div><b>' + ds.length + '</b><span>zdań przetłumaczonych</span></div><div><b class="ok2">' + (c('ok') + ds.filter(d => d.v === 'self' && d.self).length) + '</b><span>dobrze</span></div><div><b>' + (c('almost')) + '</b><span>prawie</span></div><div><b>' + (tr.partWords || 0) + '</b><span>nowych słów do nauki</span></div></div>' +
+        (learn.length ? '<div class="tr-learn"><b class="tr-h3">Gramatyka, która się pojawiła</b>' + learn.map(t => '<div><span>⏱</span><span>' + qaFmt(t) + '</span></div>').join('') + '</div>' : '') +
+        '<div class="small-note">Na koniec dwie krótkie rzeczy, które najbardziej utrwalają: przeczytaj całość płynnie z lektorem i powiedz albo napisz po angielsku, o czym był tekst.</div></section>' +
+        '<div class="tr-under"><button class="btn" id="trReadAll">' + IC.speaker + ' Przeczytaj całość z lektorem ' + K('L') + '</button><button class="btn" id="trRetell">Streszczenie po angielsku ' + K('R') + '</button>' +
+        (more ? '<button class="btn primary" id="trNextPart">Następna część ' + K('Enter') + '</button>' : '<button class="btn primary" id="trFinish">Zakończ ' + K('Enter') + '</button>') + '</div>';
+    } else if (TR.view === 'retell') {
+      const r = TR.ret;
+      html = head(esc(T.title) + ' · streszczenie') +
+        '<section class="tr-f"><h2>O czym był tekst? <span class="small-note">3–5 zdań po angielsku — powiedz albo napisz</span></h2>' +
+        '<div class="tr-ta"><textarea id="trRet" rows="5" class="tr-in" placeholder="This text is about…">' + esc(TR.retAns || '') + '</textarea>' + (Recog.supported() ? '<button class="btn tr-mic' + (TR.mic === 'trRet' ? ' on' : '') + '" data-trmic="trRet" data-lang="en-US" title="Mów po angielsku" aria-label="Dyktuj po angielsku">' + IC.mic + '</button>' : '') + '</div>' +
+        (TR.busy ? '<div class="checking"><span class="spinner"></span>AI czyta Twoje streszczenie…</div>' : TR.err ? '<div class="fb bad">' + IC.alert + '<span>' + esc(TR.err) + '</span></div>' : '') +
+        (r ? '<div class="row between"><b class="tr-h3">Poprawione</b>' + aiTag(r.m) + '</div><div class="tr-better" lang="en">' + esc(r.corrected) + '</div><div class="tr-aic">' + qaFmt(r.comment) + '</div>' +
+          (r.phrases && r.phrases.length ? '<div class="tr-learn"><b class="tr-h3">Zwroty z tekstu, których mogłeś użyć</b>' + r.phrases.map(p => '<div><span>🔗</span><span>' + qaFmt(p) + '</span></div>').join('') + '</div>' : '') : '') + '</section>' +
+        '<div class="tr-under"><button class="btn" id="trRetBack">Wróć do podsumowania</button>' + (r ? '' : '<button class="btn primary" id="trRetCheck"' + (TR.busy ? ' disabled' : '') + '>Sprawdź ' + K('Enter') + '</button>') + (r ? '<button class="btn primary" id="trFinish">Zakończ ' + K('Enter') + '</button>' : '') + '</div>';
+    } else if (TR.view === 'back') {
+      const L2 = TR.backList || [], i = L2[TR.bi];
+      if (i == null) {
+        html = head(esc(T.title) + ' · tłumaczenie wsteczne') + '<section class="tr-f"><h2>Gotowe</h2><p style="margin:0">Przetłumaczyłeś z powrotem ' + L2.length + ' ' + (L2.length === 1 ? 'zdanie' : 'zdań') + ' — dobrze: <b>' + TR.bOk + '</b>.</p></section><div class="tr-under"><button class="btn primary" id="trFinish">Zakończ ' + K('Enter') + '</button></div>';
+      } else {
+        const d = tr.done[i], r = TR.bRes;
+        html = head(esc(T.title) + ' · tłumaczenie wsteczne ' + (TR.bi + 1) + ' z ' + L2.length) +
+          '<section class="tr-f tr-card"><div class="small-note" style="text-align:center">Wczoraj tłumaczyłeś to zdanie z angielskiego. Napisz je teraz z powrotem po angielsku:</div><div class="tr-sent tr-small">' + esc(d.better) + '</div>' +
+          '<div class="tr-ta"><textarea id="trBack" rows="2" class="tr-in" placeholder="In English…"' + (r ? ' disabled' : '') + '>' + esc(TR.bAns) + '</textarea>' + (Recog.supported() && !r ? '<button class="btn tr-mic' + (TR.mic === 'trBack' ? ' on' : '') + '" data-trmic="trBack" data-lang="en-US" aria-label="Dyktuj po angielsku">' + IC.mic + '</button>' : '') + '</div>' +
+          (TR.busy ? '<div class="checking"><span class="spinner"></span>AI porównuje z oryginałem…</div>' : TR.err ? '<div class="fb bad">' + IC.alert + '<span>' + esc(TR.err) + '</span></div>' : '') +
+          (r ? '<div class="fb ' + (r.ok ? 'ok' : 'unsure') + '">' + (r.ok ? IC.check : IC.alert) + '<span><b>' + (r.ok ? 'Dobrze' : 'Inaczej niż w oryginale') + '</b></span></div><div class="tr-cmp"><span>Oryginał</span><div class="tr-better" lang="en">' + esc(T.sents[i].t) + '</div></div><div class="tr-aic">' + qaFmt(r.comment) + '</div>' : '') + '</section>' +
+          '<div class="tr-under">' + (r ? '<button class="btn primary" id="trBNext">Dalej ' + K('Enter') + '</button>' : '<button class="btn" id="trBSkip">Pomiń</button><button class="btn primary" id="trBCheck"' + (TR.busy ? ' disabled' : '') + '>Sprawdź ' + K('Enter') + '</button>') + '</div>';
+      }
+    }
+    app.innerHTML = '<div class="wrap tr-wrap">' + html + '</div>';
+    bindTrx(T);
+  }
+  async function trLoadIntro(T) {
+    const tr = trData(T); if (tr.intro || TR.loading) return;
+    TR.loading = true; TR.err = '';
+    try {
+      const words = []; let n = 0;
+      const lines = T.sents.map((s, i) => i + '. ' + s.t).filter(l => { n += l.split(' ').length; return n < 5000; });
+      const it = await AI.trIntro(T.title, lines.join('\n'), trCandidates(T), L[levels().vocab]);
+      it.m = AI.lastModel(); tr.intro = it; Store.save();
+    } catch (e) { TR.err = AI.humanError(e); }
+    TR.loading = false;
+    if (screen === 'trx' && TR && TR.view === 'intro') renderTrx();
+  }
+  function trAddWord(T, si, w) {
+    const sent = T.sents[si].t, phrase = (w.phrase || w.surface || '').trim(), surface = (w.surface || phrase).trim(); if (!surface) return;
+    const lowP = phrase.toLowerCase(), lowS = surface.toLowerCase();
+    const base = WORDS.list.find(x => x.answers.some(a => a.toLowerCase() === lowP || a.toLowerCase() === lowS));
+    let id;
+    if (base) { id = base.id; playMiss(id); }
+    else {
+      const k = sent.toLowerCase().indexOf(lowS);
+      id = 't-' + (slugify(surface) || Date.now().toString(36));
+      if (WORDS.byId[id] && !(D().custom || {})[id]) id += '-' + Date.now().toString(36);
+      if (!(D().custom || {})[id]) {
+        D().custom = D().custom || {};
+        const s = k >= 0 ? clozeFromText(sent, k, k + surface.length) : '_ — ' + sent;
+        D().custom[id] = { answers: [k >= 0 ? sent.slice(k, k + surface.length) : surface], pl: w.pl + (lowP !== lowS ? ' (' + phrase + ')' : ''), s, lvl: levels().vocab, added: Date.now(), textId: T.id, textTitle: T.title };
+        registerCustom();
+      }
+    }
+    const toks = tokenize(sent), parts = lowS.split(/\s+/);
+    const a = toks.findIndex((tk, j) => parts.every((p, q) => toks[j + q] && toks[j + q].w.toLowerCase() === p.replace(/[^a-z0-9'’-]/g, '')));
+    if (a >= 0) { const sel = { s: si, a, b: a + parts.length - 1 }; T.marks = T.marks || {}; T.marks[selKey(sel)] = { s: si, a: sel.a, b: sel.b, phrase: surface, pl: w.pl, id, at: Date.now() }; }
+    const tr = trData(T); tr.words = (tr.words || 0) + 1; tr.partWords = (tr.partWords || 0) + 1;
+  }
+  async function trCheck(T, inHead) {
+    if (TR.busy) return;
+    const tr = trData(T), si = tr.list[tr.pos], sn = T.sents[si];
+    const ans = inHead ? '' : ($('#trAns').value || '').trim(), think = ($('#trThink').value || '').trim();
+    if (!inHead && !ans) { TR.err = 'Wpisz albo powiedz tłumaczenie — albo kliknij „Tłumaczę w głowie”.'; renderTrx(); return; }
+    if (TR.mic) Recog.stop();
+    TR.ans = ans; TR.think = think; TR.busy = true; TR.err = ''; renderTrx();
+    const toks = tokenize(sn.t), red = [], yellow = [];
+    Object.keys(TR.marks).forEach(k => { (TR.marks[k] === 'r' ? red : yellow).push(toks[+k].w); });
+    try {
+      const f = await AI.trJudge({ level: L[levels().vocab], summary: (tr.intro && tr.intro.summary) || T.title, prev: si > 0 ? T.sents[si - 1].t : '', next: T.sents[si + 1] ? T.sents[si + 1].t : '', sentence: sn.t, translation: ans, think, red, yellow });
+      f.m = AI.lastModel(); if (inHead) f.verdict = 'self';
+      (f.words || []).forEach(w => { if (w.kind === 'red') { trAddWord(T, si, w); w.added = true; } });
+      tr.done[si] = { v: f.verdict, ans, think, better: f.better, learn: f.learn || [], at: Date.now(), back: false };
+      TR.fb = f; TR.lastAns = ans; TR.view = 'fb'; TR.qa = []; TR.ask = false;
+      const set = trUnknownSet(T), rest = tr.list.slice(tr.pos + 1), [pa, pb] = trPartRange(T, tr.part || 0), after = []; for (let i = si + 1; i < pb; i++) after.push(i);
+      TR.banner = tr.mode === 'all' && rest.length >= 3 && !tr.bannerSeen && after.every(i => trSentUnknown(T, i, set) === 0);
+      Store.save(); Sound.play(f.verdict === 'ok' ? 'ok' : 'uns');
+    } catch (e) { TR.err = AI.humanError(e); }
+    TR.busy = false; if (screen === 'trx') renderTrx();
+  }
+  function trNext(T) {
+    const tr = trData(T);
+    tr.pos++; TR.marks = {}; TR.ans = ''; TR.think = ''; TR.fb = null; TR.err = ''; TR.banner = false; TR.view = tr.pos >= tr.list.length ? 'done' : 'sent';
+    Store.save(); renderTrx();
+  }
+  function trMic(id, lang) {
+    if (TR.mic) { Recog.stop(); return; }
+    const el = document.getElementById(id); if (!el) return;
+    const before = el.value ? el.value.trim() + ' ' : '';
+    TR.mic = id; const keep = () => { const e2 = document.getElementById(id); if (e2) { if (id === 'trAns') TR.ans = e2.value; else if (id === 'trThink') TR.think = e2.value; else if (id === 'trRet') TR.retAns = e2.value; else if (id === 'trBack') TR.bAns = e2.value; } };
+    keep(); renderTrx();
+    Recog.listen({
+      silenceMs: 3500, lang: lang || 'pl-PL',
+      onInterim: t => { const e2 = document.getElementById(id); if (e2) e2.value = before + t; },
+      onResult: alts => { TR.mic = null; const e2 = document.getElementById(id); if (e2) e2.value = before + (alts[0] || ''); keep(); renderTrx(); },
+      onError: err => { TR.mic = null; if (err !== 'aborted') TR.err = recogMsg(err); renderTrx(); }
+    });
+  }
+  function bindTrx(T) {
+    const tr = trData(T), on = (sel, fn) => { const el = $(sel); if (el) el.onclick = fn; };
+    const leave = () => { if (TR && TR.mic) Recog.stop(); TR = null; go('texts'); };
+    on('#back', leave);
+    if (TR.view === 'intro' && !tr.intro && !TR.err && AI.enabled()) trLoadIntro(T);
+    on('#trRetry', () => { TR.err = ''; renderTrx(); });
+    const startMode = m => { tr.mode = m; tr.pos = 0; trBuildList(T); tr.partWords = 0; TR.view = 'sent'; Store.save(); renderTrx(); };
+    $$('[data-trmode]').forEach(b => b.onclick = () => startMode(b.dataset.trmode));
+    $$('[data-trk]').forEach(b => b.onclick = () => { const k = b.dataset.trk, m = TR.marks[k]; TR.ans = ($('#trAns') || {}).value || TR.ans; TR.think = ($('#trThink') || {}).value || TR.think; if (!m) TR.marks[k] = 'r'; else if (m === 'r') TR.marks[k] = 'y'; else delete TR.marks[k]; b.className = 'tr-w' + (TR.marks[k] === 'r' ? ' r' : TR.marks[k] === 'y' ? ' y' : ''); });
+    on('#trSay', () => Speech.speak(T.sents[tr.list[tr.pos]].t, D().settings.rate || 0.95));
+    $$('[data-trmic]').forEach(b => b.onclick = () => trMic(b.dataset.trmic, b.dataset.lang));
+    ['#trAns', '#trThink'].forEach(sel => { const el = $(sel); if (el) el.oninput = () => { if (sel === '#trAns') TR.ans = el.value; else TR.think = el.value; }; });
+    on('#trCheck', () => trCheck(T, false));
+    on('#trHead', () => trCheck(T, true));
+    on('#trDupNext', () => { const si = tr.list[tr.pos], k = trNorm(T.sents[si].t), j = Object.keys(tr.done).map(Number).find(x => tr.done[x].v === 'ok' && trNorm(T.sents[x].t) === k); if (j != null) tr.done[si] = Object.assign({}, tr.done[j], { at: Date.now(), back: true }); trNext(T); });
+    $$('[data-trself]').forEach(b => b.onclick = () => { const d = tr.done[tr.list[tr.pos]]; d.self = b.dataset.trself === '1'; Store.save(); renderTrx(); });
+    $$('[data-trwa]').forEach(b => b.onclick = () => { const w = TR.fb.words[+b.dataset.trwa]; trAddWord(T, tr.list[tr.pos], w); w.added = true; progress(); Store.save(); renderTrx(); });
+    $$('[data-trwk]').forEach(b => b.onclick = () => { TR.fb.words[+b.dataset.trwk].known = true; renderTrx(); });
+    on('#trMore', () => { TR.ask = true; renderTrx(); const i = $('#trAsk'); if (i) i.focus(); });
+    const ask = $('#trAsk');
+    if (ask) ask.onkeydown = async e => {
+      if (e.key !== 'Enter' || !ask.value.trim()) return; e.preventDefault();
+      const q = { q: ask.value.trim(), a: '' }; TR.qa.push(q); TR.ask = false; renderTrx();
+      const si = tr.list[tr.pos];
+      try { q.a = await AI.askAboutText(q.q, '', T.sents[si].t, contextOf(T, si), TR.qa.slice(0, -1).filter(x => x.a)); } catch (er) { q.a = AI.humanError(er); }
+      if (screen === 'trx' && TR && TR.view === 'fb') renderTrx();
+    };
+    on('#trNext', () => trNext(T));
+    on('#trKeep', () => { tr.bannerSeen = true; TR.banner = false; renderTrx(); });
+    on('#trOnlyHard', () => { const hs = new Set((tr.intro && tr.intro.hard) || []); tr.bannerSeen = true; tr.list = tr.list.slice(0, tr.pos + 1).concat(tr.list.slice(tr.pos + 1).filter(i => hs.has(i))); trNext(T); });
+    on('#trRestRead', () => { tr.bannerSeen = true; tr.list = tr.list.slice(0, tr.pos + 1); trNext(T); });
+    on('#trReadAll', () => { const id = T.id; TR = null; go('reader', id); setTimeout(() => { const b = document.getElementById('rPlay'); if (b) b.click(); }, 400); });
+    on('#trRetell', () => { TR.view = 'retell'; TR.ret = null; TR.err = ''; renderTrx(); const t = $('#trRet'); if (t) t.focus(); });
+    on('#trRetBack', () => { TR.view = 'done'; renderTrx(); });
+    const ret = $('#trRet'); if (ret) ret.oninput = () => { TR.retAns = ret.value; };
+    on('#trRetCheck', async () => {
+      const v = ($('#trRet').value || '').trim(); if (!v) { TR.err = 'Napisz albo powiedz kilka zdań po angielsku.'; renderTrx(); return; }
+      if (TR.mic) Recog.stop();
+      TR.retAns = v; TR.busy = true; TR.err = ''; renderTrx();
+      const [pa, pb] = trPartRange(T, tr.part || 0);
+      try { const r = await AI.trRetell({ level: L[levels().vocab], text: T.sents.slice(pa, pb).map(s => s.t).join(' '), retell: v }); r.m = AI.lastModel(); TR.ret = r; tr.retell = (tr.retell || 0) + 1; Store.save(); }
+      catch (e) { TR.err = AI.humanError(e); }
+      TR.busy = false; if (screen === 'trx') renderTrx();
+    });
+    on('#trNextPart', () => { tr.part = (tr.part || 0) + 1; tr.pos = 0; tr.list = null; tr.bannerSeen = false; TR.view = 'intro'; Store.save(); renderTrx(); });
+    on('#trFinish', leave);
+    const bk = $('#trBack'); if (bk) bk.oninput = () => { TR.bAns = bk.value; };
+    on('#trBSkip', () => { TR.bi++; TR.bAns = ''; TR.bRes = null; TR.err = ''; renderTrx(); });
+    on('#trBCheck', async () => {
+      const v = ($('#trBack').value || '').trim(); if (!v) { TR.err = 'Napisz zdanie po angielsku.'; renderTrx(); return; }
+      if (TR.mic) Recog.stop();
+      const i = TR.backList[TR.bi], d = tr.done[i];
+      TR.bAns = v; TR.busy = true; TR.err = ''; renderTrx();
+      try {
+        const same = trNorm(v) === trNorm(T.sents[i].t);
+        const r = same ? { ok: true, comment: 'Dokładnie jak w oryginale.' } : await AI.trBack({ pl: d.better, original: T.sents[i].t, answer: v });
+        TR.bRes = r; if (r.ok) TR.bOk++; d.back = true; d.backOk = !!r.ok; Store.save(); Sound.play(r.ok ? 'ok' : 'uns');
+      } catch (e) { TR.err = AI.humanError(e); }
+      TR.busy = false; if (screen === 'trx') renderTrx();
+    });
+    on('#trBNext', () => { TR.bi++; TR.bAns = ''; TR.bRes = null; renderTrx(); const t = $('#trBack'); if (t) t.focus(); });
+    const fa = $('#trAns'); if (fa && TR.view === 'sent' && !TR.busy) fa.focus();
+    const fb2 = $('#trBack'); if (fb2 && !fb2.disabled) fb2.focus();
+    keyHandler = e => {
+      if (e.key === 'Escape') { e.preventDefault(); if (TR.mic) { Recog.stop(); return; } leave(); return; }
+      const inField = typingInField();
+      if (TR.view === 'intro' && !inField) { if (e.key === '1' && $('[data-trmode="hard"]')) { e.preventDefault(); startMode('hard'); } if (e.key === '2' && $('[data-trmode="all"]')) { e.preventDefault(); startMode('all'); } return; }
+      if (TR.view === 'sent') {
+        if (TR.dup && e.key === 'Enter') { e.preventDefault(); $('#trDupNext').click(); return; }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); trCheck(T, false); return; }
+        if (altKey(e, 'KeyG')) { e.preventDefault(); trCheck(T, true); return; }
+        if (!inField && plainKey(e, 'KeyS')) { e.preventDefault(); $('#trSay').click(); }
+        return;
+      }
+      if (TR.view === 'fb') {
+        if (document.activeElement && document.activeElement.id === 'trAsk') return;
+        if (e.key === 'Enter') { e.preventDefault(); trNext(T); return; }
+        if (altKey(e, 'KeyE')) { e.preventDefault(); $('#trMore').click(); return; }
+        if (!inField && (e.key === '1' || e.key === '2') && $('[data-trself="1"]')) { e.preventDefault(); $('[data-trself="' + (e.key === '1' ? '1' : '0') + '"]').click(); }
+        return;
+      }
+      if (TR.view === 'done' && !inField) {
+        if (e.key === 'Enter') { e.preventDefault(); ($('#trNextPart') || $('#trFinish')).click(); }
+        if (plainKey(e, 'KeyL')) { e.preventDefault(); $('#trReadAll').click(); }
+        if (plainKey(e, 'KeyR')) { e.preventDefault(); $('#trRetell').click(); }
+        return;
+      }
+      if (TR.view === 'retell' && e.key === 'Enter' && !e.shiftKey) { if ($('#trRetCheck')) { e.preventDefault(); $('#trRetCheck').click(); } else if ($('#trFinish') && !inField) { e.preventDefault(); $('#trFinish').click(); } return; }
+      if (TR.view === 'back' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ($('#trBCheck') || $('#trBNext') || $('#trFinish')).click(); }
+    };
+  }
+
   /* ---------- Lista tekstów i dodawanie ---------- */
   function renderTexts() {
     S = null; stopReading();
     const texts = Object.values(D().texts || {}).sort((a, b) => b.added - a.added);
     const ai = AI.enabled();
     app.innerHTML =
-      '<div class="wrap narrow">' + backHeader('Moje teksty', 'czytaj, zaznaczaj, ucz się z własnych materiałów') +
+      '<div class="wrap narrow">' + backHeader('Moje teksty', 'czytaj, tłumacz z AI, ucz się z własnych materiałów') +
       '<section class="set-card raised"><h2>Dodaj tekst</h2>' +
       '<p class="small-note desc" style="margin:0">Wklej artykuł, fragment książki albo transkrypcję z YouTube. <b>Transkrypcja z YouTube:</b> pod filmem kliknij „…więcej” → „Pokaż transkrypcję”, zaznacz cały tekst, skopiuj i wklej tutaj — znaczniki czasu usunę sam. Możesz też wczytać plik napisów <b>.srt</b>, <b>.vtt</b> albo <b>.txt</b>.</p>' +
       '<div class="field"><label for="tTitle">Tytuł</label><div class="ctl"><input id="tTitle" class="txt" autocomplete="off" placeholder="np. TED: How AI learns"></div></div>' +
@@ -4468,19 +4805,24 @@
       '<div class="row between"><label class="btn small" for="tFile" style="cursor:pointer">Wczytaj plik…</label><input type="file" id="tFile" accept=".txt,.srt,.vtt,text/plain" hidden>' +
       '<span class="small-note" id="tInfo"></span></div>' +
       '<div id="tPunct" hidden><label class="check"><input type="checkbox" id="tPunctCb"' + (ai ? ' checked' : ' disabled') + '> Tekst nie ma kropek ani przecinków — popraw interpunkcję z AI' + (ai ? '' : ' (wymaga klucza API)') + '</label></div>' +
-      '<div class="row" style="justify-content:flex-end"><button class="btn primary" id="tAdd">Dodaj i czytaj</button></div><div id="tMsg"></div></section>' +
+      '<div class="row" style="justify-content:flex-end;gap:14px"><button class="btn' + (ai ? '' : ' primary') + '" id="tAdd">Dodaj i czytaj</button>' + (ai ? '<button class="btn primary" id="tAddTr">Dodaj i tłumacz z AI</button>' : '') + '</div><div id="tMsg"></div></section>' +
       '<section class="col" style="gap:18px">' +
       (texts.length ? texts.map((T, i) => {
         const st = textStats(T);
         const pct = st.marked ? Math.round(st.done / st.marked * 100) : 0;
-        return '<div class="list-card raised textrow"><div class="row between" style="align-items:flex-start"><div style="min-width:0"><h2 style="font-size:20px">' + esc(T.title) + '</h2>' +
+        const tr = T.tr, trDone = tr ? Object.keys(tr.done || {}).length : 0, trOk = tr ? Object.values(tr.done || {}).filter(d => d.v === 'ok' || d.self).length : 0;
+        const trIn = tr && tr.list && tr.pos < tr.list.length, back = trBackDue(T).length;
+        const trLabel = !ai ? '' : trIn ? 'Tłumacz z AI — dalej od zdania ' + (tr.list[tr.pos] + 1) : 'Tłumacz z AI';
+        return '<div class="tblock"><div class="list-card raised textrow"><div class="row between" style="align-items:flex-start"><div style="min-width:0"><h2 style="font-size:20px">' + esc(T.title) + '</h2>' +
           '<div class="small-note">' + st.words + ' słów · ' + st.sents + ' zdań · dodano ' + new Date(T.added).toLocaleDateString('pl-PL') + '</div></div>' +
           (i < 9 ? K(String(i + 1)) : '') + '</div>' +
-          '<div class="small-note">Zaznaczone do nauki: <b>' + st.marked + '</b> · w nauce: <b>' + st.learn + '</b> · opanowane: <b>' + st.done + '</b></div>' +
-          '<div class="bar thin inset"><div style="width:' + pct + '%;background:linear-gradient(90deg,#3E8A5A,#7DBB8E)"></div></div>' +
-          '<div class="row" style="justify-content:flex-end;gap:12px"><button class="btn small" data-tdel="' + T.id + '">Usuń</button>' +
+          '<div class="small-note">' + (trDone ? 'Tłumacz z AI: <b>' + trDone + ' z ' + st.sents + ' zdań</b> · dobrze ' + trOk + ' · ' : '') + 'zaznaczone do nauki: <b>' + st.marked + '</b> · w nauce: <b>' + st.learn + '</b> · opanowane: <b>' + st.done + '</b></div>' +
+          (trDone ? '<div class="bar thin inset"><div style="width:' + Math.round(trDone / st.sents * 100) + '%;background:linear-gradient(90deg,#B9CBE0,#5E7898)"></div></div>' : '<div class="bar thin inset"><div style="width:' + pct + '%;background:linear-gradient(90deg,#3E8A5A,#7DBB8E)"></div></div>') + '</div>' +
+          '<div class="tbtns"><button class="btn small" data-tdel="' + T.id + '">Usuń</button>' +
           '<button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu</button>' +
-          '<button class="btn small primary" data-tread="' + T.id + '">Czytaj</button></div></div>';
+          (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
+          '<button class="btn small" data-tread="' + T.id + '">Czytaj</button>' +
+          (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + (i === 0 ? ' ' + K('T') : '') + '</button>' : '') + '</div></div>';
       }).join('')
         : '<section class="note raised"><div class="ic inset">' + IC.book + '</div><div class="tx"><b>Jeszcze nie masz tekstów</b><span>Dodaj pierwszy — np. transkrypcję ulubionego filmu o technice albo artykuł o nauce.</span></div></section>') +
       '</section></div>';
@@ -4498,6 +4840,8 @@
       rd.onload = () => { body.value = rd.result; if (!$('#tTitle').value.trim()) $('#tTitle').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '); updInfo(); };
       rd.readAsText(f);
     };
+    let addThen = 'reader';
+    if ($('#tAddTr')) $('#tAddTr').onclick = () => { addThen = 'trx'; $('#tAdd').onclick(); };
     $('#tAdd').onclick = async () => {
       const btn = $('#tAdd'), msg = $('#tMsg');
       let paras = cleanTranscript(body.value);
@@ -4525,15 +4869,19 @@
       D().texts[id] = { id, title, added: Date.now(), sents, marks: {}, cache: {}, qa: [], pos: 0 };
       progress();
       if (!Store.save()) { delete D().texts[id]; btn.disabled = false; msg.innerHTML = '<span class="status bad">Brakuje miejsca w pamięci przeglądarki — usuń jakiś stary tekst i spróbuj ponownie.</span>'; return; }
+      if (addThen === 'trx') { addThen = 'reader'; return startTrx(id); }
       go('reader', id);
     };
     $$('[data-tread]').forEach(b => b.onclick = () => go('reader', b.dataset.tread));
+    $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));
+    $$('[data-tback]').forEach(b => b.onclick = () => startTrx(b.dataset.tback, 'back'));
     $$('[data-tlearn]').forEach(b => b.onclick = () => startTextSession(D().texts[b.dataset.tlearn]));
     $$('[data-tdel]').forEach(b => b.onclick = () => deleteText(b.dataset.tdel));
     $('#back').onclick = () => go('home');
     keyHandler = e => {
       if (e.key === 'Escape') { e.preventDefault(); go('home'); return; }
       if (!typingInField() && !e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key) && texts[+e.key - 1]) { e.preventDefault(); go('reader', texts[+e.key - 1].id); }
+      if (plainKey(e, 'KeyT') && texts[0] && ai) { e.preventDefault(); startTrx(texts[0].id); }
     };
   }
   function deleteText(id) {
