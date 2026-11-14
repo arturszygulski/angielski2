@@ -4808,7 +4808,7 @@
       '<div class="row between"><label class="btn small" for="tFile" style="cursor:pointer">Wczytaj plik…</label><input type="file" id="tFile" accept=".txt,.srt,.vtt,text/plain" hidden>' +
       '<span class="small-note" id="tInfo"></span></div>' +
       '<div id="tPunct" hidden><label class="check"><input type="checkbox" id="tPunctCb"' + (ai ? ' checked' : ' disabled') + '> Tekst nie ma kropek ani przecinków — popraw interpunkcję z AI' + (ai ? '' : ' (wymaga klucza API)') + '</label></div>' +
-      '<div class="row" style="justify-content:flex-end;gap:14px"><button class="btn' + (ai ? '' : ' primary') + '" id="tAdd">Dodaj i czytaj</button>' + (ai ? '<button class="btn primary" id="tAddTr">Dodaj i tłumacz z AI</button>' : '') + '</div><div id="tMsg"></div></section>' +
+      '<div class="row" style="justify-content:flex-end"><button class="btn primary" id="tAdd">Dodaj tekst</button></div><div id="tMsg"></div></section>' +
       '<section class="col" style="gap:18px">' +
       (texts.length ? texts.map((T, i) => {
         const st = textStats(T);
@@ -4843,8 +4843,6 @@
       rd.onload = () => { body.value = rd.result; if (!$('#tTitle').value.trim()) $('#tTitle').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '); updInfo(); };
       rd.readAsText(f);
     };
-    let addThen = 'reader';
-    if ($('#tAddTr')) $('#tAddTr').onclick = () => { addThen = 'trx'; $('#tAdd').onclick(); };
     $('#tAdd').onclick = async () => {
       const btn = $('#tAdd'), msg = $('#tMsg');
       let paras = cleanTranscript(body.value);
@@ -4872,8 +4870,9 @@
       D().texts[id] = { id, title, added: Date.now(), sents, marks: {}, cache: {}, qa: [], pos: 0 };
       progress();
       if (!Store.save()) { delete D().texts[id]; btn.disabled = false; msg.innerHTML = '<span class="status bad">Brakuje miejsca w pamięci przeglądarki — usuń jakiś stary tekst i spróbuj ponownie.</span>'; return; }
-      if (addThen === 'trx') { addThen = 'reader'; return startTrx(id); }
-      go('reader', id);
+      renderTexts();
+      const card = document.querySelector('[data-tread="' + id + '"]'); if (card) { const blk = card.closest('.tblock'); if (blk) { blk.classList.add('tnew'); blk.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+      toast('Dodano „' + title + '” — wybierz: Czytaj albo ' + (AI.enabled() ? 'Tłumacz z AI.' : 'Ucz się z tego tekstu.'), 5000);
     };
     $$('[data-tread]').forEach(b => b.onclick = () => go('reader', b.dataset.tread));
     $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));

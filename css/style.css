@@ -1382,3 +1382,4 @@ input.tr-in { height: 48px; }
 .t2-done { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px 14px; }
 .t2-done-tx b { white-space: normal; }
 .t2-done .btn { grid-column: 1 / -1; justify-self: end; }
+.tblock.tnew > .list-card { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(217,106,140,.18); }
