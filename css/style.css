@@ -1383,3 +1383,6 @@ input.tr-in { height: 48px; }
 .t2-done-tx b { white-space: normal; }
 .t2-done .btn { grid-column: 1 / -1; justify-self: end; }
 .tblock.tnew > .list-card { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(217,106,140,.18); }
+
+.tbtns .btn.tdel { margin-right: auto; margin-left: 6px; width: 44px; padding: 0; justify-content: center; color: #C0564A; }
+.tbtns .btn.tdel:hover { color: #A8392E; }

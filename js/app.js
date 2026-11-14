@@ -4821,7 +4821,7 @@
           (i < 9 ? K(String(i + 1)) : '') + '</div>' +
           '<div class="small-note">' + (trDone ? 'Tłumacz z AI: <b>' + trDone + ' z ' + st.sents + ' zdań</b> · dobrze ' + trOk + ' · ' : '') + 'zaznaczone do nauki: <b>' + st.marked + '</b> · w nauce: <b>' + st.learn + '</b> · opanowane: <b>' + st.done + '</b></div>' +
           (trDone ? '<div class="bar thin inset"><div style="width:' + Math.round(trDone / st.sents * 100) + '%;background:linear-gradient(90deg,#B9CBE0,#5E7898)"></div></div>' : '<div class="bar thin inset"><div style="width:' + pct + '%;background:linear-gradient(90deg,#3E8A5A,#7DBB8E)"></div></div>') + '</div>' +
-          '<div class="tbtns"><button class="btn small" data-tdel="' + T.id + '">Usuń</button>' +
+          '<div class="tbtns"><button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button>' +
           '<button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu</button>' +
           (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
           '<button class="btn small" data-tread="' + T.id + '">Czytaj</button>' +
