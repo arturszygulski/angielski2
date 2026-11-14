@@ -1386,3 +1386,23 @@ input.tr-in { height: 48px; }
 
 .tbtns .btn.tdel { margin-left: auto; width: 44px; padding: 0; justify-content: center; color: #C0564A; }
 .tbtns .btn.tdel:hover { color: #A8392E; }
+
+/* Moje teksty — lista zwijana (upd163) */
+.tsec { font-family: var(--head); font-weight: 700; color: var(--ink-2); font-size: 15px; letter-spacing: .04em; text-transform: uppercase; padding-left: 8px; margin-bottom: -12px; }
+.tlist { gap: 22px; }
+.trow { border: none; width: 100%; text-align: left; border-radius: 26px; padding: 18px 26px; display: flex; align-items: center; gap: 18px; cursor: pointer; color: var(--ink); }
+.trow .t { font-family: var(--head); font-weight: 700; font-size: 19px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trow .m { color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.trow .mini { width: 110px; height: 12px; border-radius: 9px; padding: 3px; flex: none; display: block; }
+.trow .mini > span { display: block; height: 100%; border-radius: 9px; min-width: 0; }
+.chev { color: var(--ink-3); font-size: 16px; background: none; border: none; cursor: pointer; padding: 4px; }
+.topen { border: 1.5px solid #BDB6AD; border-radius: 30px; padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; }
+.tt-row { display: flex; align-items: center; gap: 12px; }
+.tt-name { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; cursor: pointer; font-family: var(--head); font-weight: 700; font-size: 21px; color: var(--ink); overflow-wrap: anywhere; }
+.pen { width: 40px; height: 40px; border: none; border-radius: 12px; display: grid; place-items: center; color: var(--ink-2); cursor: pointer; flex: none; }
+.pen:hover { color: var(--pink-ink); }
+.txt.tedit { flex: 1; min-width: 0; font-family: var(--head); font-weight: 700; font-size: 19px; }
+.tblock .tbtns { margin-top: -2px; }
+.tblock.tnew > .topen { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(217,106,140,.18); }
+.tadd { border: 1.5px solid #BDB6AD; background: none; box-shadow: none; }
+@media (max-width: 640px) { .trow .m, .trow .mini { display: none; } }

@@ -2301,7 +2301,7 @@
     S = null;
     if (res.topicId) { const T = (D().topics || {})[res.topicId]; if (T) { T.res = { total: res.total, correct: res.correct, xp: res.xp, at: Date.now() }; Store.save(); } if (res.total) Sound.play('block'); syncAfterSession(); return go('topic'); }
     if (res.guide) { if (completed && res.total) Sound.play('block'); guideStepDone({ total: res.total, correct: res.correct, xp: res.xp, promos }); syncAfterSession(); return; }
-    if (res.total === 0 && res.raceHits == null && !res.boss) return go(res.textId && (D().texts || {})[res.textId] ? 'texts' : res.play && res.play !== 'text' && res.play !== 'tense' ? 'play' : 'home');
+    if (res.total === 0 && res.raceHits == null && !res.boss) { if (res.textId) TXO.open = res.textId; return go(res.textId && (D().texts || {})[res.textId] ? 'texts' : res.play && res.play !== 'text' && res.play !== 'tense' ? 'play' : 'home'); }
     if (completed && !res.blockSound) Sound.play('block');
     go('result', res);
     syncAfterSession();
@@ -2392,7 +2392,7 @@
     const rT = r.textId && (D().texts || {})[r.textId];
     const again = () => r.tenseTids ? startTenseSession(r.tenseTids, r.custom) : rT ? startTextSession(rT) : r.play ? startPlay(r.play) : startSession(false, (dueIds().length || newLeftToday() || newExtraLeftToday()) ? 0 : 5); // gdy plan na dziś zrobiony — blok z 5 dodatkowymi nowymi
     $('#more').onclick = again;
-    $('#end').onclick = () => r.tenseTids ? go('tenses') : rT ? go('texts') : go(r.play ? 'play' : 'home');
+    $('#end').onclick = () => r.tenseTids ? go('tenses') : rT ? (TXO.open = r.textId, go('texts')) : go(r.play ? 'play' : 'home');
     bindSyncLine();
     if (r.newBadges && r.newBadges.length) setTimeout(() => Sound.play('combo'), 500);
     keyHandler = e => {
@@ -4795,39 +4795,95 @@
   }
 
   /* ---------- Lista tekstów i dodawanie ---------- */
+  const TXO = { open: null, add: false, edit: null };
+  function autoTitle(sents) {
+    const t = (sents[0] && sents[0].t || '').replace(/\s+/g, ' ').trim();
+    const w = t.split(' '); const out = [];
+    for (let i = 0; i < w.length && i < 6; i++) { out.push(w[i]); if (/[.,;:!?…]$/.test(w[i])) break; }
+    const cut = out.length < w.length;
+    if (cut) while (out.length > 2 && /^(a|an|the|and|or|but|of|to|in|on|at|for|with|is|are|was|were|be|my|your|his|her|its|our|their|this|that)$/i.test(out[out.length - 1])) out.pop();
+    let r = out.join(' ').replace(/[.,;:!?…"”]+$/, '');
+    return r + (cut ? '…' : '');
+  }
+  const PEN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>';
+  const BIN = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg>';
   function renderTexts() {
     S = null; stopReading();
     const texts = Object.values(D().texts || {}).sort((a, b) => b.added - a.added);
     const ai = AI.enabled();
+    if (!texts.length) TXO.add = true;
+    if (TXO.open && !D().texts[TXO.open]) TXO.open = null;
+    const trInfo = T => {
+      const st = textStats(T), tr = T.tr;
+      const trDone = tr ? Object.keys(tr.done || {}).length : 0, trOk = tr ? Object.values(tr.done || {}).filter(d => d.v === 'ok' || d.self).length : 0;
+      const pct = trDone ? Math.round(trDone / st.sents * 100) : st.marked ? Math.round(st.done / st.marked * 100) : 0;
+      const grad = trDone ? 'linear-gradient(90deg,#B9CBE0,#5E7898)' : 'linear-gradient(90deg,#3E8A5A,#7DBB8E)';
+      return { st, tr, trDone, trOk, pct, grad };
+    };
+    const rowHtml = (T, i) => {
+      const { st, pct, grad } = trInfo(T);
+      return '<button class="trow raised" data-topen="' + T.id + '"><span class="t">' + esc(T.title) + '</span><span class="m">' + st.words + ' słów · ' + new Date(T.added).toLocaleDateString('pl-PL') + '</span>' +
+        '<span class="mini inset"><span style="width:' + pct + '%;background:' + grad + '"></span></span>' + (i < 9 ? K(String(i + 1)) : '') + '<span class="chev">▼</span></button>';
+    };
+    const openHtml = (T, i) => {
+      const { st, tr, trDone, trOk, pct, grad } = trInfo(T);
+      const trIn = tr && tr.list && tr.pos < tr.list.length, back = trBackDue(T).length;
+      const trLabel = trIn ? 'Tłumacz z AI — dalej od zdania ' + (tr.list[tr.pos] + 1) : 'Tłumacz z AI';
+      const ttl = TXO.edit === T.id
+        ? '<input id="tEdit" class="txt tedit" value="' + esc(T.title) + '" maxlength="80" autocomplete="off" aria-label="Tytuł tekstu"><button class="btn small" id="tEditOk">Zapisz ' + K('Enter') + '</button>'
+        : '<button class="tt-name" data-topen="' + T.id + '" title="Zwiń">' + esc(T.title) + '</button><button class="pen raised-sm" data-tedit="' + T.id + '" title="Zmień tytuł" aria-label="Zmień tytuł">' + PEN + '</button><button class="chev" data-topen="' + T.id + '" title="Zwiń" aria-label="Zwiń">▲</button>';
+      return '<div class="tblock" data-tid="' + T.id + '"><div class="topen"><div class="tt-row">' + ttl + '</div>' +
+        '<div class="small-note">' + st.words + ' słów · ' + st.sents + ' zdań · dodano ' + new Date(T.added).toLocaleDateString('pl-PL') + (trDone ? ' · Tłumacz z AI: <b>' + trDone + ' z ' + st.sents + ' zdań</b> (dobrze ' + trOk + ')' : '') + ' · zaznaczone do nauki: <b>' + st.marked + '</b> · w nauce: <b>' + st.learn + '</b> · opanowane: <b>' + st.done + '</b></div>' +
+        '<div class="bar thin inset"><div style="width:' + pct + '%;background:' + grad + '"></div></div></div>' +
+        '<div class="tbtns">' + (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + ' ' + K('T') + '</button>' : '') +
+        (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
+        '<button class="btn small" data-tread="' + T.id + '">Czytaj ' + K('C') + '</button>' +
+        '<button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu ' + K('U') + '</button>' +
+        '<button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst">' + BIN + '</button></div></div>';
+    };
     app.innerHTML =
-      '<div class="wrap narrow">' + backHeader('Moje teksty', 'czytaj, tłumacz z AI, ucz się z własnych materiałów') +
-      '<section class="set-card raised"><h2>Dodaj tekst</h2>' +
+      '<div class="wrap narrow">' +
+      '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button>' +
+      '<div class="ex-title"><b>Moje teksty</b><span>czytaj, tłumacz z AI, ucz się z własnych materiałów</span></div>' +
+      (TXO.add && texts.length ? '<button class="btn" id="tAddToggle">Anuluj</button>' : TXO.add ? '<div style="width:110px"></div>' : '<button class="btn primary" id="tAddToggle">+ Dodaj tekst ' + K('N') + '</button>') + '</header>' +
+      (TXO.add ? '<div class="tblock"><section class="list-card tadd"><h2 style="font-size:20px">Nowy tekst</h2>' +
       '<p class="small-note desc" style="margin:0">Wklej artykuł, fragment książki albo transkrypcję z YouTube. <b>Transkrypcja z YouTube:</b> pod filmem kliknij „…więcej” → „Pokaż transkrypcję”, zaznacz cały tekst, skopiuj i wklej tutaj — znaczniki czasu usunę sam. Możesz też wczytać plik napisów <b>.srt</b>, <b>.vtt</b> albo <b>.txt</b>.</p>' +
-      '<div class="field"><label for="tTitle">Tytuł</label><div class="ctl"><input id="tTitle" class="txt" autocomplete="off" placeholder="np. TED: How AI learns"></div></div>' +
-      '<textarea id="tBody" class="txt area" rows="8" spellcheck="false" placeholder="Wklej tutaj tekst po angielsku…"></textarea>' +
-      '<div class="row between"><label class="btn small" for="tFile" style="cursor:pointer">Wczytaj plik…</label><input type="file" id="tFile" accept=".txt,.srt,.vtt,text/plain" hidden>' +
-      '<span class="small-note" id="tInfo"></span></div>' +
+      '<textarea id="tBody" class="txt area" rows="8" spellcheck="false" placeholder="Wklej tutaj tekst po angielsku… (tytuł nadam sam — poprawisz go ołówkiem)"></textarea>' +
       '<div id="tPunct" hidden><label class="check"><input type="checkbox" id="tPunctCb"' + (ai ? ' checked' : ' disabled') + '> Tekst nie ma kropek ani przecinków — popraw interpunkcję z AI' + (ai ? '' : ' (wymaga klucza API)') + '</label></div>' +
-      '<div class="row" style="justify-content:flex-end"><button class="btn primary" id="tAdd">Dodaj tekst</button></div><div id="tMsg"></div></section>' +
-      '<section class="col" style="gap:18px">' +
-      (texts.length ? texts.map((T, i) => {
-        const st = textStats(T);
-        const pct = st.marked ? Math.round(st.done / st.marked * 100) : 0;
-        const tr = T.tr, trDone = tr ? Object.keys(tr.done || {}).length : 0, trOk = tr ? Object.values(tr.done || {}).filter(d => d.v === 'ok' || d.self).length : 0;
-        const trIn = tr && tr.list && tr.pos < tr.list.length, back = trBackDue(T).length;
-        const trLabel = !ai ? '' : trIn ? 'Tłumacz z AI — dalej od zdania ' + (tr.list[tr.pos] + 1) : 'Tłumacz z AI';
-        return '<div class="tblock"><div class="list-card raised textrow"><div class="row between" style="align-items:flex-start"><div style="min-width:0"><h2 style="font-size:20px">' + esc(T.title) + '</h2>' +
-          '<div class="small-note">' + st.words + ' słów · ' + st.sents + ' zdań · dodano ' + new Date(T.added).toLocaleDateString('pl-PL') + '</div></div>' +
-          (i < 9 ? K(String(i + 1)) : '') + '</div>' +
-          '<div class="small-note">' + (trDone ? 'Tłumacz z AI: <b>' + trDone + ' z ' + st.sents + ' zdań</b> · dobrze ' + trOk + ' · ' : '') + 'zaznaczone do nauki: <b>' + st.marked + '</b> · w nauce: <b>' + st.learn + '</b> · opanowane: <b>' + st.done + '</b></div>' +
-          (trDone ? '<div class="bar thin inset"><div style="width:' + Math.round(trDone / st.sents * 100) + '%;background:linear-gradient(90deg,#B9CBE0,#5E7898)"></div></div>' : '<div class="bar thin inset"><div style="width:' + pct + '%;background:linear-gradient(90deg,#3E8A5A,#7DBB8E)"></div></div>') + '</div>' +
-          '<div class="tbtns"><button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu</button>' +
-          (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
-          '<button class="btn small" data-tread="' + T.id + '">Czytaj</button>' +
-          (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + (i === 0 ? ' ' + K('T') : '') + '</button>' : '') + '<button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button></div></div>';
-      }).join('')
-        : '<section class="note raised"><div class="ic inset">' + IC.book + '</div><div class="tx"><b>Jeszcze nie masz tekstów</b><span>Dodaj pierwszy — np. transkrypcję ulubionego filmu o technice albo artykuł o nauce.</span></div></section>') +
-      '</section></div>';
+      '</section><div class="tbtns"><label class="btn small" for="tFile" style="cursor:pointer">Wczytaj plik…</label><input type="file" id="tFile" accept=".txt,.srt,.vtt,text/plain" hidden><span class="small-note" id="tInfo" style="align-self:center"></span>' +
+      '<button class="btn small primary" id="tAdd" style="margin-left:auto">Dodaj tekst</button></div><div id="tMsg"></div></div>' : '') +
+      (texts.length ? '<div class="tsec">Twoje teksty · ' + texts.length + '</div><section class="col tlist">' + texts.map((T, i) => TXO.open === T.id ? openHtml(T, i) : rowHtml(T, i)).join('') + '</section>' : '') +
+      '</div>';
+    if (TXO.edit && $('#tEdit')) {
+      const inp = $('#tEdit'); inp.focus(); inp.select();
+      const save = () => { const v = inp.value.trim(); const T = D().texts[TXO.edit]; if (T && v) { T.title = v; Store.save(); } TXO.edit = null; renderTexts(); };
+      $('#tEditOk').onclick = save;
+      inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); save(); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); TXO.edit = null; renderTexts(); } };
+    }
+    $$('[data-topen]').forEach(b => b.onclick = () => { const id = b.dataset.topen; TXO.open = TXO.open === id ? null : id; TXO.edit = null; renderTexts(); });
+    $$('[data-tedit]').forEach(b => b.onclick = () => { TXO.edit = b.dataset.tedit; renderTexts(); });
+    if ($('#tAddToggle')) $('#tAddToggle').onclick = () => { TXO.add = !TXO.add; renderTexts(); if (TXO.add && $('#tBody')) $('#tBody').focus(); };
+    if (TXO.add) bindTextAdd(ai);
+    $$('[data-tread]').forEach(b => b.onclick = () => go('reader', b.dataset.tread));
+    $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));
+    $$('[data-tback]').forEach(b => b.onclick = () => startTrx(b.dataset.tback, 'back'));
+    $$('[data-tlearn]').forEach(b => b.onclick = () => startTextSession(D().texts[b.dataset.tlearn]));
+    $$('[data-tdel]').forEach(b => b.onclick = () => deleteText(b.dataset.tdel));
+    $('#back').onclick = () => go('home');
+    keyHandler = e => {
+      if (typingInField()) { if (e.key === 'Escape') { e.preventDefault(); document.activeElement.blur(); } return; }
+      if (e.key === 'Escape') { e.preventDefault(); if (TXO.add && texts.length) { TXO.add = false; renderTexts(); } else if (TXO.open) { TXO.open = null; renderTexts(); } else go('home'); return; }
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (/^[1-9]$/.test(e.key) && texts[+e.key - 1]) { e.preventDefault(); const id = texts[+e.key - 1].id; TXO.open = TXO.open === id ? null : id; TXO.edit = null; renderTexts(); return; }
+      if (plainKey(e, 'KeyN') && texts.length && !TXO.add) { e.preventDefault(); $('#tAddToggle').click(); return; }
+      const O = TXO.open && D().texts[TXO.open]; if (!O) return;
+      if (plainKey(e, 'KeyT') && ai) { e.preventDefault(); startTrx(O.id); }
+      else if (plainKey(e, 'KeyC')) { e.preventDefault(); go('reader', O.id); }
+      else if (plainKey(e, 'KeyU')) { e.preventDefault(); startTextSession(O); }
+    };
+  }
+  function bindTextAdd(ai) {
+    let fileTitle = '';
     const body = $('#tBody');
     const updInfo = () => {
       const paras = cleanTranscript(body.value);
@@ -4839,7 +4895,7 @@
     $('#tFile').onchange = e => {
       const f = e.target.files[0]; if (!f) return;
       const rd = new FileReader();
-      rd.onload = () => { body.value = rd.result; if (!$('#tTitle').value.trim()) $('#tTitle').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '); updInfo(); };
+      rd.onload = () => { body.value = rd.result; fileTitle = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '); updInfo(); };
       rd.readAsText(f);
     };
     $('#tAdd').onclick = async () => {
@@ -4864,25 +4920,15 @@
       }
       const sents = splitSentences(paras);
       const id = 'x' + Date.now().toString(36);
-      const title = $('#tTitle').value.trim() || sents[0].t.split(' ').slice(0, 6).join(' ') + '…';
+      const title = fileTitle || autoTitle(sents);
       D().texts = D().texts || {};
       D().texts[id] = { id, title, added: Date.now(), sents, marks: {}, cache: {}, qa: [], pos: 0 };
       progress();
       if (!Store.save()) { delete D().texts[id]; btn.disabled = false; msg.innerHTML = '<span class="status bad">Brakuje miejsca w pamięci przeglądarki — usuń jakiś stary tekst i spróbuj ponownie.</span>'; return; }
+      TXO.add = false; TXO.open = id; TXO.edit = null;
       renderTexts();
-      const card = document.querySelector('[data-tread="' + id + '"]'); if (card) { const blk = card.closest('.tblock'); if (blk) { blk.classList.add('tnew'); blk.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
-      toast('Dodano „' + title + '” — wybierz: Czytaj albo ' + (AI.enabled() ? 'Tłumacz z AI.' : 'Ucz się z tego tekstu.'), 5000);
-    };
-    $$('[data-tread]').forEach(b => b.onclick = () => go('reader', b.dataset.tread));
-    $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));
-    $$('[data-tback]').forEach(b => b.onclick = () => startTrx(b.dataset.tback, 'back'));
-    $$('[data-tlearn]').forEach(b => b.onclick = () => startTextSession(D().texts[b.dataset.tlearn]));
-    $$('[data-tdel]').forEach(b => b.onclick = () => deleteText(b.dataset.tdel));
-    $('#back').onclick = () => go('home');
-    keyHandler = e => {
-      if (e.key === 'Escape') { e.preventDefault(); go('home'); return; }
-      if (!typingInField() && !e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key) && texts[+e.key - 1]) { e.preventDefault(); go('reader', texts[+e.key - 1].id); }
-      if (plainKey(e, 'KeyT') && texts[0] && ai) { e.preventDefault(); startTrx(texts[0].id); }
+      const blk = document.querySelector('.tblock[data-tid="' + id + '"]'); if (blk) { blk.classList.add('tnew'); blk.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      toast('Dodano „' + title + '”. Tytuł zmienisz ołówkiem.', 4000);
     };
   }
   function deleteText(id) {
