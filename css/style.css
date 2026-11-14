@@ -1201,3 +1201,40 @@ header.top { gap: 24px; align-items: center; }
 .wod-btns { display: flex; flex-direction: column; gap: 8px; flex: none; }
 .wod-btns .btn.wod-go { justify-content: center; }
 .btn.chal-btn { width: 48px; height: 48px; min-height: 0; padding: 0; border-radius: 50%; color: #5E7898; font: 700 19px var(--head); letter-spacing: -1px; }
+
+/* Mój słownik — książka z zakładkami A–Z */
+.bk-wrap { gap: 22px; }
+.bk-top { display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; }
+.bk-big { font: 700 30px var(--head); }
+.bk-big span { font: 500 16px var(--body); color: var(--ink-2); }
+.bk-lg { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); align-items: center; flex-wrap: wrap; }
+.bk-lg i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.bk-search { width: 280px; max-width: 100%; height: 44px; border-radius: 999px; border: 0; padding: 0 20px; font: 16px var(--body); color: var(--ink); background: var(--bg); box-shadow: inset 3px 3px 7px var(--sh-in-d), inset -3px -3px 7px var(--sh-l); outline: none; }
+.bk-search:focus { box-shadow: inset 3px 3px 7px var(--sh-in-d), inset -3px -3px 7px var(--sh-l), 0 0 0 2px rgba(217,106,140,.35); }
+.book { display: grid; grid-template-columns: minmax(0, 1fr) 54px; align-items: start; }
+.bk-page { border: 1.5px solid #BDB6AD; border-radius: 26px 6px 6px 26px; padding: 26px 34px 30px; min-height: 560px; background: linear-gradient(90deg, rgba(0,0,0,.035), transparent 22px); min-width: 0; }
+.bk-page h3 { margin: 0 0 4px; font: 700 64px/1 var(--head); color: var(--pink-ink); }
+.bk-page h3.bk-q { font-size: 34px; }
+.bk-sub { font-size: 14px; color: var(--ink-2); margin-bottom: 16px; }
+.bk-cols { column-count: 2; column-gap: 40px; column-rule: 1px solid #D2CCC4; }
+.bk-e { break-inside: avoid; display: grid; grid-template-columns: 12px 26px minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 6px 6px; border: 1.5px solid transparent; border-bottom: 1px dashed #D2CCC4; }
+.bk-e > i { width: 9px; height: 9px; border-radius: 50%; }
+.bk-e.open { border: 1.5px solid #BDB6AD; border-radius: 14px; margin: 2px 0; }
+.bk-w { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit; min-width: 0; }
+.bk-w b { font: 700 17px var(--head); }
+.bk-w span { color: var(--ink-2); font-size: 15px; }
+.bk-e > small { font: 700 11px var(--body); color: var(--ink-3); letter-spacing: .5px; }
+.bk-spk { width: 26px; height: 26px; border-radius: 50%; border: 0; background: none; color: var(--ink-3); display: grid; place-items: center; padding: 0; cursor: pointer; }
+.bk-spk svg { width: 16px; height: 16px; }
+.bk-spk:hover { color: var(--ink); }
+.bk-act { grid-column: 3 / 5; display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 6px 0 4px; }
+.bk-act .btn { font-size: 13px; padding: 7px 14px; min-height: 0; border-radius: 999px; white-space: nowrap; flex: none; }
+.bk-pg { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 20px; font: 600 14px var(--body); color: var(--ink-2); }
+.bk-pg .btn { width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; font-size: 18px; }
+.bk-pg .btn:disabled { opacity: .4; box-shadow: none; }
+.bk-tabs { display: flex; flex-direction: column; gap: 3px; padding-top: 18px; }
+.bk-tab { height: 26px; width: 54px; border: 0; border-radius: 0 12px 12px 0; margin-left: -1.5px; display: flex; align-items: center; justify-content: space-between; padding: 0 7px 0 9px; font: 700 13px var(--head); color: var(--ink); background: var(--bg); box-shadow: 3px 2px 5px var(--sh-d); cursor: pointer; }
+.bk-tab small { font: 600 9px var(--body); color: var(--ink-3); }
+.bk-tab.on { background: #EBD5DC; color: var(--pink-ink); width: 62px; box-shadow: 3px 2px 6px rgba(150,60,90,.3); }
+.bk-tab.empty { color: #C4BEB6; box-shadow: none; background: transparent; border: 1px dashed #CFC9C1; border-left: 0; cursor: default; }
+@media (max-width: 760px) { .bk-cols { column-count: 1; } .bk-page { padding: 20px 18px; } .bk-page h3 { font-size: 48px; } }

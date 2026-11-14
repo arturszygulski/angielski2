@@ -2519,6 +2519,7 @@
   function renderSettings(focus) {
     const d = D(), st = d.settings, games = st.games || {};
     const known = Object.keys(d.cards).filter(id => d.cards[id].state === 'known' && itemFor(id)).filter(id => { const f = knownFamily(id); return f[0] === id || !(d.cards[f[0]] && d.cards[f[0]].state === 'known'); });
+    const knownWords = known.filter(id => baseWordId(id)).length, knownOther = known.filter(id => !baseWordId(id));
     const voiceOpts = Speech.voices.length
       ? Speech.voices.map(v => '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === st.voiceURI ? ' selected' : '') + '>' + esc(v.name + ' (' + v.lang + ')') + '</option>').join('')
       : '<option value="">Domyślny głos angielski</option>';
@@ -2589,10 +2590,12 @@
       '<p class="small-note desc" style="margin:0">Ręczna kopia do folderu Pobrane — przydatna, gdy nie używasz Dysku Google.</p><p class="small-note" style="margin:0">Ostatnia kopia: <b>' + (d.lastBackup ? new Date(d.lastBackup).toLocaleDateString('pl-PL') : 'jeszcze nie było') + '</b>.</p>' +
       '<div class="row"><button class="btn" id="export">Zapisz kopię do pliku</button><button class="btn" id="import">Wczytaj kopię z pliku</button><input type="file" id="file" accept=".json,application/json" hidden></div></section>' +
 
-      '<section class="set-card raised"><h2>Oznaczone jako znane (' + known.length + ')</h2>' +
-      (known.length
-        ? '<div class="known-list">' + known.map(id => '<div class="list-item inset"><div>' + itemLabel(id) + '</div><button class="btn small" data-restore="' + esc(id) + '">Przywróć do powtórek</button></div>').join('') + '</div>'
-        : '<p class="small-note" style="margin:0">Jeszcze nic. Elementy oznaczone „Umiem to” pojawią się tutaj — w każdej chwili możesz je przywrócić.</p>') +
+      '<section class="set-card raised"><h2>Oznaczone jako znane</h2>' +
+      '<div class="row between"><span class="small-note">Znane słowa (' + knownWords + ') są w <b>Moje słówka → Mój słownik</b> — tam je znajdziesz i przywrócisz do nauki.</span><button class="btn small" id="toBook">Otwórz słownik</button></div>' +
+      (knownOther.length ? '<h3 class="tm-sub">Zdania i ćwiczenia (' + knownOther.length + ')</h3>' : '') +
+      (knownOther.length
+        ? '<div class="known-list">' + knownOther.map(id => '<div class="list-item inset"><div>' + itemLabel(id) + '</div><button class="btn small" data-restore="' + esc(id) + '">Przywróć do powtórek</button></div>').join('') + '</div>'
+        : '') +
       '</section>' +
 
       '<section class="set-card raised"><h2>Inne</h2>' +
@@ -2652,6 +2655,7 @@
       progress(); save(); renderSettings(); toast(itemShort(id) + ' — wróci w najbliższej sesji.');
     });
     on('#retest', () => startTest());
+    on('#toBook', () => { wTab = 'dict'; go('words'); });
     on('#wipe', () => {
       modal('<h2>Usunąć wszystkie dane?</h2><p class="muted" style="margin:0">Postępy, statystyki i ustawienia zostaną usunięte z tej przeglądarki. Kopie na Dysku Google zostaną — możesz je potem wczytać.</p>' +
         '<div class="row center"><button class="btn primary" id="mNo" data-esc>Anuluj</button><button class="btn" id="mYes" style="color:var(--bad-ink)">Usuń wszystko</button></div>',
@@ -3701,13 +3705,91 @@
     if (c.state === 'known') return ['znane', 'ok'];
     return [(c.s || 0) >= 10 ? 'opanowane' : 'w nauce', (c.s || 0) >= 10 ? 'ok' : ''];
   }
-  function renderWords() {
+  /* ---------- Mój słownik: książka z zakładkami A–Z (wszystkie poznane słowa) ---------- */
+  let wTab = 'dict';
+  const BK = { letter: null, page: 0, q: '', open: null };
+  const BK_PER = 40;
+  function bkHead(w) { return w.answers[0].replace(/^(to|a|an|the)\s+/i, ''); }
+  function bkStat(id) { const c = D().cards[id]; return !c ? null : c.state === 'known' ? 'known' : ((c.s || 0) >= 10 || c.mastered || wordLv(id) >= 5) ? 'mast' : 'learn'; }
+  function bkWords() { const c = D().cards; return WORDS.list.filter(w => c[w.id]); }
+  function bookHtml() {
+    const all = bkWords(), by = {}, L2 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    all.forEach(w => { const ch = (bkHead(w)[0] || '').toUpperCase(); if (L2.indexOf(ch) >= 0) (by[ch] = by[ch] || []).push(w); });
+    if (!BK.letter || !by[BK.letter]) BK.letter = L2.find(x => by[x]) || 'A';
+    const q = BK.q.trim().toLowerCase();
+    let list = q ? all.filter(w => w.answers.some(a => a.toLowerCase().indexOf(q) >= 0) || (w.pl || '').toLowerCase().indexOf(q) >= 0) : (by[BK.letter] || []);
+    list = list.slice().sort((a, b) => bkHead(a).localeCompare(bkHead(b), 'en'));
+    const pages = Math.max(1, Math.ceil(list.length / BK_PER)); BK.page = Math.min(BK.page, pages - 1);
+    const show = list.slice(BK.page * BK_PER, BK.page * BK_PER + BK_PER), cc = D().cards;
+    const COL = { mast: '#5E9670', known: '#7E98BE', learn: '#D3A35C' }, NAME = { mast: 'opanowane', known: 'znane („Umiem to”)', learn: 'w nauce' };
+    const fd = t => t ? new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric', year: '2-digit' }) : '';
+    const ent = show.map(w => {
+      const st = bkStat(w.id), c = cc[w.id], open = BK.open === w.id, hasS = (w.s || '').indexOf('_') >= 0, [a, b2] = hasS ? splitSentence(w.s) : ['', ''];
+      const since = st === 'known' ? 'znane od ' + fd(c.knownAt) : st === 'mast' ? 'opanowane' + (c.added ? ' · w nauce od ' + fd(c.added) : '') : 'w nauce' + (c.added ? ' od ' + fd(c.added) : '');
+      return '<div class="bk-e' + (open ? ' open' : '') + '"><i style="background:' + COL[st] + '" title="' + NAME[st] + '"></i>' +
+        '<button class="bk-spk" data-bksay="' + esc(w.id) + '" title="Posłuchaj" aria-label="Posłuchaj ' + esc(w.answers[0]) + '">' + IC.speaker + '</button>' +
+        '<button class="bk-w" data-bkopen="' + esc(w.id) + '"><b lang="en">' + esc(w.answers[0]) + '</b> <span>— ' + esc(w.pl) + '</span></button><small>' + (L[w.lvl] || '') + '</small>' +
+        (open ? '<div class="bk-act"><span class="small-note">' + since + (hasS ? ' · <i lang="en">' + esc(a) + '<b>' + esc(w.answers[0]) + '</b>' + esc(b2) + '</i>' : '') + '</span>' +
+          (st !== 'learn' ? '<button class="btn raised" data-bkback="' + esc(w.id) + '">Przywróć do nauki</button>' : '<span class="small-note">już w nauce</span>') + '</div>' : '') + '</div>';
+    }).join('');
+    const tabs = L2.map(x => { const k = (by[x] || []).length; return '<button class="bk-tab' + (!q && x === BK.letter ? ' on' : '') + (k ? '' : ' empty') + '"' + (k ? ' data-bkl="' + x + '"' : ' disabled') + '>' + x + (k ? '<small>' + k + '</small>' : '') + '</button>'; }).join('');
+    const pager = pages > 1 ? '<div class="bk-pg"><button class="btn raised" id="bkPrev"' + (BK.page ? '' : ' disabled') + ' aria-label="Poprzednia strona">‹</button><span>strona ' + (BK.page + 1) + ' z ' + pages + '</span><button class="btn raised" id="bkNext"' + (BK.page < pages - 1 ? '' : ' disabled') + ' aria-label="Następna strona">›</button></div>' : '';
+    return '<div class="book"><div class="bk-page">' +
+      (q ? '<h3 class="bk-q">„' + esc(BK.q.trim()) + '”</h3><div class="bk-sub">' + (list.length ? 'znaleziono ' + list.length : 'nic nie znaleziono — może jeszcze tego słowa nie poznałeś') + '</div>'
+        : '<h3>' + BK.letter + '</h3><div class="bk-sub">' + list.length + ' ' + (list.length === 1 ? 'słowo' : 'słów') + ' na literę ' + BK.letter + ' · kliknij słowo — szczegóły i „Przywróć do nauki”</div>') +
+      (all.length ? '<div class="bk-cols">' + ent + '</div>' : '<p class="small-note">Słownik zapełni się, gdy zaczniesz się uczyć — każde poznane słowo trafi tutaj.</p>') + pager + '</div>' +
+      '<div class="bk-tabs">' + tabs + '</div></div>';
+  }
+  function bookTop() {
+    const all = bkWords(), mon = mondayOf(Date.now()), cc = D().cards;
+    const wk = all.filter(w => (cc[w.id].added || 0) >= mon || (cc[w.id].knownAt || 0) >= mon).length;
+    return '<div class="bk-top"><div class="bk-big">' + fmtNum(all.length) + ' <span>' + (all.length === 1 ? 'słowo' : 'słów') + ' w Twoim słowniku' + (wk ? ' · +' + wk + ' w tym tygodniu' : '') + '</span></div>' +
+      '<div class="bk-lg"><span><i style="background:#5E9670"></i>opanowane</span><span><i style="background:#7E98BE"></i>znane („Umiem to”)</span><span><i style="background:#D3A35C"></i>w nauce</span></div>' +
+      '<input class="bk-search" id="bkQ" placeholder="Szukaj słowa…" autocomplete="off" spellcheck="false" value="' + esc(BK.q) + '"></div>';
+  }
+  function bindBook() {
+    const r = () => { $('#bkBox').innerHTML = bookHtml(); bindBook(); };
+    $$('[data-bkl]').forEach(b => b.onclick = () => { BK.letter = b.dataset.bkl; BK.page = 0; BK.open = null; BK.q = ''; const qi = $('#bkQ'); if (qi) qi.value = ''; r(); });
+    $$('[data-bkopen]').forEach(b => b.onclick = () => { BK.open = BK.open === b.dataset.bkopen ? null : b.dataset.bkopen; r(); });
+    $$('[data-bksay]').forEach(b => b.onclick = () => { const w = WORDS.byId[b.dataset.bksay]; if (w) Speech.speak(w.answers[0], D().settings.rate || 0.95); });
+    $$('[data-bkback]').forEach(b => b.onclick = () => {
+      const id = b.dataset.bkback, d = D(), w = WORDS.byId[id];
+      if (d.cards[id] && d.cards[id].state === 'known') {
+        knownFamily(id).concat([id]).forEach(x => { const c = d.cards[x]; if (!c || c.state !== 'known') return; if (!c.reps) delete d.cards[x]; else d.cards[x] = Object.assign({}, c, { state: 'review', due: Date.now() }); });
+      } else if (d.cards[id]) d.cards[id] = Object.assign({}, d.cards[id], { due: Date.now() });
+      progress(); Store.save(); BK.open = null; r(); toast('„' + (w ? w.answers[0] : id) + '” — wróci w najbliższej sesji.');
+    });
+    if ($('#bkPrev')) $('#bkPrev').onclick = () => { BK.page--; BK.open = null; r(); };
+    if ($('#bkNext')) $('#bkNext').onclick = () => { BK.page++; BK.open = null; r(); };
+  }
+  function renderWords(tab) {
     S = null;
+    if (tab) wTab = tab;
+    const nOwn = Object.keys(D().custom || {}).length;
+    if (wTab === 'dict') {
+      app.innerHTML = '<div class="wrap bk-wrap">' +
+        '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
+        '<div class="seg inset" role="tablist"><button class="btn on" role="tab" aria-selected="true">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button></div></header>' +
+        bookTop() + '<div id="bkBox">' + bookHtml() + '</div></div>';
+      $('#back').onclick = () => go('home');
+      $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
+      const qi = $('#bkQ'); qi.oninput = () => { BK.q = qi.value; BK.page = 0; BK.open = null; $('#bkBox').innerHTML = bookHtml(); bindBook(); };
+      bindBook();
+      keyHandler = e => {
+        if (e.key === 'Escape') { e.preventDefault(); if (BK.q) { BK.q = ''; qi.value = ''; $('#bkBox').innerHTML = bookHtml(); bindBook(); return; } go('home'); return; }
+        if (document.activeElement && document.activeElement.id === 'bkQ') return;
+        if (e.key === 'ArrowRight' && $('#bkNext') && !$('#bkNext').disabled) { e.preventDefault(); $('#bkNext').click(); }
+        if (e.key === 'ArrowLeft' && $('#bkPrev') && !$('#bkPrev').disabled) { e.preventDefault(); $('#bkPrev').click(); }
+      };
+      return;
+    }
     const cust = D().custom || {};
     const ids = Object.keys(cust).sort((a, b) => cust[b].added - cust[a].added);
     const ai = AI.enabled();
     app.innerHTML =
-      '<div class="wrap narrow">' + backHeader('Moje słówka', 'słowa z filmów, pracy, książek') +
+      '<div class="wrap narrow">' +
+      '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
+      '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn on" role="tab" aria-selected="true">Moje własne (' + nOwn + ')</button></div></header>' +
       '<section class="set-card raised"><h2>Dodaj słowo</h2>' +
       '<div class="field"><label for="cw">Po angielsku</label><div class="ctl"><input id="cw" class="txt" autocomplete="off" spellcheck="false" placeholder="np. take for granted"></div></div>' +
       '<div class="field"><label for="cp">Po polsku</label><div class="ctl"><input id="cp" class="txt" autocomplete="off" placeholder="' + (ai ? 'opcjonalnie — AI uzupełni' : 'znaczenie') + '"></div></div>' +
@@ -3756,6 +3838,7 @@
       renderWords(); toast('Dodano „' + w + '”.'); const f = $('#cw'); if (f) f.focus();
     };
     $('#back').onclick = () => go('home');
+    $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
     $('#cAdd').onclick = add;
     if ($('#topUp')) $('#topUp').onclick = async () => {
       $('#topUp').disabled = true;
