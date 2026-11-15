@@ -391,6 +391,14 @@ window.AI = (function () {
     const system = 'Dodajesz interpunkcję i wielkie litery do angielskiej transkrypcji. Nie zmieniasz, nie dodajesz i nie usuwasz słów. Zwracasz wyłącznie poprawiony tekst.';
     return (await call(system, chunk, Math.min(4000, Math.round(chunk.length / 2.5) + 200), 60000)).trim();
   }
+  /* interpunkcja dla tekstów w wersach (piosenki, napisy): AI nie przepisuje tekstu, tylko mówi, czym kończy się każda linia */
+  async function punctLines(lines) {
+    const system = 'Pomagasz uczniowi przygotować do nauki tekst w wersach (piosenka, napisy) bez interpunkcji. Nie przepisujesz tekstu — dla każdej ponumerowanej linii zwracasz tylko znak, którym powinna się kończyć, i czy jej pierwsza litera ma być mała. Odpowiadasz wyłącznie jednym obiektem JSON.';
+    const user = 'Linie:\n' + lines.map((l, i) => (i + 1) + '. ' + l).join('\n') +
+      '\n\nDla KAŻDEJ linii (n = numer) zwróć: "end" — "." gdy kończy się tu zdanie (albo "?"/"!"), "," gdy myśl ciągnie się dalej, ale potrzebna pauza, "" gdy zdanie płynnie przechodzi do następnej linii bez przecinka; "lower" — true, gdy linia kontynuuje zdanie z poprzedniej, więc jej pierwsze słowo powinno być małą literą (false dla początku zdania, dla "I" i nazw własnych). Linia, która już kończy się znakiem interpunkcyjnym, dostaje "end": "".';
+    const r = await callJSON(system, user, Math.min(4000, lines.length * 28 + 200), 60000, { type: 'object', required: ['lines'], properties: { lines: { type: 'array', items: { type: 'object', required: ['n', 'end', 'lower'], properties: { n: { type: 'integer' }, end: { type: 'string', enum: ['', '.', ',', '?', '!', '…', ';', ':'] }, lower: { type: 'boolean' } } } } } });
+    return r.lines || [];
+  }
   /* automatyczne dobieranie nowych słów na poziomie Artura */
   async function newWords(levelName, avoid, n) {
     const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka. Odpowiadasz wyłącznie jednym obiektem JSON, bez żadnego innego tekstu.';
@@ -714,7 +722,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

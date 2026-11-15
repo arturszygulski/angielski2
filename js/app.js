@@ -4396,6 +4396,13 @@
   /* ================= ETAP 4 — MOJE TEKSTY ================= */
   const ABBR = /\b(Mr|Mrs|Ms|Dr|Prof|St|Jr|Sr|vs|etc|e\.g|i\.e|U\.S|U\.K|a\.m|p\.m)\./g;
   function cleanTranscript(raw) {
+    const out = cleanLines(raw);
+    const paras = []; let cur = [];
+    out.forEach(l => { if (!l) { if (cur.length) { paras.push(cur.join(' ')); cur = []; } } else cur.push(l); });
+    if (cur.length) paras.push(cur.join(' '));
+    return paras.map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  }
+  function cleanLines(raw) {
     const out = [];
     String(raw || '').replace(/\r/g, '').replace(/_/g, ' ').split('\n').forEach(line => {
       let l = line.trim();
@@ -4410,10 +4417,7 @@
       if (out.length && out[out.length - 1] === l) return;          // powtórzenia z auto-napisów
       out.push(l);
     });
-    const paras = []; let cur = [];
-    out.forEach(l => { if (!l) { if (cur.length) { paras.push(cur.join(' ')); cur = []; } } else cur.push(l); });
-    if (cur.length) paras.push(cur.join(' '));
-    return paras.map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    return out;
   }
   function splitSentences(paras) {
     const out = [];
@@ -4886,7 +4890,9 @@
       const paras = cleanTranscript(body.value);
       const words = paras.join(' ').split(/\s+/).filter(Boolean).length;
       $('#tInfo').textContent = words ? words + ' słów' : '';
-      $('#tPunct').hidden = !needsPunctuation(paras);
+      const ls = cleanLines(body.value).filter(Boolean), lw = ls.join(' ').split(/\s+/).filter(Boolean).length;
+      const versyBez = ls.length >= 4 && lw / ls.length <= 14 && ls.filter(l => /[.!?…,;]["'”’)]*$/.test(l)).length < ls.length * 0.3;
+      $('#tPunct').hidden = !(needsPunctuation(paras) || versyBez);
     };
     body.oninput = updInfo;
     $('#tFile').onchange = e => {
@@ -4900,7 +4906,31 @@
       let paras = cleanTranscript(body.value);
       if (!paras.length) { msg.innerHTML = '<span class="status bad">Najpierw wklej tekst albo wczytaj plik.</span>'; body.focus(); return; }
       btn.disabled = true;
-      if (!$('#tPunct').hidden && $('#tPunctCb').checked && AI.enabled()) {
+      const lns = cleanLines(body.value), txtL = lns.filter(Boolean);
+      const versy = txtL.length >= 4 && txtL.join(' ').split(/\s+/).length / txtL.length <= 14;
+      if (!$('#tPunct').hidden && $('#tPunctCb').checked && AI.enabled() && versy) {
+        // tekst w wersach (piosenka, napisy): AI podaje tylko zakończenie każdej linii — tekstu nie przepisuje
+        const idx = []; lns.forEach((l, i) => { if (l) idx.push(i); });
+        const parts = []; for (let i = 0; i < idx.length; i += 120) parts.push(idx.slice(i, i + 120));
+        let failed = '';
+        for (let pi = 0; pi < parts.length; pi++) {
+          msg.innerHTML = '<div class="checking"><span class="spinner"></span>AI poprawia interpunkcję' + (parts.length > 1 ? ': część ' + (pi + 1) + ' z ' + parts.length : '') + '…</div>';
+          try {
+            const r = await AI.punctLines(parts[pi].map(i => lns[i]));
+            r.forEach(o => {
+              const li = parts[pi][(o.n | 0) - 1]; if (li == null) return;
+              let l = lns[li];
+              if (o.lower && /^[A-Z][a-z]/.test(l) && !/^I(\b|')/.test(l)) l = l[0].toLowerCase() + l.slice(1);
+              if (o.end && !/[.,;:!?…]["'”’)]*$/.test(l)) l += o.end;
+              lns[li] = l;
+            });
+            // wielka litera na początku zdania
+            for (let k = 0; k < parts[pi].length; k++) { const li = parts[pi][k], prev = k ? lns[parts[pi][k - 1]] : '.'; if (/[.!?…]["'”’)]*$/.test(prev) && /^[a-z]/.test(lns[li])) lns[li] = lns[li][0].toUpperCase() + lns[li].slice(1); }
+          } catch (e) { failed = AI.humanError(e); }
+        }
+        if (failed) msg.innerHTML = '<span class="status bad">' + esc(failed) + ' — część tekstu bez poprawionej interpunkcji.</span>';
+        paras = cleanTranscript(lns.join('\n'));
+      } else if (!$('#tPunct').hidden && $('#tPunctCb').checked && AI.enabled()) {
         const chunks = []; let curC = '';
         paras.forEach(p => { if ((curC + ' ' + p).length > 2500 && curC) { chunks.push(curC); curC = p; } else curC = curC ? curC + '\n\n' + p : p; });
         if (curC) chunks.push(curC);
@@ -4910,7 +4940,7 @@
           try {
             const out = await AI.punctuate(chunks[i]);
             const a = chunks[i].split(/\s+/).length, b = out.split(/\s+/).length;
-            fixed.push(Math.abs(a - b) / a < 0.12 ? out : chunks[i]);
+            if (Math.abs(a - b) / a < 0.12) fixed.push(out); else { fixed.push(chunks[i]); msg.innerHTML = '<span class="status bad">AI nie poprawiło interpunkcji w części ' + (i + 1) + ' — zostawiam ją bez zmian.</span>'; }
           } catch (e) { fixed.push(chunks[i]); msg.innerHTML = '<span class="status bad">' + esc(AI.humanError(e)) + ' — zostawiam tekst bez zmian.</span>'; }
         }
         paras = cleanTranscript(fixed.join('\n\n'));
