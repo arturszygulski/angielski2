@@ -853,12 +853,12 @@
       '<div class="t2-goal"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div></div>' +
       '</section>' +
       '<nav class="nav-tiles" aria-label="Więcej"><span class="nav-sep" aria-hidden="true"></span>' +
-      navTile('talk', IC.chat, 'Rozmowa', 'scenki z AI — mów i dogadaj się', 'R') +
+      navTile('texts', IC.doc, 'Moje teksty', 'czytaj i tłumacz z AI', 'K') +
       navTile('play', IC.gamepad, 'Graj', 'wybierz grę, bez limitu', 'G') +
       navTile('tenses', IC.clock, 'Czasy', 'oś czasu i ćwiczenia w zdaniach', 'C') +
       navTile('stats', IC.chart, 'Statystyki', 'tydzień, miesiąc, rekordy', 'T', 'tint') +
       navTile('words', IC.book, 'Moje słówka', 'dodaj własne słowa', 'M') +
-      navTile('texts', IC.doc, 'Moje teksty', 'czytaj i ucz się z tekstów', 'K') +
+      navTile('talk', IC.chat, 'Rozmowa', 'scenki z AI — mów i dogadaj się', 'R') +
       navTile('listen', IC.headphones, 'Audycja', 'minuta słuchania i 4 pytania', 'A') +
       navTile('mistakes', IC.list, 'Dziennik błędów', 'co sprawia trudność', 'D', 'tint') +
       '</nav>' +
