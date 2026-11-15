@@ -4838,7 +4838,6 @@
         '<div class="tbtns">' + (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + ' ' + K('T') + '</button>' : '') +
         (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
         '<button class="btn small" data-tread="' + T.id + '">Czytaj ' + K('C') + '</button>' +
-        '<button class="btn small" data-tlearn="' + T.id + '"' + (st.marked || st.sents ? '' : ' disabled') + '>Ucz się z tego tekstu ' + K('U') + '</button>' +
         '<button class="btn small" data-tedtx="' + T.id + '">Edytuj tekst ' + K('E') + '</button>' +
         '<button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst">' + BIN + '</button></div></div>';
     };
@@ -4868,7 +4867,6 @@
     $$('[data-tread]').forEach(b => b.onclick = () => go('reader', b.dataset.tread));
     $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));
     $$('[data-tback]').forEach(b => b.onclick = () => startTrx(b.dataset.tback, 'back'));
-    $$('[data-tlearn]').forEach(b => b.onclick = () => startTextSession(D().texts[b.dataset.tlearn]));
     $$('[data-tdel]').forEach(b => b.onclick = () => deleteText(b.dataset.tdel));
     $$('[data-tedtx]').forEach(b => b.onclick = () => startEditText(b.dataset.tedtx));
     $('#back').onclick = () => go('home');
@@ -4881,7 +4879,6 @@
       const O = TXO.open && D().texts[TXO.open]; if (!O) return;
       if (plainKey(e, 'KeyT') && ai) { e.preventDefault(); startTrx(O.id); }
       else if (plainKey(e, 'KeyC')) { e.preventDefault(); go('reader', O.id); }
-      else if (plainKey(e, 'KeyU')) { e.preventDefault(); startTextSession(O); }
       else if (plainKey(e, 'KeyE')) { e.preventDefault(); startEditText(O.id); }
     };
   }
@@ -5121,8 +5118,7 @@
       '<div class="wrap reader-wrap">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Teksty ' + K('Esc') + '</button>' +
       '<div class="ex-title" style="min-width:0"><b>' + esc(T.title) + '</b><span id="rSub">' + readerSub(T) + '</span></div>' +
-      '<div class="row" style="gap:12px"><button class="btn" id="rPlay">' + IC.speaker + ' Czytaj na głos ' + K('Spacja') + '</button>' +
-      '<button class="btn primary" id="rLearn">Ucz się z tego tekstu ' + K('L') + '</button></div></header>' +
+      '<div class="row" style="gap:12px"><button class="btn" id="rPlay">' + IC.speaker + ' Czytaj na głos ' + K('Spacja') + '</button></div></header>' +
       '<div class="legend reader-legend"><span><i class="ul m-new"></i>do nauki</span><span><i class="ul m-learn"></i>w nauce</span><span><i class="ul m-done"></i>opanowane</span>' +
       '<span class="small-note hint-line">Kliknij słowo albo przeciągnij myszą po zwrocie · skróty klawiszowe w panelu obok</span></div>' +
       '<div class="reader"><article class="rtext raised" id="rtext" lang="en">' + textHtml(T) + '</article>' +
@@ -5132,7 +5128,6 @@
     if (cs && RD.cur.s > 0) cs.scrollIntoView({ block: 'center' });
     $('#back').onclick = () => go('texts');
     $('#rPlay').onclick = togglePlay;
-    $('#rLearn').onclick = () => startTextSession(T);
     const rt = $('#rtext');
     rt.addEventListener('click', e => {
       const w = e.target.closest('.w'); if (!w) return;
@@ -5194,7 +5189,6 @@
     if (e.key === 'Enter') { e.preventDefault(); const r = RD.pending || { s: RD.cur.s, a: RD.cur.k, b: RD.cur.k }; RD.pending = null; RD.anchor = null; setSel(r); return; }
     if (e.key === 'Escape') { e.preventDefault(); if (RD.sel || RD.pending) { RD.sel = null; RD.pending = null; RD.anchor = null; paintSel(); renderPanel(); } else go('texts'); return; }
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); return; }
-    if (e.code === 'KeyL') { e.preventDefault(); startTextSession(T); return; }
     if (!RD.sel) return;
     if (e.code === 'KeyD') { e.preventDefault(); toggleMark(); return; }
     if (e.code === 'KeyT') { e.preventDefault(); translateSel(); return; }
@@ -7473,6 +7467,10 @@
     D().baseFixV1 = 1; Store.save();
   }
   scaleMigrate(); scaleMigrate2();
+  if (!D().noTextSentV1) { // upd165: bez ćwiczeń ze zdań tekstów (ułóż/dyktando/tłumacz) — słowa z tekstów zostają
+    Object.keys(D().cards).forEach(k => { if (/^(tord|tdic|ttr):/.test(k)) delete D().cards[k]; });
+    D().noTextSentV1 = 1; progress(); Store.save();
+  }
   document.addEventListener('visibilitychange', () => { if (document.hidden) Store.save(); });
   if (D().profile.placementDone) go('home'); else go('welcome');
   syncStartup();
