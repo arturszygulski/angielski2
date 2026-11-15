@@ -3077,7 +3077,7 @@
         '<div class="answer-box"><label for="ans">Po angielsku</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off"' + (show ? ' disabled value="' + esc(X.ans) + '"' : '') + '></div>' + btns + '</main>';
     }
     app.innerHTML = '<div class="wrap narrow">' + head + body + '</div>';
-    const back = () => { const f = X.from; SW = null; go(f === 'stats' ? 'stats' : 'play'); };
+    const back = () => { const f = X.from; SW = null; f === 'words' ? go('words', 'rev') : go(f === 'stats' ? 'stats' : 'play'); };
     $('#swEnd').onclick = back;
     if ($('#swBack')) $('#swBack').onclick = back;
     if ($('#swMore')) $('#swMore').onclick = () => startSweep(X.lvl, X.from);
@@ -3789,7 +3789,7 @@
     if (wTab === 'dict') {
       app.innerHTML = '<div class="wrap bk-wrap">' +
         '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
-        '<div class="seg inset" role="tablist"><button class="btn on" role="tab" aria-selected="true">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button></div></header>' +
+        '<div class="seg inset" role="tablist"><button class="btn on" role="tab" aria-selected="true">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button></div></header>' +
         bookTop() + '<div id="bkBox">' + bookHtml() + '</div></div>';
       $('#back').onclick = () => go('home');
       $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
@@ -3803,13 +3803,26 @@
       };
       return;
     }
+    if (wTab === 'rev') {
+      app.innerHTML = '<div class="wrap bk-wrap">' +
+        '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
+        '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn on" role="tab" aria-selected="true">Przegląd</button></div></header>' +
+        '<section class="st-f vm">' + vocabMapHtml() + '</section></div>';
+      $('#back').onclick = () => go('home');
+      $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
+      $$('[data-sweep]').forEach(b => b.onclick = () => startSweep(+b.dataset.sweep, 'words'));
+      if ($('#pvPlay')) $('#pvPlay').onclick = () => startPlay('particle');
+      if ($('#pvSweep')) $('#pvSweep').onclick = () => startSweep('pv', 'words');
+      keyHandler = e => { if (e.key === 'Escape') { e.preventDefault(); go('home'); } };
+      return;
+    }
     const cust = D().custom || {};
     const ids = Object.keys(cust).sort((a, b) => cust[b].added - cust[a].added);
     const ai = AI.enabled();
     app.innerHTML =
       '<div class="wrap bk-wrap">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
-      '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn on" role="tab" aria-selected="true">Moje własne (' + nOwn + ')</button></div></header>' +
+      '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn on" role="tab" aria-selected="true">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button></div></header>' +
       '<div class="own-col">' +
       '<section class="set-card raised"><h2>Dodaj słowo</h2>' +
       '<div class="field"><label for="cw">Po angielsku</label><div class="ctl"><input id="cw" class="txt" autocomplete="off" spellcheck="false" placeholder="np. take for granted"></div></div>' +
