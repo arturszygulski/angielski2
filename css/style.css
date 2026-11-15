@@ -724,19 +724,6 @@ button.vm-home:focus-visible { outline: 2px solid #B9456B; outline-offset: 4px; 
 .btn.t2-guide svg { stroke: #fff; width: 22px; height: 22px; }
 .btn.t2-guide b { font-weight: 700; font-size: 17px; line-height: 1.2; }
 /* ekran „Krok po kroku” */
-.gd-now { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 10px 0 4px; }
-.gd-now h1 { font-size: 38px; }
-.gd-now p { margin: 0 0 8px; font-size: 18px; max-width: 640px; }
-.gd-plan { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--sh-d); padding-top: 16px; }
-.gd-h { font: 700 13px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
-.gd-row { display: flex; align-items: center; gap: 14px; padding: 8px 6px; border-radius: 14px; }
-.gd-row.cur { background: var(--bg-in); }
-.gd-row.done { opacity: .7; }
-.gd-n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; flex: none; box-shadow: inset 3px 3px 6px var(--sh-in-d), inset -3px -3px 6px var(--sh-l); }
-.gd-row.cur .gd-n { background: var(--pink); color: #fff; box-shadow: none; }
-.gd-row.done .gd-n { color: #3E7A52; }
-.gd-tx { display: flex; flex-direction: column; min-width: 0; }
-.gd-tx b { font-size: 17px; } .gd-tx small { color: var(--ink-2); font-size: 14px; }
 
 /* słupki umiejętności: wypełnienie odsunięte od krawędzi jak w poziomych paskach */
 .skill .fillbox { position: absolute; left: 9px; right: 9px; top: 9px; bottom: 9px; border-radius: 39px; overflow: hidden; }
@@ -1416,3 +1403,28 @@ input.tr-in { height: 48px; }
 .vm-view .vm-row.vm-pv b { font-size: inherit; }
 .vm-view > .small-note:last-child { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
 @media (max-width: 640px) { .vm-view .vm-row, .vm-view .vm-row.vm-pv { grid-template-columns: 34px 1fr; } .vm-view .vm-row .small-note { text-align: left; } }
+
+/* Krok po kroku — wariant C, oś kroków na dole (upd175) */
+.gd-wrap { gap: 34px; }
+.gd-blk { display: flex; flex-direction: column; gap: 16px; }
+.gd-frame { border: 1.5px solid #BDB6AD; border-radius: 32px; padding: 32px 36px; display: flex; align-items: center; gap: 32px; }
+.gd-ic { width: 92px; height: 92px; border-radius: 24px; display: grid; place-items: center; flex: none; color: var(--ink); }
+.gd-ic svg { width: 38px; height: 38px; }
+.gd-tx { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gd-now { font-family: var(--head); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--pink-ink); }
+.gd-tx h1 { font-size: 46px; line-height: 1.1; }
+.gd-tx p { margin: 0; font-size: 18px; color: var(--ink-2); line-height: 1.5; max-width: 62ch; }
+.gd-meta { font-size: 14px; color: var(--ink-3); }
+.gd-btns { display: flex; gap: 14px; justify-content: flex-end; padding: 0 6px; }
+.gd-btns .gd-go { font-size: 20px; min-height: 58px; padding: 0 30px; }
+.gd-steps { display: flex; align-items: flex-start; padding-top: 8px; }
+.gd-st { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; text-align: center; padding: 0 6px; }
+.gd-st:not(:last-child)::after { content: ''; position: absolute; top: 18px; left: calc(50% + 26px); right: calc(-50% + 26px); height: 2px; background: #C3BCB3; }
+.gd-st.done:not(:last-child)::after { background: #9DBFA5; }
+.gd-dot { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-family: var(--head); font-weight: 700; font-size: 15px; background: var(--bg); box-shadow: 3px 3px 6px var(--sh-d), -3px -3px 6px var(--sh-l); }
+.gd-st.cur .gd-dot { background: var(--pink); color: #fff; }
+.gd-st.done .gd-dot { background: #7FA889; color: #fff; }
+.gd-st b { font-family: var(--head); font-size: 15px; }
+.gd-st.cur b { color: var(--pink-ink); }
+.gd-st small { font-size: 12.5px; color: var(--ink-3); }
+@media (max-width: 700px) { .gd-frame { flex-direction: column; align-items: flex-start; padding: 24px; } .gd-tx h1 { font-size: 34px; } .gd-st b { font-size: 13px; } }

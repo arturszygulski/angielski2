@@ -5716,24 +5716,29 @@
     if (r.promos && r.promos.length) setTimeout(() => toast('Awans! ' + r.promos.join(' ')), 300);
     go('guide');
   }
+  function plKart(n) { const d = n % 10, t = n % 100; return n === 1 ? 'karta' : d >= 2 && d <= 4 && (t < 12 || t > 14) ? 'karty' : 'kart'; }
   function renderGuide() {
     screen = 'guide';
     const g = GUIDE; if (!g) return go('home');
     const n = g.steps.length, done = g.i >= n, cur = g.steps[g.i];
     const mins = Math.max(0, Math.round((Store.today().sec - g.sec0) / 60));
     const res = x => x.res ? (x.res.total ? x.res.correct + '/' + x.res.total + ' dobrze' : 'pominięte') + (x.res.xp ? ' · +' + x.res.xp + ' XP' : '') : '';
-    const rows = g.steps.map((x, k) => '<div class="gd-row' + (k === g.i ? ' cur' : '') + (k < g.i ? ' done' : '') + '"><span class="gd-n">' + (k < g.i ? '✓' : k + 1) + '</span><div class="gd-tx"><b>' + esc(x.title) + '</b><small>' + esc(k < g.i ? res(x) : (x.aiWhy || x.why)) + (x.mode === 'listen' && g.topic && k >= g.i ? ' · temat: ' + esc(g.topicName) : '') + '</small></div></div>').join('');
+    const RE = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 4v5h-5"></path></svg>';
+    const gIc = x => ({ due: RE, new: IC.book, hard: IC.flame, mistakes: IC.list, listen: IC.headphones, speak: IC.mic, dictation: IC.headphones })[x.type] || (x.mode === 'listen' ? IC.headphones : IC.gamepad);
+    const steps = '<section class="gd-steps">' + g.steps.map((x, k) => '<div class="gd-st' + (k === g.i ? ' cur' : '') + (k < g.i ? ' done' : '') + '"><span class="gd-dot">' + (k < g.i ? '✓' : k + 1) + '</span><b>' + esc(x.title) + '</b>' + (k < g.i && res(x) ? '<small>' + esc(res(x)) + '</small>' : '') + '</div>').join('') + '</section>';
+    const meta = cur && cur.queue && cur.queue.length ? '<div class="gd-meta">' + cur.queue.length + ' ' + plKart(cur.queue.length) + '</div>' : '';
     app.innerHTML =
-      '<div class="wrap narrow">' +
+      '<div class="wrap narrow gd-wrap">' +
       '<header class="ex-head"><button class="btn" id="gEnd">' + IC.back + (done ? ' Wróć ' : ' Zakończ plan ') + K('Esc') + '</button>' +
-      '<div class="ex-title"><b>Krok po kroku</b><span>' + (done ? 'plan zrobiony' : 'krok ' + (g.i + 1) + ' z ' + n) + ' · ' + mins + ' min · +' + g.xp + ' XP</span></div><div style="width:150px"></div></header>' +
+      '<div class="ex-title"><b>Krok po kroku</b><span>' + mins + ' min · +' + g.xp + ' XP</span></div><div style="width:150px"></div></header>' +
       (done
-        ? '<section class="gd-now"><h1>Plan na dziś zrobiony!</h1><p class="muted">' + n + ' kroków · ' + mins + ' min nauki · +' + g.xp + ' XP</p><div class="row center"><button class="btn big primary" id="gHome">Wróć na stronę główną ' + K('Enter') + '</button></div></section>'
-        : '<section class="gd-now"><div class="small-note">Teraz</div><h1>' + esc(cur.title) + '</h1><p class="muted">' + esc(cur.aiWhy || cur.why) + '</p>' +
-          (cur.mode === 'listen' && g.topic ? '<p class="small-note" style="margin:0">Temat audycji od AI: <b>' + esc(g.topicName) + '</b> — ' + esc(g.topic) + '</p>' : '') +
-          (g.aiBusy ? '<div class="checking"><span class="spinner"></span>AI dopasowuje plan do Twoich danych…</div>' : g.aiErr ? '<div class="small-note">AI niedostępne (' + esc(g.aiErr) + ') — plan i tak działa.</div>' : '') +
-          '<div class="row center" style="gap:16px"><button class="btn" id="gSkip">Pomiń ten krok ' + K('P') + '</button><button class="btn big primary" id="gGo">' + IC.play + ' ' + (g.i ? 'Dalej' : 'Zaczynamy') + ' ' + K('Enter') + '</button></div></section>') +
-      '<section class="gd-plan"><div class="gd-h">Plan</div>' + rows + '</section></div>';
+        ? '<div class="gd-blk"><section class="gd-frame"><div class="gd-ic inset" style="color:#5E9670">' + IC.check + '</div><div class="gd-tx"><div class="gd-now">Gotowe · ' + n + ' z ' + n + '</div><h1>Plan na dziś zrobiony!</h1><p>' + n + ' kroków · ' + mins + ' min nauki · +' + g.xp + ' XP</p></div></section>' +
+          '<div class="gd-btns"><button class="btn primary gd-go" id="gHome">Wróć na stronę główną ' + K('Enter') + '</button></div></div>'
+        : '<div class="gd-blk"><section class="gd-frame"><div class="gd-ic inset">' + gIc(cur) + '</div><div class="gd-tx"><div class="gd-now">Teraz · krok ' + (g.i + 1) + ' z ' + n + '</div><h1>' + esc(cur.title) + '</h1><p>' + esc(cur.aiWhy || cur.why) + '</p>' +
+          (cur.mode === 'listen' && g.topic ? '<p class="small-note" style="margin:0">Temat audycji od AI: <b>' + esc(g.topicName) + '</b> — ' + esc(g.topic) + '</p>' : '') + meta +
+          (g.aiBusy ? '<div class="checking"><span class="spinner"></span>AI dopasowuje plan do Twoich danych…</div>' : g.aiErr ? '<div class="small-note">AI niedostępne (' + esc(g.aiErr) + ') — plan i tak działa.</div>' : '') + '</div></section>' +
+          '<div class="gd-btns"><button class="btn" id="gSkip">Pomiń ' + K('P') + '</button><button class="btn primary gd-go" id="gGo">' + IC.play + ' ' + (g.i ? 'Dalej' : 'Zaczynamy') + ' ' + K('Enter') + '</button></div></div>') +
+      steps + '</div>';
     $('#gEnd').onclick = () => { GUIDE = null; go('home'); };
     if ($('#gHome')) $('#gHome').onclick = () => { GUIDE = null; go('home'); };
     if ($('#gGo')) $('#gGo').onclick = runGuideStep;
