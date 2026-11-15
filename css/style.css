@@ -1408,19 +1408,3 @@ input.tr-in { height: 48px; }
 @media (max-width: 640px) { .trow .m, .trow .mini { display: none; } }
 
 /* Edycja tekstu (upd164) */
-.ed-frame { border: 1.5px solid #BDB6AD; border-radius: 30px; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
-.ed-text { display: flex; flex-direction: column; gap: 14px; }
-.ed-par { margin: 0; line-height: 2.05; font-size: 17px; }
-.ed-s { padding: 3px 4px; border-radius: 8px; cursor: pointer; user-select: none; }
-.ed-s:hover { background: #CEC9C2; }
-.ed-s.chg { background: #E4DCCB; }
-.ed-s.del { color: #A8392E; text-decoration: line-through; background: #EBD3CE; }
-.ed-s.anc { box-shadow: 0 0 0 1.5px #A9A29A; }
-.ed-s.ed { box-shadow: 0 0 0 2px var(--pink); }
-.ed-br { border: none; background: none; cursor: pointer; color: var(--ink-3); opacity: .35; font-size: 15px; padding: 0 3px; border-radius: 6px; vertical-align: baseline; }
-.ed-br:hover { opacity: 1; color: var(--pink-ink); background: #CEC9C2; }
-.ed-br.on { opacity: .6; margin-right: 4px; }
-.ed-box { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.ed-box .txt { flex: 1 1 300px; min-width: 0; }
-.ed-btns { align-items: center; }
-.ed-cnt { font-size: 14px; color: #A8392E; font-weight: 700; margin-right: auto; }

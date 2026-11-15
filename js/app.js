@@ -531,7 +531,7 @@
   /* czas nauki: liczy się tylko, gdy okno programu jest aktywne (inny program kliknięty = stop od razu)
      i był ruch myszą / klawiatura w ostatnich 15 s — chyba że mówi lektor, słucha mikrofon albo czekasz na AI */
   const IDLE_SEC = 15, IDLE_SEC_VIDEO = 60;
-  const TIME_MOD = { talk: 'talk', listen: 'listen', reader: 'texts', trx: 'texts', tedit: 'texts', tense: 'tenses', test: 'test', sweep: 'ex', topic: 'ex' };
+  const TIME_MOD = { talk: 'talk', listen: 'listen', reader: 'texts', trx: 'texts', tense: 'tenses', test: 'test', sweep: 'ex', topic: 'ex' };
   const audioOn = () => { try { return !!(window.speechSynthesis && speechSynthesis.speaking); } catch (e) { return false; } };
   const winActive = () => !document.hidden && (typeof document.hasFocus !== 'function' || document.hasFocus());
   const recentInput = lim => Date.now() - lastInput <= lim * 1000;
@@ -583,7 +583,7 @@
     screen = name;
     window.scrollTo(0, 0);
     ({ welcome: renderWelcome, home: renderHome, exercise: renderExercise, race: renderRace, result: renderResult, settings: renderSettings,
-       play: renderPlayMenu, yg: renderYG, words: renderWords, trx: renderTrx, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, tedit: renderTextEdit, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
+       play: renderPlayMenu, yg: renderYG, words: renderWords, trx: renderTrx, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
     qaFabSync();
   }
 
@@ -4838,7 +4838,6 @@
         '<div class="tbtns">' + (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + ' ' + K('T') + '</button>' : '') +
         (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
         '<button class="btn small" data-tread="' + T.id + '">Czytaj ' + K('C') + '</button>' +
-        '<button class="btn small" data-tedtx="' + T.id + '">Edytuj tekst ' + K('E') + '</button>' +
         '<button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst">' + BIN + '</button></div></div>';
     };
     app.innerHTML =
@@ -4868,7 +4867,6 @@
     $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));
     $$('[data-tback]').forEach(b => b.onclick = () => startTrx(b.dataset.tback, 'back'));
     $$('[data-tdel]').forEach(b => b.onclick = () => deleteText(b.dataset.tdel));
-    $$('[data-tedtx]').forEach(b => b.onclick = () => startEditText(b.dataset.tedtx));
     $('#back').onclick = () => go('home');
     keyHandler = e => {
       if (typingInField()) { if (e.key === 'Escape') { e.preventDefault(); document.activeElement.blur(); } return; }
@@ -4879,7 +4877,6 @@
       const O = TXO.open && D().texts[TXO.open]; if (!O) return;
       if (plainKey(e, 'KeyT') && ai) { e.preventDefault(); startTrx(O.id); }
       else if (plainKey(e, 'KeyC')) { e.preventDefault(); go('reader', O.id); }
-      else if (plainKey(e, 'KeyE')) { e.preventDefault(); startEditText(O.id); }
     };
   }
   function bindTextAdd(ai) {
@@ -4930,140 +4927,6 @@
       const blk = document.querySelector('.tblock[data-tid="' + id + '"]'); if (blk) { blk.classList.add('tnew'); blk.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
       toast('Dodano „' + title + '”. Tytuł zmienisz ołówkiem.', 4000);
     };
-  }
-  /* ---------- Edycja tekstu: wyrzucanie zdań, poprawki, entery, dzielenie i łączenie ---------- */
-  let ED = null;
-  function plural(n, a, b, c) { const d = n % 10, t = n % 100; return n === 1 ? a : d >= 2 && d <= 4 && (t < 12 || t > 14) ? b : c; }
-  function startEditText(id) {
-    const T = D().texts[id]; if (!T) return;
-    stopReading();
-    ED = { id, items: T.sents.map((s, i) => ({ t: s.t, par: i > 0 && s.p !== T.sents[i - 1].p, orig: i, del: false })), anchor: null, edit: null };
-    go('tedit', id);
-  }
-  function renderTextEdit() {
-    screen = 'tedit';
-    if (!ED || !D().texts[ED.id]) { ED = null; return go('texts'); }
-    const T = D().texts[ED.id], it = ED.items;
-    const nDel = it.filter(x => x.del).length;
-    let html = '<p class="ed-par">';
-    it.forEach((x, i) => {
-      if (i > 0) html += x.par ? '</p><p class="ed-par"><button class="ed-br on" data-ebr="' + i + '" title="Połącz z poprzednią linią">⤒</button>' : '<button class="ed-br" data-ebr="' + i + '" title="Nowa linia od tego zdania">↵</button>';
-      html += '<span class="ed-s' + (x.del ? ' del' : '') + (ED.anchor === i ? ' anc' : '') + (ED.edit === i ? ' ed' : '') + (x.orig == null ? ' chg' : '') + '" data-es="' + i + '">' + esc(x.t) + '</span> ';
-    });
-    html += '</p>';
-    const E = ED.edit != null && it[ED.edit];
-    app.innerHTML =
-      '<div class="wrap narrow">' +
-      '<header class="ex-head"><button class="btn" id="edCancel">' + IC.back + ' Anuluj ' + K('Esc') + '</button>' +
-      '<div class="ex-title"><b>Edytuj tekst</b><span>' + esc(T.title) + '</span></div>' +
-      '<button class="btn primary" id="edSave">Zapisz zmiany</button></header>' +
-      '<div class="tblock"><section class="ed-frame">' +
-      '<div class="small-note">Kliknij zdanie, żeby je <b>wyrzucić</b> (ponowny klik — przywraca). <b>Shift+klik</b> — cały zakres. <b>Podwójny klik</b> — popraw zdanie; Enter w środku zdania dzieli je na dwa. <b>↵</b> między zdaniami — nowa linia, <b>⤒</b> — połącz linie.</div>' +
-      '<div class="ed-text">' + html + '</div>' +
-      (E ? '<div class="ed-box"><input id="edInp" class="txt" value="' + esc(E.t) + '" autocomplete="off" spellcheck="false">' +
-        '<button class="btn small" id="edOk">OK</button>' +
-        (ED.edit < it.length - 1 ? '<button class="btn small" id="edJoin">Połącz z następnym</button>' : '') + '</div>' : '') +
-      '</section><div class="tbtns ed-btns"><span class="ed-cnt">' + (nDel ? 'Do wyrzucenia: ' + nDel + ' ' + plural(nDel, 'zdanie', 'zdania', 'zdań') : 'Nic nie wyrzucasz') + '</span>' +
-      (ED.anchor != null ? '<button class="btn small" id="edBefore">Wyrzuć wszystko przed zaznaczonym</button><button class="btn small" id="edAfter">…i po zaznaczonym</button>' : '') +
-      (nDel ? '<button class="btn small" id="edRestore">Przywróć wszystkie</button>' : '') + '</div></div></div>';
-    $$('[data-es]').forEach(s => {
-      s.onclick = e => {
-        const i = +s.dataset.es;
-        if (e.shiftKey && ED.anchor != null && ED.anchor !== i) {
-          const v = it[ED.anchor].del, [a, b] = ED.anchor < i ? [ED.anchor, i] : [i, ED.anchor];
-          for (let k = a; k <= b; k++) it[k].del = v;
-        } else { it[i].del = !it[i].del; ED.anchor = i; }
-        renderTextEdit();
-      };
-      s.ondblclick = e => { e.preventDefault(); const i = +s.dataset.es; it[i].del = false; ED.anchor = i; ED.edit = i; renderTextEdit(); };
-    });
-    $$('[data-ebr]').forEach(b => b.onclick = () => { const i = +b.dataset.ebr; it[i].par = !it[i].par; renderTextEdit(); });
-    if (E) {
-      const inp = $('#edInp'); inp.focus();
-      const commit = () => { const v = inp.value.replace(/\s+/g, ' ').trim(); if (!v) { E.del = true; } else if (v !== E.t) { E.t = v; E.orig = null; } };
-      $('#edOk').onclick = () => { commit(); ED.edit = null; renderTextEdit(); };
-      if ($('#edJoin')) $('#edJoin').onclick = () => {
-        commit(); const i = ED.edit, nx = it[i + 1];
-        it[i] = { t: (it[i].t + ' ' + nx.t).trim(), par: it[i].par, orig: null, del: false };
-        it.splice(i + 1, 1); renderTextEdit();
-      };
-      inp.onkeydown = e => {
-        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ED.edit = null; renderTextEdit(); return; }
-        if (e.key !== 'Enter') return;
-        e.preventDefault(); e.stopPropagation();
-        const v = inp.value, p = inp.selectionStart, a = v.slice(0, p).trim(), b = v.slice(p).trim();
-        if (a && b) {
-          const i = ED.edit;
-          it.splice(i, 1, { t: a.replace(/\s+/g, ' '), par: it[i].par, orig: null, del: false }, { t: b.replace(/\s+/g, ' '), par: true, orig: null, del: false });
-          ED.edit = i + 1; renderTextEdit();
-          const n = $('#edInp'); if (n) n.setSelectionRange(0, 0);
-        } else { commit(); ED.edit = null; renderTextEdit(); }
-      };
-    }
-    const cut = before => { const a = ED.anchor; it.forEach((x, k) => { if (before ? k < a : k > a) x.del = true; }); renderTextEdit(); };
-    if ($('#edBefore')) { $('#edBefore').onclick = () => cut(true); $('#edAfter').onclick = () => cut(false); }
-    if ($('#edRestore')) $('#edRestore').onclick = () => { it.forEach(x => x.del = false); renderTextEdit(); };
-    $('#edCancel').onclick = () => { ED = null; go('texts'); };
-    $('#edSave').onclick = saveTextEdit;
-    keyHandler = e => {
-      if (typingInField()) return;
-      if (e.key === 'Escape') { e.preventDefault(); if (ED.edit != null) { ED.edit = null; renderTextEdit(); } else { ED = null; go('texts'); } }
-    };
-  }
-  function saveTextEdit() {
-    const T = D().texts[ED.id], keep = ED.items.filter(x => !x.del);
-    if (!keep.length) { toast('Nie możesz wyrzucić wszystkich zdań — usuń wtedy cały tekst koszem.'); return; }
-    const unchanged = keep.length === T.sents.length && keep.every((x, i) => x.orig === i && x.t === T.sents[i].t) && T.sents.every((s, i) => !i || (s.p !== T.sents[i - 1].p) === keep[i].par);
-    if (unchanged) { ED = null; return go('texts'); }
-    /* kopia do cofnięcia */
-    const bakT = JSON.parse(JSON.stringify(T)), bakDicts = {}, bakCust = {};
-    const map = {}; let p = -1;
-    const sents = keep.map((x, i) => { if (i === 0 || x.par) p++; if (x.orig != null) map[x.orig] = i; return { t: x.t, p }; });
-    const mp = i => (map[i] === undefined ? null : map[i]);
-    /* zaznaczenia słów */
-    const marks = {};
-    Object.values(T.marks || {}).forEach(m => {
-      const ns = mp(m.s);
-      if (ns == null) { const c = (D().custom || {})[m.id]; if (c && c.textId === T.id && !D().cards[m.id] && !Object.values(T.marks).some(o => o !== m && o.id === m.id && mp(o.s) != null)) { bakCust[m.id] = c; delete D().custom[m.id]; } return; }
-      const nm = Object.assign({}, m, { s: ns }); marks[selKey(nm)] = nm;
-    });
-    /* pamięć objaśnień i tłumaczeń */
-    const cache = {};
-    Object.keys(T.cache || {}).forEach(k => { const r = /^(t:)?(\d+)(.*)$/.exec(k); if (!r) { cache[k] = T.cache[k]; return; } const ns = mp(+r[2]); if (ns != null) cache[(r[1] || '') + ns + r[3]] = T.cache[k]; });
-    const qa = (T.qa || []).filter(x => mp(x.s) != null).map(x => Object.assign({}, x, { s: mp(x.s) }));
-    let pos = mp(T.pos || 0); if (pos == null) pos = Math.min(sents.length - 1, Object.keys(map).filter(o => +o < (T.pos || 0)).length);
-    /* Tłumacz z AI */
-    if (T.tr) {
-      const tr = T.tr, done = {};
-      Object.keys(tr.done || {}).forEach(k => { const ns = mp(+k); if (ns != null) done[ns] = tr.done[k]; });
-      tr.done = done;
-      if (tr.intro && tr.intro.hard) tr.intro.hard = tr.intro.hard.map(mp).filter(x => x != null);
-      tr.part = Math.min(tr.part || 0, Math.max(0, Math.ceil(sents.length / TR_PART) - 1));
-    }
-    /* karty ćwiczeń i inne zapisy powiązane ze zdaniami (tord/tdic/ttr/tx) */
-    const re = new RegExp('^(tord|tdic|ttr|tx):' + T.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':(\\d+)$');
-    Object.keys(D()).forEach(name => {
-      const o = D()[name]; if (!o || typeof o !== 'object' || Array.isArray(o)) return;
-      const ks = Object.keys(o).filter(k => re.test(k)); if (!ks.length) return;
-      bakDicts[name] = {}; const moved = {};
-      ks.forEach(k => { bakDicts[name][k] = o[k]; const r = re.exec(k), ns = mp(+r[2]); if (ns != null) moved[r[1] + ':' + T.id + ':' + ns] = o[k]; delete o[k]; });
-      Object.assign(o, moved);
-      bakDicts[name].__new = Object.keys(moved);
-    });
-    if (T.title === autoTitle(T.sents)) T.title = autoTitle(sents); // tytuł nadany automatycznie — nadaj na nowo
-    T.sents = sents; T.marks = marks; T.cache = cache; T.qa = qa; T.pos = pos;
-    if (T.tr && T.tr.list) { trBuildList(T); const l = T.tr.list; let k = 0; while (k < l.length && T.tr.done[l[k]]) k++; T.tr.pos = k; }
-    delete TOKS[T.id];
-    registerCustom(); progress(); Store.save();
-    const id = ED.id, nDel = ED.items.filter(x => x.del).length; ED = null;
-    TXO.open = id; go('texts');
-    toast('Zapisano tekst' + (nDel ? ' — wyrzucono ' + nDel + ' ' + plural(nDel, 'zdanie', 'zdania', 'zdań') : '') + '.', {
-      label: 'Cofnij', fn: () => {
-        D().texts[id] = bakT; delete TOKS[id];
-        Object.keys(bakDicts).forEach(name => { const o = D()[name]; (bakDicts[name].__new || []).forEach(k => delete o[k]); Object.keys(bakDicts[name]).forEach(k => { if (k !== '__new') o[k] = bakDicts[name][k]; }); });
-        Object.assign(D().custom, bakCust); registerCustom(); progress(); Store.save(); if (screen === 'texts') renderTexts();
-      }
-    });
   }
   function deleteText(id) {
     const T = D().texts[id]; if (!T) return;
