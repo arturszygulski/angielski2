@@ -1408,3 +1408,11 @@ input.tr-in { height: 48px; }
 @media (max-width: 640px) { .trow .m, .trow .mini { display: none; } }
 
 /* Edycja tekstu (upd164) */
+
+/* Mapa słownictwa w Statystykach — tylko podgląd (upd171) */
+.vm-view .vm-rows { gap: 14px; }
+.vm-view .vm-row, .vm-view .vm-row.vm-pv { grid-template-columns: 38px 1fr 170px; gap: 18px; }
+.vm-view .vm-row .small-note { text-align: right; }
+.vm-view .vm-row.vm-pv b { font-size: inherit; }
+.vm-view > .small-note:last-child { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+@media (max-width: 640px) { .vm-view .vm-row, .vm-view .vm-row.vm-pv { grid-template-columns: 34px 1fr; } .vm-view .vm-row .small-note { text-align: left; } }
