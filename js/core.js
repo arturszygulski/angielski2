@@ -346,6 +346,7 @@ window.AI = (function () {
       (o.translation ? 'Tłumaczenie ucznia: "' + o.translation + '"\n' : 'Uczeń tłumaczył w głowie — nie ocenisz tłumaczenia, tylko je pokaż i skomentuj zdanie.\n') +
       (o.think ? 'Jak uczeń to zrozumiał / co myślał (jego słowa): "' + o.think + '"\n' : '') +
       'Słowa zaznaczone jako NIEZNANE: ' + (o.red.join(', ') || '(brak)') + '\nSłowa zaznaczone jako „domyślam się”: ' + (o.yellow.join(', ') || '(brak)') + '\n\n' +
+      'WAŻNE: oceniasz WYŁĄCZNIE tłumaczenie ZDANIA — dokładnie tego fragmentu, który uczeń widział. Poprzednie i następne zdanie są tylko dla zrozumienia sensu. Jeśli ZDANIE jest urywkiem (np. wers piosenki bez interpunkcji, a myśl kończy się w następnym zdaniu), nie wymagaj tłumaczenia tego, czego w nim nie ma, i nie obniżaj za to oceny — najwyżej w komentarzu krótko powiedz, jak łączy się z następnym. "better" tłumaczy tylko ZDANIE. Punkty "learn" muszą być prawdziwe i konkretne — bez ogólników i bez wymyślonych reguł.\n\n' +
       'Zwróć:\n"verdict": "ok" (sens oddany, drobiazgi), "almost" (sens częściowo), "wrong" (sens nie oddany)' + (o.translation ? '' : ' — tu zawsze "self"') + ';\n' +
       '"headline": jedno krótkie zdanie werdyktu po polsku;\n"better": naturalne polskie tłumaczenie całego zdania;\n' +
       '"comment": 2–4 zdania po polsku: odnieś się do tłumaczenia ucznia i — jeśli coś napisał — do jego toku myślenia (co dobrze zgadł, gdzie się pomylił i dlaczego, odpowiedz na jego pytania);\n' +
