@@ -1417,7 +1417,7 @@ input.tr-in { height: 48px; }
 .gd-meta { font-size: 14px; color: var(--ink-3); }
 .gd-btns { display: flex; gap: 14px; justify-content: flex-end; padding: 0 6px; }
 .gd-btns .gd-go { font-size: 20px; min-height: 58px; padding: 0 30px; }
-.gd-steps { display: flex; align-items: flex-start; padding-top: 8px; }
+.gd-steps { display: flex; align-items: flex-start; padding-top: 46px; }
 .gd-st { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; text-align: center; padding: 0 6px; }
 .gd-st:not(:last-child)::after { content: ''; position: absolute; top: 18px; left: calc(50% + 26px); right: calc(-50% + 26px); height: 2px; background: #C3BCB3; }
 .gd-st.done:not(:last-child)::after { background: #9DBFA5; }
