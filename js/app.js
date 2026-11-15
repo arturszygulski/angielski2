@@ -2757,19 +2757,19 @@
     return '<div class="vm-bar inset"' + (h ? ' style="height:' + h + 'px"' : '') + '>' + seg('mast', VM_COL.mast) + seg('known', VM_COL.known) + seg('learn', VM_COL.learn) + '</div>';
   }
   const fmtMonth = t => new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/^\d+\s+/, '');
-  function vocabMapHtml() {
+  function vocabMapHtml(view) {
     const v = vocabMap(), t = v.tot, knowN = t.mast + t.known;
     const legend = '<div class="legend"><span><i style="background:' + VM_COL.mast + '"></i>opanowane</span><span><i style="background:' + VM_COL.known + '"></i>znane („Umiem to”)</span><span><i style="background:' + VM_COL.learn + '"></i>w nauce</span><span><i class="vm-empty"></i>jeszcze nie było</span></div>';
-    const rows = v.rows.map((r, i) => '<div class="vm-row' + (i === v.cur ? ' cur' : '') + '"><b>' + L[i] + '</b>' + vmBar(r) + '<span class="small-note">' + (r.mast + r.known) + ' / ' + r.total + (r.learn ? ' · w nauce ' + r.learn : '') + '</span>' + (sweepLeft(i) ? '<button class="btn small vm-sweep" data-sweep="' + i + '" title="Przesiej słowa ' + L[i] + ', które już znasz">Przegląd</button>' : '<span></span>') + '</div>').join('');
+    const rows = v.rows.map((r, i) => '<div class="vm-row' + (i === v.cur ? ' cur' : '') + '"><b>' + L[i] + '</b>' + vmBar(r) + '<span class="small-note">' + (r.mast + r.known) + ' / ' + r.total + (r.learn ? ' · w nauce ' + r.learn : '') + '</span>' + (!view && sweepLeft(i) ? '<button class="btn small vm-sweep" data-sweep="' + i + '" title="Przesiej słowa ' + L[i] + ', które już znasz">Przegląd</button>' : '<span></span>') + '</div>').join('');
     const pvw = WORDS.list.filter(w => isPV(w) && !w.custom), pr = { mast: 0, known: 0, learn: 0, total: pvw.length }, cc = D().cards;
     pvw.forEach(w => { const k = cc[w.id]; if (!k) return; if (k.state === 'known') pr.known++; else if ((k.s || 0) >= 10 || k.mastered || wordLv(w.id) >= 5) pr.mast++; else pr.learn++; });
     const pvRow = pr.total ? '<div class="vm-row vm-pv"><b title="Phrasal verbs">PV</b>' + vmBar(pr) + '<span class="small-note"' + (pr.learn ? ' title="w nauce ' + pr.learn + '"' : '') + '>' + (pr.mast + pr.known) + ' / ' + pr.total + '</span>' +
-      '<span class="vm-btns"><button class="btn small vm-sweep" id="pvPlay" title="Gra: dobierz partykułę">Ćwicz</button>' + (sweepLeft('pv') ? '<button class="btn small vm-sweep" id="pvSweep" title="Przesiej phrasal verbs, które już znasz">Przegląd</button>' : '') + '</span></div>' : '';
+      (view ? '<span></span>' : '<span class="vm-btns"><button class="btn small vm-sweep" id="pvPlay" title="Gra: dobierz partykułę">Ćwicz</button>' + (sweepLeft('pv') ? '<button class="btn small vm-sweep" id="pvSweep" title="Przesiej phrasal verbs, które już znasz">Przegląd</button>' : '') + '</span>') + '</div>' : '';
     const eta = v.etaAll ? 'Przy obecnym tempie (ok. ' + (Math.round(v.pace * 10) / 10).toString().replace('.', ',') + ' nowych słów dziennie) poziom ' + L[v.cur] + ' przejdziesz do ok. ' + fmtMonth(v.etaCur) + ', całą bazę do ok. ' + fmtMonth(v.etaAll) + '.' : 'Szacunek końca pojawi się, gdy przez kilka dni będziesz uczyć się nowych słów.';
     return '<div class="row between"><h2>Mapa słownictwa</h2>' + legend + '</div>' +
       '<div class="vm-head"><div class="vm-big">' + fmtNum(knowN) + ' <span>z ' + fmtNum(t.total) + ' słów · ' + Math.round(knowN / t.total * 100) + '%</span></div>' +
       '<div class="small-note">Etap: <b>' + L[v.cur] + '</b> — ' + v.curPct + '% poziomu · nie było jeszcze ' + fmtNum(t.unseen) + ' słów' + (v.custom ? ' · do tego ' + v.custom + ' Twoich słów' : '') + '</div></div>' +
-      '<div class="vm-rows">' + rows + (pvRow ? '<div class="vm-sep"></div>' + pvRow : '') + '</div><div class="small-note">' + eta + '</div>';
+      '<div class="vm-rows">' + rows + (pvRow ? '<div class="vm-sep"></div>' + pvRow : '') + '</div><div class="small-note">' + eta + (view ? ' <a href="#" id="vmGo" style="white-space:nowrap;margin-left:8px">Przejrzyj słowa →</a>' : '') + '</div>';
   }
   function levelInfo(xp) {
     let level = 1, acc = 0, need = 100;
@@ -4358,7 +4358,7 @@
       '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C8607F"></i>miesiąc</span>' : '<span><i style="background:#C8607F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div></div>' + barsHtml(Object.assign({}, sd, { h: 118 })) + '</section>' +
       '<section class="st-f"><div class="acc2"><div>' + skillAccHtml(sd) + '</div><div class="acc2-l"><div class="small-note">w czasie</div>' + linesHtml(mode, true) + '</div></div></section></div>' +
       '<div class="st-sh"><b>Postęp</b><small>niezależny od zakładek</small></div>' +
-      '<section class="st-f vm">' + vocabMapHtml() + '</section>' +
+      '<section class="st-f vm">' + vocabMapHtml(true) + '</section>' +
       '<div class="st-g2">' +
       '<section class="st-f"><div class="row between"><h3>Poziom w czasie</h3>' + skLegend + '</div>' + levelsChartHtml() + sentLevelHtml() +
       '<div class="st-test"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div>' + levelWhyHtml() + '</section>' +
@@ -4376,9 +4376,7 @@
     $$('[data-mode]').forEach(b => b.onclick = () => renderStats(b.dataset.mode));
     $('#sTest').onclick = () => startTest(true);
     if ($('#sLastTest')) $('#sLastTest').onclick = showLastTest;
-    $$('[data-sweep]').forEach(b => b.onclick = () => startSweep(+b.dataset.sweep, 'stats'));
-    if ($('#pvPlay')) $('#pvPlay').onclick = () => startPlay('particle');
-    if ($('#pvSweep')) $('#pvSweep').onclick = () => startSweep('pv', 'stats');
+    if ($('#vmGo')) $('#vmGo').onclick = e => { e.preventDefault(); go('words', 'rev'); };
     const bindHeat = () => $$('[data-hy]').forEach(b => b.onclick = () => { heatYear = b.dataset.hy ? +b.dataset.hy : null; $('#heatBox').innerHTML = heatTitle() + heatHtml(); bindHeat(); });
     bindHeat();
     const bindAcc = () => { const t = $('#accToggle'); if (t) t.onclick = () => { stAccLines = !stAccLines; $('#accBox').innerHTML = accBoxHtml(mode, sd, skLegend); bindAcc(); }; };
