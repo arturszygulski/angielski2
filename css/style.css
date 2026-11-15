@@ -1179,7 +1179,7 @@ header.top { gap: 24px; align-items: center; }
 .note.mt-note #mTest:hover { box-shadow: 4px 5px 10px rgba(70,110,175,.45), -4px -4px 10px rgba(240,245,251,.95); }
 .note.mt-note #mTest .kbd { color: #3E5677 !important; }
 /* Boss tygodnia na stronie głównej — miodowa belka (jak niebieska belka testu) */
-.note.bs-note { background: linear-gradient(90deg, #EFE6D8, #E5D0AE); box-shadow: 6px 6px 14px rgba(150,105,40,.38), -6px -6px 14px rgba(245,238,236,.9); }
+.note.bs-note { background: linear-gradient(90deg, #EFE6D8, #E5D0AE); box-shadow: 9px 9px 20px var(--sh-d), -9px -9px 20px var(--sh-l); }
 .note.bs-note .ic { background: transparent; color: #6B4A12; box-shadow: inset 3px 3px 7px rgba(150,105,40,.38), inset -3px -3px 7px rgba(250,244,242,.85); }
 .note.bs-note .tx b { color: #6B4A12; }
 .note.bs-note .tx span { color: #9A6B2A; }
