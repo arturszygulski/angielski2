@@ -1429,6 +1429,6 @@ input.tr-in { height: 48px; }
 .gd-st small { font-size: 12.5px; color: var(--ink-3); }
 @media (max-width: 700px) { .gd-frame { flex-direction: column; align-items: flex-start; padding: 24px; } .gd-tx h1 { font-size: 34px; } .gd-st b { font-size: 13px; } }
 
-/* Cel dzienny: dzisiaj pod spodem (upd177) */
-.t2-goal > .t2-gl { display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
-.t2-gl small { font-size: 14px; color: var(--ink-2); }
+/* Cel dzienny: wklęsłe kółko z dzisiejszym czasem (upd178) */
+.t2-goal { gap: 20px; }
+.gcirc { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 22px var(--head); color: var(--ink-2); font-variant-numeric: tabular-nums; box-shadow: inset 4px 4px 9px var(--sh-in-d), inset -4px -4px 9px var(--sh-l); }
