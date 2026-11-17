@@ -337,7 +337,7 @@ textarea.txt.area { height: auto; min-height: 130px; padding: 14px 18px; font-fa
 .blabels span { flex: 1 1 0; text-align: center; }
 svg.lines { width: 100%; height: auto; overflow: visible; }
 .heat { display: grid; grid-template-columns: 24px repeat(18, minmax(0, 1fr)); gap: 4px; align-items: center; }
-.heat .cell { aspect-ratio: 1; border-radius: 4px; }
+.heat .cell { aspect-ratio: 1; border-radius: 22%; }
 .heat .cell:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
 .heat .hl { font-size: 11px; color: var(--ink-2); }
 .heat-legend { display: flex; justify-content: flex-end; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
