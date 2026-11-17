@@ -850,7 +850,7 @@
         return '<div class="t2-stale" title="' + esc(sl.map(x => USE_NAME[x.k] + ' — ' + ago(x)).join(' · ')) + '"><span>Dawno nie było:</span>' +
           sl.map((x, i) => '<button class="lnk" data-stale="' + x.k + '"' + (i === 0 ? ' title="klawisz N"' : '') + '>' + esc(USE_NAME[x.k]) + '</button>').join('') + '</div>';
       })() + '</div>' +
-      '<div class="t2-goal"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div></div>' +
+      '<div class="t2-goal"><span class="t2-gl"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><small>dzisiaj ' + fmtHM(Math.floor(t.sec / 60)) + '</small></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div></div>' +
       '</section>' +
       '<nav class="nav-tiles" aria-label="Więcej"><span class="nav-sep" aria-hidden="true"></span>' +
       navTile('texts', IC.doc, 'Moje teksty', 'czytaj i tłumacz z AI', 'K') +
@@ -2831,6 +2831,7 @@
   }
   function mondayOf(t) { const d = new Date(U.startOfDay(t)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
   function weekKey(t) { return U.dayKey(mondayOf(t == null ? Date.now() : t)); }
+  function fmtHM(m) { return m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '') : m + ' min'; }
   function navTile(nav, icon, title, sub, key, cls) {
     return '<button class="btn nav-tile raised' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '" title="' + esc(sub) + '"><span class="ic inset">' + icon + '</span><span class="tx"><b>' + title + '</b><small>' + sub + '</small></span>' + K(key) + '</button>';
   }
