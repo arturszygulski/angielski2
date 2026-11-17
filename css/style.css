@@ -1432,3 +1432,5 @@ input.tr-in { height: 48px; }
 /* Cel dzienny: wklęsłe kółko z dzisiejszym czasem (upd178) */
 .t2-goal { gap: 20px; }
 .gcirc { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 22px var(--head); color: var(--ink-2); font-variant-numeric: tabular-nums; box-shadow: inset 4px 4px 9px var(--sh-in-d), inset -4px -4px 9px var(--sh-l); }
+
+.heat .hl b { font-weight: 700; color: var(--ink); }

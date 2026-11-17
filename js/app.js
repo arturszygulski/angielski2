@@ -4172,7 +4172,7 @@
       mon += '<div class="hm">' + (m !== prevM ? MONTHS[m].slice(0, 3).toLowerCase() : '') + '</div>'; prevM = m;
     }
     let h = '';
-    const rows = ['Pn', '', 'Śr', '', 'Pt', '', 'Nd'];
+    const rows = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', '<b>So</b>', '<b>Nd</b>'];
     for (let r = 0; r < 7; r++) {
       h += '<div class="hl">' + rows[r] + '</div>';
       for (let w = 0; w < W; w++) {
