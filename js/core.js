@@ -276,13 +276,14 @@ window.AI = (function () {
 
   /* Ocena całego zdania (Ułóż zdanie, Znajdź błąd) */
   async function checkSentence(task, expected, answer) {
+    answer = tidyEn(answer);
     const system = 'Jesteś cierpliwym nauczycielem angielskiego dla dorosłego Polaka. Odpowiadasz wyłącznie jednym obiektem JSON, bez żadnego innego tekstu.';
     const user =
       'Zadanie Artura: ' + task + '\n' +
       'Wzorcowa odpowiedź: "' + expected + '"\n' +
       'Odpowiedź Artura: "' + answer + '"\n\n' +
       'Oceń, czy odpowiedź Artura jest poprawnym, naturalnym angielskim zdaniem o tym samym sensie (inna poprawna kolejność lub forma jest w porządku). ' +
-      'Napisz po polsku 1–2 krótkie zdania: jeśli źle — co dokładnie jest nie tak; jeśli dobrze — krótko potwierdź.\n' +
+      'Ignoruj wielkie/małe litery i interpunkcję — nie oceniaj ich i nie wspominaj o nich. Pisz tylko o błędach, które naprawdę są w odpowiedzi Artura. Napisz po polsku 1–2 krótkie zdania: jeśli źle — co dokładnie jest nie tak; jeśli dobrze — krótko potwierdź.\n' +
       'Zwróć dokładnie: {"acceptable": true albo false, "explanation": "..."}';
     const j = await callJSON(system, user + fmtJ('explanation'), 500, 20000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
     return { acceptable: !!j.acceptable, explanation: String(j.explanation || '') };
@@ -365,7 +366,7 @@ window.AI = (function () {
   }
   async function trBack(o) {
     const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka. Uczeń tłumaczy z powrotem na angielski zdanie, które wczoraj czytał w oryginale. Odpowiadasz wyłącznie jednym obiektem JSON.';
-    const user = 'Polskie zdanie: "' + o.pl + '"\nOryginał angielski: "' + o.original + '"\nWersja ucznia: "' + o.answer + '"\n\nZwróć: "ok" — true, jeśli wersja ucznia jest poprawna i naturalna (nie musi być identyczna z oryginałem); "comment" — 1–3 zdania po polsku: czym różni się od oryginału, co z oryginału warto przejąć (konkretne zwroty), błędy.';
+    const user = 'Polskie zdanie: "' + o.pl + '"\nOryginał angielski: "' + o.original + '"\nWersja ucznia: "' + tidyEn(o.answer) + '"\n\nZwróć: "ok" — true, jeśli wersja ucznia jest poprawna i naturalna (nie musi być identyczna z oryginałem); "comment" — 1–3 zdania po polsku: czym różni się od oryginału, co z oryginału warto przejąć (konkretne zwroty), błędy.';
     return callJSON(system, user + fmtJ('comment'), 500, 30000, { type: 'object', required: ['ok', 'comment'], properties: { ok: { type: 'boolean' }, comment: STR } });
   }
   async function askAboutText(question, phrase, sentence, context, history) {
@@ -459,7 +460,15 @@ window.AI = (function () {
     const j = await callJSON(system, user, Math.min(4000, 300 + sentences.length * 80), 60000, { type: 'object', required: ['items'], properties: { items: { type: 'array', items: STR } } });
     return Array.isArray(j.items) ? j.items.map(x => String(x || '').trim()) : [];
   }
+  /* zapis bez znaczenia dla oceny: małe „i” jako zaimek, wielka litera na początku, spacja po przecinku — poprawiamy przed wysłaniem, żeby AI o tym nie pisało */
+  function tidyEn(a) {
+    let t = String(a || '').replace(/\s+/g, ' ').trim();
+    t = t.replace(/(^|[^A-Za-z'’])i(?=('|’)(m|ve|d|ll)\b|[^A-Za-z'’]|$)/g, '$1I');
+    t = t.replace(/,(?=\S)/g, ', ');
+    return t ? t[0].toUpperCase() + t.slice(1) : t;
+  }
   async function judgeTranslation(pl, reference, answer, focus, spoken) {
+    answer = tidyEn(answer);
     const system = 'Jesteś życzliwym nauczycielem angielskiego dla dorosłego Polaka. Liczy się to, czy Anglik zrozumie Artura. Odpowiadasz wyłącznie jednym obiektem JSON, bez żadnego innego tekstu.';
     const user =
       'Artur tłumaczył z polskiego na angielski.\nPolskie zdanie: "' + pl + '"\nPrzykładowe tłumaczenie: "' + reference + '"\nOdpowiedź Artura: "' + answer + '"\n\n' +
@@ -468,7 +477,8 @@ window.AI = (function () {
       (focus ? 'WAŻNE: ' + focus + '\n' : '') +
       'ZASADY:\n- Całkowicie ignoruj wielkie/małe litery i interpunkcję (przecinki, kropki) — nie oceniaj ich i NIE wspominaj o nich.\n' +
       '- Porównuj dokładnie słowa, które Artur napisał. Nie pisz, że czegoś brakuje, jeśli to jest w jego odpowiedzi; nie przypisuj mu słów z przykładowego tłumaczenia. Jego sformułowanie (np. „When” zamiast „After”) jest w porządku, jeśli pasuje do sensu.\n' +
-      '- W explanation wymień tylko rzeczywiste różnice, np. brakujące „the” albo zbędne słowo, cytując je.\n' +
+      '- W explanation wymień tylko rzeczywiste różnice, np. brakujące „the” albo zbędne słowo, cytując je. Zanim napiszesz, że czegoś brakuje albo coś jest źle, sprawdź to słowo po słowie w odpowiedzi Artura — jeśli tam jest, nie pisz o tym wcale.\n' +
+      '- Częste, naturalne warianty używane przez rodzimych użytkowników (np. „Can I get…” zamiast „Can I have…”, „I am” zamiast „I\'m”) to "natural". "understandable" daj tylko za prawdziwy błąd gramatyczny, złe słowo albo wyraźnie nienaturalne sformułowanie — nie za wybór stylu.\n' +
       (spoken ? '- Artur PODYKTOWAŁ odpowiedź do mikrofonu — rozpoznawanie mowy mogło dodać, zgubić albo przekręcić krótkie słowo (np. „on”, „the”, „a”). Jeśli różnica wygląda na błąd rozpoznania, zaznacz to delikatnie („możliwe, że mikrofon usłyszał…”).\n' : '') +
       'Zwróć dokładnie: {"verdict": "natural" | "understandable" | "wrong", "better": "poprawiona, naturalna wersja zdania Artura (jak najbliżej jego słów)", "explanation": "1–2 krótkie zdania po polsku: co poprawić albo potwierdzenie"}';
     const j = await callJSON(system, user + fmtJ('explanation'), 500, 25000, { type: 'object', required: ['verdict', 'better', 'explanation'], properties: { verdict: { type: 'string', enum: ['natural', 'understandable', 'wrong'] }, better: STR, explanation: STR } });
