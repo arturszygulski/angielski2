@@ -478,11 +478,14 @@ window.AI = (function () {
       'ZASADY:\n- Całkowicie ignoruj wielkie/małe litery i interpunkcję (przecinki, kropki) — nie oceniaj ich i NIE wspominaj o nich.\n' +
       '- Porównuj dokładnie słowa, które Artur napisał. Nie pisz, że czegoś brakuje, jeśli to jest w jego odpowiedzi; nie przypisuj mu słów z przykładowego tłumaczenia. Jego sformułowanie (np. „When” zamiast „After”) jest w porządku, jeśli pasuje do sensu.\n' +
       '- W explanation wymień tylko rzeczywiste różnice, np. brakujące „the” albo zbędne słowo, cytując je. Zanim napiszesz, że czegoś brakuje albo coś jest źle, sprawdź to słowo po słowie w odpowiedzi Artura — jeśli tam jest, nie pisz o tym wcale.\n' +
+      '- Odpowiedź niepełna (urwana, z „...”/„…” w miejscu słowa albo bez części sensu) to zawsze "wrong" — w explanation podaj brakujące słowo i jego znaczenie.\n' +
+      '- Słowo o innym znaczeniu niż w polskim zdaniu (np. „lesson” = lekcja zamiast „subject” = przedmiot) to błąd — nazwij go wprost i wyjaśnij różnicę.\n' +
       '- Częste, naturalne warianty używane przez rodzimych użytkowników (np. „Can I get…” zamiast „Can I have…”, „I am” zamiast „I\'m”) to "natural". "understandable" daj tylko za prawdziwy błąd gramatyczny, złe słowo albo wyraźnie nienaturalne sformułowanie — nie za wybór stylu.\n' +
       (spoken ? '- Artur PODYKTOWAŁ odpowiedź do mikrofonu — rozpoznawanie mowy mogło dodać, zgubić albo przekręcić krótkie słowo (np. „on”, „the”, „a”). Jeśli różnica wygląda na błąd rozpoznania, zaznacz to delikatnie („możliwe, że mikrofon usłyszał…”).\n' : '') +
       'Zwróć dokładnie: {"verdict": "natural" | "understandable" | "wrong", "better": "poprawiona, naturalna wersja zdania Artura (jak najbliżej jego słów)", "explanation": "1–2 krótkie zdania po polsku: co poprawić albo potwierdzenie"}';
     const j = await callJSON(system, user + fmtJ('explanation'), 500, 25000, { type: 'object', required: ['verdict', 'better', 'explanation'], properties: { verdict: { type: 'string', enum: ['natural', 'understandable', 'wrong'] }, better: STR, explanation: STR } });
-    const v = ['natural', 'understandable', 'wrong'].includes(j.verdict) ? j.verdict : 'wrong';
+    let v = ['natural', 'understandable', 'wrong'].includes(j.verdict) ? j.verdict : 'wrong';
+    if (/\.\.\.|…|\?\?/.test(answer)) v = 'wrong'; // urwana odpowiedź nigdy nie jest trafieniem
     return { verdict: v, better: String(j.better || ''), explanation: String(j.explanation || '') };
   }
   /* Audycja: krótki tekst do słuchania + 4 pytania */
