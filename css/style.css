@@ -1617,3 +1617,27 @@ input.tr-in { height: 48px; }
 .st-t-vm > .vm-view > .row.between:first-child, .st-t-mi > .mi-st > .row.between:first-child { margin-bottom: 22px; }
 .st-t-vm > .vm-view > :nth-child(2), .st-t-mi > .mi-st > :nth-child(2) { margin-top: auto; }
 .st-t-vm > .vm-view > :last-child, .st-t-mi > .mi-st > :last-child { margin-bottom: auto; }
+
+/* Krok po kroku — plan zapisany na dzień, stan na stronie głównej, podsumowanie (upd197) */
+.t2-guide .gp-n { font: 700 13px var(--head); opacity: .95; }
+.gp-dots { display: flex; gap: 5px; justify-content: center; }
+.gp-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.35); display: block; }
+.gp-dots i.on { background: #fff; }
+.t2-guide.gp-done { width: 122px; flex: none; align-self: stretch; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 10px; border-radius: 22px; text-align: center; background: #DCE8DF; color: #24412D; border: 1.5px solid #B7CDBD; box-shadow: none; cursor: default; }
+.t2-guide.gp-done svg { width: 24px; height: 24px; stroke: #5D9A6E; }
+.t2-guide.gp-done b { font: 700 16px var(--head); line-height: 1.2; }
+.t2-guide.gp-done .gp-n { font-size: 12px; opacity: 1; color: #3E6249; }
+.gs-tx { flex: 1; min-width: 0; }
+.gs-kp { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid #D2CCC4; border-bottom: 1px solid #D2CCC4; padding: 14px 0; margin-top: 4px; }
+.gs-kp div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.gs-kp div + div { border-left: 1px solid #D2CCC4; }
+.gs-kp b { font: 700 26px var(--head); }
+.gs-kp span { font-size: 12.5px; color: var(--ink-2); }
+.gs-list { display: flex; flex-direction: column; margin-top: 10px; }
+.gs-row { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 14px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #D2CCC4; font-size: 15px; }
+.gs-row i { width: 24px; height: 24px; border-radius: 50%; background: #7FAE8C; color: #fff; display: grid; place-items: center; font-style: normal; font-size: 13px; }
+.gs-row i.sk { background: #CFC9C1; color: var(--ink-3); }
+.gs-row small { color: var(--ink-2); font-size: 13px; }
+.gs-row b { font-family: var(--head); min-width: 70px; text-align: right; }
+.gs-next { font-size: 14.5px; color: var(--ink-2); margin-top: 14px; }
+.gs-next b { color: var(--ink); }

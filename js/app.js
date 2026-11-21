@@ -865,6 +865,7 @@
     return '<div class="row between"><h2>Kamienie milowe</h2><span class="small-note">zdobyte ' + have + ' z ' + total + '</span></div>' + rows;
   }
   function renderHome() {
+    guideLoad();
     if (maybeWeeklyReport()) return;
     const d = D(), t = Store.today(), st = d.settings;
     { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); }
@@ -936,7 +937,7 @@
       weekHtml() +
       '<div class="t2-plan"><h4>Plan na dziś</h4><div><span>Powtórki</span><b>' + due + '</b></div><div><span>Nowe słowa</span><b>' + freshW + '</b></div><div><span>Nowe ćwiczenia</span><b>' + freshX + '</b></div></div>' +
       '<div class="t2-right"><div class="t2-act">' +
-      '<button class="btn t2-guide" id="guide" title="Program układa plan i prowadzi Cię krok po kroku"><b>' + (GUIDE && GUIDE.i < GUIDE.steps.length ? 'Wróć<br>do planu' : 'Krok<br>po kroku') + '</b>' + K('L') + '</button>' +
+      guideHomeBtn() +
       '<div class="t2-main">' +
       (nothing
         ? (function () { const td = Store.today(), mn = Math.round((td.sec || 0) / 60), nw = (td.newCount || 0) + (td.newExtra || 0), parts = [];
@@ -984,7 +985,7 @@
     if ($('#start')) $('#start').onclick = () => startSession(false);
     if ($('#quick')) $('#quick').onclick = () => startSession(true);
     if ($('#extra')) $('#extra').onclick = () => startSession(false, 5);
-    $('#guide').onclick = () => (GUIDE && GUIDE.i < GUIDE.steps.length ? go('guide') : startGuide());
+    if ($('#guide')) $('#guide').onclick = () => (GUIDE && GUIDE.i < GUIDE.steps.length ? go('guide') : startGuide());
     $$('[data-nav]').forEach(b => b.onclick = () => go(b.dataset.nav));
     if ($('#bossGo')) $('#bossGo').onclick = startBoss;
     if ($('#mTest')) $('#mTest').onclick = () => startTest(true);
@@ -1000,7 +1001,7 @@
       if (plainKey(e, 'KeyW') && $('#wodGo')) { e.preventDefault(); wodPractice(); return; }
       if (e.key === 'Enter' && document.activeElement === document.body) { const b = $('#start') || $('#extra'); if (b) { e.preventDefault(); b.click(); } return; }
       if (plainKey(e, 'KeyS') && $('#quick')) { e.preventDefault(); $('#quick').click(); return; }
-      if (plainKey(e, 'KeyL')) { e.preventDefault(); $('#guide').click(); return; }
+      if (plainKey(e, 'KeyL')) { e.preventDefault(); if ($('#guide')) $('#guide').click(); return; }
       if (plainKey(e, 'KeyO')) { e.preventDefault(); go('settings'); return; }
       const nav = { KeyG: 'play', KeyT: 'stats', KeyD: 'mistakes', KeyM: 'words', KeyK: 'texts', KeyA: 'listen', KeyC: 'tenses', KeyR: 'talk' };
       if (plainKey(e, 'KeyP') && $('#mTest')) { e.preventDefault(); startTest(true); return; }
@@ -5846,6 +5847,24 @@
 
   /* ================= KROK PO KROKU — program układa plan i prowadzi ================= */
   let GUIDE = null;
+  /* plan „Krok po kroku” zapisany na cały dzień (upd197): po zamknięciu programu wracasz do tego samego kroku, nowy plan następnego dnia */
+  function guideLoad() {
+    const tk = U.dayKey(Date.now());
+    if (GUIDE && GUIDE.day !== tk) GUIDE = null;
+    if (!GUIDE && D().guide && D().guide.day === tk) { GUIDE = D().guide; GUIDE.aiBusy = false; }
+    if (D().guide && D().guide.day !== tk) { delete D().guide; Store.save(); }
+    return GUIDE;
+  }
+  function guideSave() { if (GUIDE) { D().guide = GUIDE; Store.save(); } }
+  function guideHomeBtn() {
+    const g = GUIDE, n = g ? g.steps.length : 0;
+    if (g && g.i >= n) {
+      const mins = Math.max(0, Math.round((Store.today().sec - g.sec0) / 60));
+      return '<div class="t2-guide gp-done" title="Dzisiejszy plan krok po kroku jest zrobiony — szczegóły w statystykach">' + IC.check + '<b>Plan<br>zrobiony</b><span class="gp-n">' + n + ' z ' + n + ' · ' + mins + ' min</span></div>';
+    }
+    if (g) return '<button class="btn t2-guide" id="guide" title="Wróć do dzisiejszego planu"><b>Wróć<br>do planu</b><span class="gp-n">krok ' + (g.i + 1) + ' z ' + n + '</span><span class="gp-dots">' + g.steps.map((x, k) => '<i' + (k < g.i ? ' class="on"' : '') + '></i>').join('') + '</span>' + K('L') + '</button>';
+    return '<button class="btn t2-guide" id="guide" title="Program układa plan i prowadzi Cię krok po kroku"><b>Krok<br>po kroku</b>' + K('L') + '</button>';
+  }
   const GUIDE_TYPES = { grammar: ['error', 'order', 'translate'], listening: ['dictation'], speaking: ['speak'], vocab: ['cloze', 'particle'] };
   const GUIDE_BLOCK = ['order', 'dictation', 'speak', 'error', 'translate', 'particle', 'cloze'];
   function guideIn(mode) { const s = GUIDE && GUIDE.steps[GUIDE.i]; return !!s && s.mode === mode; }
@@ -5896,7 +5915,9 @@
   function startGuide() {
     const steps = buildGuide();
     if (!steps.length) { toast('Za mało materiału na plan — poucz się najpierw trochę słówek.'); return; }
-    GUIDE = { steps, i: 0, xp: 0, sec0: Store.today().sec, at: Date.now() };
+    const td = Store.today();
+    GUIDE = { steps, i: 0, xp: 0, sec0: td.sec || 0, n0: (td.newCount || 0) + (td.newExtra || 0), r0: td.reviews || 0, day: U.dayKey(Date.now()), at: Date.now() };
+    guideSave();
     go('guide');
     if (AI.enabled()) guideAI(GUIDE);
   }
@@ -5913,6 +5934,7 @@
       if (r.topic) { g.topic = r.topic; g.topicName = r.topicName || 'Temat dnia'; }
     } catch (e) { g.aiErr = AI.humanError(e); }
     g.aiBusy = false;
+    if (GUIDE === g) guideSave();
     if (GUIDE === g && screen === 'guide') renderGuide();
   }
   function runGuideStep() {
@@ -5929,9 +5951,22 @@
   function guideStepDone(r) {
     const g = GUIDE; if (!g) return go('home');
     const x = g.steps[g.i]; if (x) x.res = r;
-    g.xp += r.xp || 0; g.i++;
+    g.xp += r.xp || 0; g.i++; guideSave();
     if (r.promos && r.promos.length) setTimeout(() => toast('Awans! ' + r.promos.join(' ')), 300);
     go('guide');
+  }
+  function guideSummary(g, mins) {
+    const td = Store.today(), tot = g.steps.reduce((a, x) => a + (x.res && x.res.total || 0), 0), ok = g.steps.reduce((a, x) => a + (x.res && x.res.correct || 0), 0);
+    const nw = Math.max(0, (td.newCount || 0) + (td.newExtra || 0) - (g.n0 || 0)), rv = Math.max(0, (td.reviews || 0) - (g.r0 || 0));
+    const kp = (v, l) => '<div><b>' + v + '</b><span>' + l + '</span></div>';
+    const rows = g.steps.map(x => { const r = x.res || {}, sk = !x.res || r.skip || !r.total;
+      return '<div class="gs-row"><i class="' + (sk ? 'sk' : '') + '">' + (sk ? '–' : '✓') + '</i><span>' + esc(x.title) + '</span><small>' + (sk ? 'pominięte' : r.correct + '/' + r.total + ' dobrze') + '</small><b>' + (r.xp ? '+' + r.xp + ' XP' : '—') + '</b></div>'; }).join('');
+    const today = U.startOfDay(); let tm = 0;
+    Object.keys(D().cards).forEach(id => { const x = D().cards[id]; if (x.state !== 'review') return; const it = itemFor(id); if (!it || !typeEnabled(it.type)) return; if (daysBetween(today, x.due) <= 1) tm++; });
+    const lw = D().days[U.dayKey(U.addDays(today, -7))], lwm = lw ? Math.round((lw.sec || 0) / 60) : 0, tdm = Math.round((td.sec || 0) / 60), wd = new Date(today).toLocaleDateString('pl-PL', { weekday: 'long' });
+    const cmp = lwm ? (tdm >= lwm ? ' · więcej niż ' + (wd === 'niedziela' || wd === 'środa' || wd === 'sobota' ? 'zeszła ' : 'zeszły ') + wd + ' (+' + (tdm - lwm) + ' min)' : ' · zeszły tydzień tego dnia: ' + lwm + ' min') : '';
+    return '<div class="gs-kp">' + kp(mins + ' min', 'nauki') + kp('+' + fmtNum(g.xp), 'XP') + kp(tot ? Math.round(ok / tot * 100) + '%' : '—', 'trafność') + kp(nw, nw === 1 ? 'nowe słowo' : 'nowych słów') + kp(rv, rv === 1 ? 'powtórka' : 'powtórek') + '</div>' +
+      '<div class="gs-list">' + rows + '</div><div class="gs-next">Jutro czeka: <b>' + tm + ' ' + (tm === 1 ? 'powtórka' : tm % 10 >= 2 && tm % 10 <= 4 && (tm % 100 < 12 || tm % 100 > 14) ? 'powtórki' : 'powtórek') + '</b>' + cmp + '</div>';
   }
   function plLit(n) { const d = n % 10, t = n % 100; return n === 1 ? 'literę' : d >= 2 && d <= 4 && (t < 12 || t > 14) ? 'litery' : 'liter'; }
   function plKart(n) { const d = n % 10, t = n % 100; return n === 1 ? 'karta' : d >= 2 && d <= 4 && (t < 12 || t > 14) ? 'karty' : 'kart'; }
@@ -5947,20 +5982,20 @@
     const meta = cur && cur.queue && cur.queue.length ? '<div class="gd-meta">' + cur.queue.length + ' ' + plKart(cur.queue.length) + '</div>' : '';
     app.innerHTML =
       '<div class="wrap narrow gd-wrap">' +
-      '<header class="ex-head"><button class="btn" id="gEnd">' + IC.back + (done ? ' Wróć ' : ' Zakończ plan ') + K('Esc') + '</button>' +
+      '<header class="ex-head"><button class="btn" id="gEnd" title="' + (done ? '' : 'Plan zostaje zapisany — wrócisz do tego kroku') + '">' + IC.back + ' Wróć ' + K('Esc') + '</button>' +
       '<div class="ex-title"><b>Krok po kroku</b><span>' + mins + ' min · +' + g.xp + ' XP</span></div><div style="width:150px"></div></header>' +
       (done
-        ? '<div class="gd-blk"><section class="gd-frame"><div class="gd-ic inset" style="color:#5E9670">' + IC.check + '</div><div class="gd-tx"><div class="gd-now">Gotowe · ' + n + ' z ' + n + '</div><h1>Plan na dziś zrobiony!</h1><p>' + n + ' kroków · ' + mins + ' min nauki · +' + g.xp + ' XP</p></div></section>' +
+        ? '<div class="gd-blk"><section class="gd-frame"><div class="gd-ic inset" style="color:#5E9670">' + IC.check + '</div><div class="gd-tx gs-tx"><div class="gd-now">Gotowe · ' + g.steps.filter(x => x.res && !x.res.skip && x.res.total !== 0).length + ' z ' + n + ' ' + (n === 1 ? 'kroku' : 'kroków') + ' · ' + new Date(g.at).toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'numeric' }) + '</div><h1>Plan na dziś zrobiony!</h1>' + guideSummary(g, mins) + '</div></section>' +
           '<div class="gd-btns"><button class="btn primary gd-go" id="gHome">Wróć na stronę główną ' + K('Enter') + '</button></div></div>'
         : '<div class="gd-blk"><section class="gd-frame"><div class="gd-ic inset">' + gIc(cur) + '</div><div class="gd-tx"><div class="gd-now">Teraz · krok ' + (g.i + 1) + ' z ' + n + '</div><h1>' + esc(cur.title) + '</h1><p>' + esc(cur.aiWhy || cur.why) + '</p>' +
           (cur.mode === 'listen' && g.topic ? '<p class="small-note" style="margin:0">Temat audycji od AI: <b>' + esc(g.topicName) + '</b> — ' + esc(g.topic) + '</p>' : '') + meta +
           (g.aiBusy ? '<div class="checking"><span class="spinner"></span>AI dopasowuje plan do Twoich danych…</div>' : g.aiErr ? '<div class="small-note">AI niedostępne (' + esc(g.aiErr) + ') — plan i tak działa.</div>' : '') + '</div></section>' +
           '<div class="gd-btns"><button class="btn" id="gSkip">Pomiń ' + K('P') + '</button><button class="btn primary gd-go" id="gGo">' + IC.play + ' ' + (g.i ? 'Dalej' : 'Zaczynamy') + ' ' + K('Enter') + '</button></div></div>') +
-      steps + '</div>';
-    $('#gEnd').onclick = () => { GUIDE = null; go('home'); };
-    if ($('#gHome')) $('#gHome').onclick = () => { GUIDE = null; go('home'); };
+      (done ? '' : steps) + '</div>';
+    $('#gEnd').onclick = () => go('home');
+    if ($('#gHome')) $('#gHome').onclick = () => go('home');
     if ($('#gGo')) $('#gGo').onclick = runGuideStep;
-    if ($('#gSkip')) $('#gSkip').onclick = () => { cur.res = { total: 0, correct: 0, xp: 0 }; g.i++; renderGuide(); };
+    if ($('#gSkip')) $('#gSkip').onclick = () => { cur.res = { total: 0, correct: 0, xp: 0, skip: true }; g.i++; guideSave(); renderGuide(); };
     keyHandler = e => {
       if (e.repeat) return;
       if (e.key === 'Escape') { e.preventDefault(); $('#gEnd').click(); return; }
