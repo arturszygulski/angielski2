@@ -1473,3 +1473,9 @@ input.tr-in { height: 48px; }
 .mi-ln { flex: 1; min-width: 10px; height: 2px; background: #C3BCB3; }
 .mi-next { margin-top: 6px; }
 @media (max-width: 700px) { .mi-trk { grid-template-columns: 1fr; } .mi-m { width: 50px; height: 50px; font-size: 13px; } }
+
+/* Krok po kroku: przycisk w mocnym różu, bieżący krok na osi w jasnym różu (upd186) */
+.gd-btns .gd-go { background: var(--pink); color: #fff; }
+.gd-btns .gd-go .kbd { color: #fff !important; }
+.gd-btns .gd-go svg { color: #fff; }
+.gd-st.cur .gd-dot { background: #F3D6DF; color: #9E3358; }
