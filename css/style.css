@@ -1479,3 +1479,8 @@ input.tr-in { height: 48px; }
 .gd-btns .gd-go .kbd { color: #fff !important; }
 .gd-btns .gd-go svg { color: #fff; }
 .gd-st.cur .gd-dot { background: #F3D6DF; color: #9E3358; }
+
+/* Krok po kroku: kroki na osi nie są klikalne → płaskie (upd190) */
+.gd-dot { box-shadow: none; background: transparent; border: 1.5px solid #BDB6AD; color: var(--ink-2); }
+.gd-st.cur .gd-dot { border-color: #F3D6DF; }
+.gd-st.done .gd-dot { border-color: #7FA889; }
