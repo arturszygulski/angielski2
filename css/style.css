@@ -1484,3 +1484,31 @@ input.tr-in { height: 48px; }
 .gd-dot { box-shadow: none; background: transparent; border: 1.5px solid #BDB6AD; color: var(--ink-2); }
 .gd-st.cur .gd-dot { border-color: #F3D6DF; }
 .gd-st.done .gd-dot { border-color: #7FA889; }
+
+/* Ustawienia na jednym ekranie — siatka 3×2 (upd192) */
+.s3-wrap { max-width: 1280px; gap: 18px; padding-top: 28px; padding-bottom: 28px; }
+.s3-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+.set-card.s3 { background: none; box-shadow: none; border: 1.5px solid #BDB6AD; border-radius: 24px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+.set-card.s3 h2 { font-size: 17px; margin: 0 0 2px; }
+.s3-r { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14.5px; }
+.s3-r > label { flex: 1; min-width: 0; }
+.s3-r b { font-family: var(--head); font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.s3-num { width: 64px !important; flex: 0 0 64px !important; height: 34px; padding: 0 6px !important; text-align: center; font-size: 14.5px !important; }
+.s3-txt { flex: 0 1 190px !important; min-width: 0; height: 34px; font-size: 14px !important; padding: 0 12px !important; }
+.s3-sel { flex: 0 1 210px !important; min-width: 0; height: 34px; font-size: 13.5px !important; padding: 0 10px !important; }
+.s3-key { display: flex; gap: 8px; flex: 0 1 230px; min-width: 0; } .s3-key .s3-txt { flex: 1 1 auto !important; }
+.s3-key .btn { min-height: 34px; width: 38px; padding: 0; justify-content: center; }
+.s3-rng { display: flex; align-items: center; gap: 8px; flex: 0 1 210px; } .s3-rng input { flex: 1; min-width: 0; }
+.s3-pills { display: flex; gap: 5px; flex-wrap: nowrap; } .s3-pills .btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.s3-cbs { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.s3-cb { font-size: 14.5px; }
+.s3-games { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.s3-mini { font-size: 12.5px; color: var(--ink-3); }
+.s3-sync { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+.s3-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.s3-foot { margin-top: auto; padding-top: 8px; display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.s3-foot .status { margin-right: auto; font-size: 13px; }
+.set-card.s3 .btn.small { min-height: 34px; font-size: 13.5px; padding: 0 12px; }
+@media (max-width: 1050px) { .s3-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .s3-grid { grid-template-columns: 1fr; } }
+.s3-pills .btn.pressed { color: var(--pink-ink); background: #D0CBC4; }

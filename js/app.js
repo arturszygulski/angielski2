@@ -2658,81 +2658,71 @@
     const gameRow = (key, label, note, disabled) =>
       '<label class="check"><input type="checkbox" data-game="' + key + '"' + (games[key] !== false && !disabled ? ' checked' : '') + (disabled ? ' disabled' : '') + '> ' + label + (note ? ' <span class="small-note">' + note + '</span>' : '') + '</label>';
 
+    const cb = (id, on, label, extra) => '<label class="check s3-cb"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + label + '</label>' + (extra || '');
+    const row = (lbl, ctl, forId) => '<div class="s3-r"><label' + (forId ? ' for="' + forId + '"' : '') + '>' + lbl + '</label>' + ctl + '</div>';
+    const numIn = (id, v, min, max) => '<input id="' + id + '" class="txt num s3-num" type="number" min="' + min + '" max="' + max + '" value="' + v + '">';
+    const gameCb = (key, label, title, disabled) => '<label class="check s3-cb"' + (title ? ' title="' + esc(title) + '"' : '') + '><input type="checkbox" data-game="' + key + '"' + (games[key] !== false && !disabled ? ' checked' : '') + (disabled ? ' disabled' : '') + '> ' + label + '</label>';
     app.innerHTML =
-      '<div class="wrap narrow">' +
+      '<div class="wrap s3-wrap">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b>Ustawienia</b></div><div style="width:110px"></div></header>' +
+      '<div class="s3-grid">' +
 
-      '<section class="set-card raised" id="syncCard"><h2>Automatyczna kopia na Dysku Google</h2>' +
-      '<p class="small-note desc" style="margin:0">Wskaż folder na Dysku Google na komputerze, np. <b>G:\\Mój dysk\\Angielski</b> (najpierw utwórz go w Eksploratorze). Po każdej sesji program zapisze tam postępy, a Dysk Google wyśle je do chmury. W podfolderze „kopie” zostają kopie z 14 ostatnich dni. Klucz API nie jest zapisywany. Gdy uczysz się na innym komputerze albo w innej przeglądarce, wskaż ten sam folder — program zaproponuje wczytanie nowszych postępów.</p>' +
-      '<div class="small-note" id="syncStatus" style="font-size:15px;color:var(--ink)">' + syncStatusHtml() + '</div>' +
-      (Sync.supported
-        ? '<div class="row"><button class="btn primary" id="syncPick">' + (st.syncFolder ? 'Zmień folder' : 'Wybierz folder') + '</button>' +
-          (st.syncFolder ? '<button class="btn" id="syncNow">Zapisz teraz</button><button class="btn" id="syncLoad">Wczytaj z Dysku</button><button class="btn" id="syncOff">Odłącz</button>' : '') + '</div>'
-        : '') +
+      '<section class="set-card s3"><h2>Nauka</h2>' +
+      row('Imię', '<input id="name" class="txt s3-txt" value="' + esc(d.profile.name) + '">', 'name') +
+      row('Nowe słowa dziennie', numIn('newPerDay', st.newPerDay, 0, 40), 'newPerDay') +
+      row('Nowe ćwiczenia dziennie', numIn('newExtraPerDay', st.newExtraPerDay == null ? 6 : st.newExtraPerDay, 0, 30), 'newExtraPerDay') +
+      row('Cel dzienny (min)', numIn('goalMin', st.goalMin, 5, 120), 'goalMin') +
+      row('Długość bloku (min)', numIn('blockMin', st.blockMin, 2, 20), 'blockMin') +
+      row('Długa odpowiedź po (s)', numIn('slowSec', st.slowSec, 5, 120), 'slowSec') +
+      row('Poziom słownictwa', '<div class="lvl-pills s3-pills">' + L.map((l, i) => '<button class="btn pill small' + (levels().vocab === i ? ' pressed' : '') + '" data-lv="' + i + '">' + l + '</button>').join('') + '</div>') +
+      '<p class="small-note desc" style="margin:0">Nowe ćwiczenia dziennie — oprócz nowych słów. Długa odpowiedź — dłuższe myślenie liczy się jak lekka niepewność.</p>' +
       '</section>' +
 
-      '<section class="set-card raised"><h2>Sztuczna inteligencja</h2>' +
-      '<p class="small-note desc" style="margin:0">Z kluczem API program wyjaśnia błędy po polsku i uznaje poprawne odpowiedzi napisane inaczej niż wzorzec. Klucz założysz na <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Zostaje tylko w tej przeglądarce i nie trafia do kopii.</p>' +
-      '<div class="field"><label for="key">Klucz API</label><div class="ctl"><input id="key" class="txt" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="' + esc(st.apiKey) + '">' +
-      '<button class="btn small" id="showKey" aria-label="Pokaż klucz">' + IC.eye + '</button></div></div>' +
-      '<div class="field"><label for="model">Model szybki</label><div class="ctl"><input id="model" class="txt" spellcheck="false" value="' + esc(st.model) + '"></div></div>' +
-      '<div class="field"><label></label><div class="ctl"><label class="check"><input type="checkbox" id="smartOn"' + (st.smartOn !== false ? ' checked' : '') + '> Lepszy model do wyjaśnień <span class="small-note">— wyłączony: wszystko na modelu szybkim (taniej)</span></label></div></div>' +
-      '<div class="field"' + (st.smartOn === false ? ' hidden' : '') + ' id="smartField"><label for="modelSmart">Model do wyjaśnień</label><div class="ctl"><input id="modelSmart" class="txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div></div>' +
-      '<p class="small-note desc" style="margin:0">Szybki: sprawdzanie odpowiedzi, rozmowa, zdania do słówek. Do wyjaśnień: Wyjaśnij, pytania o błąd, Rozszerz temat, ocena tłumaczeń, podsumowanie rozmowy, plan „Krok po kroku”. Puste pole = wszystko na szybkim.</p>' +
-      '<div class="field"><label></label><div class="ctl"><button class="btn small primary" id="testAi">Sprawdź połączenie</button><span class="status" id="aiStatus"></span></div></div></section>' +
-
-      '<section class="set-card raised"><h2>Gry</h2>' +
-      '<div class="col" style="gap:12px">' +
-      gameRow('race', 'Rozgrzewka: wyścig z czasem', 'na początek sesji · długość ' + raceSec() + ' s (zmienisz w Graj)') +
-      gameRow('order', 'Ułóż zdanie') +
-      gameRow('error', 'Znajdź błąd') +
-      gameRow('dictation', 'Dyktando') +
-      gameRow('speak', 'Powiedz to (mikrofon)', Recog.supported() ? '' : '— ta przeglądarka nie rozpoznaje mowy', !Recog.supported()) +
-      gameRow('particle', 'Dobierz partykułę (phrasal verbs)') +
-      gameRow('tenses', 'Czasy', '— zdania z otwartych lekcji w codziennych sesjach') +
-      gameRow('translate', 'Przetłumacz z polskiego', AI.enabled() ? '' : '— wymaga klucza API', !AI.enabled()) +
-      '</div>' +
-      '<div class="field"><label for="newExtraPerDay">Nowe ćwiczenia dziennie</label><div class="ctl"><input id="newExtraPerDay" class="txt num" type="number" min="0" max="30" value="' + (st.newExtraPerDay == null ? 6 : st.newExtraPerDay) + '"><span class="small-note">oprócz nowych słów</span></div></div>' +
-      '</section>' +
-      '<section class="set-card raised"><h2>Filmy (YouGlish)</h2>' +
-      '<p class="small-note desc" style="margin:0">' + (CAN_EMBED
-        ? 'Program działa jako lokalna strona — filmy odtwarzają się w programie.'
-        : 'Program jest otwarty z pliku, więc filmy otworzą się w nowej karcie na youglish.com, a gra „Usłysz w filmie” jest niedostępna. Żeby odtwarzać je w programie, uruchamiaj go plikiem <b>Uruchom.bat</b> z folderu programu (dane przeniesiesz kopią z Dysku Google lub z pliku).') + '</p>' +
-      '<div class="field"><label>Akcent</label><div class="ctl lvl-pills">' + [['us', 'amerykański'], ['uk', 'brytyjski'], ['all', 'wszystkie']].map(a => '<button class="btn pill small' + ((st.ygAccent || 'us') === a[0] ? ' pressed' : '') + '" data-acc="' + a[0] + '">' + a[1] + '</button>').join('') + '</div></div>' +
+      '<section class="set-card s3"><h2>Lektor i dźwięk</h2>' +
+      row('Głos', '<select id="voice" class="txt s3-sel">' + voiceOpts + '</select>', 'voice') +
+      row('Tempo lektora', '<span class="s3-rng"><input id="rate" type="range" min="0.6" max="1.2" step="0.05" value="' + (st.rate || 0.95) + '" style="accent-color:var(--pink)"><span class="small-note" id="rateVal">' + rateLabel(st.rate || 0.95) + '</span></span>', 'rate') +
+      row('Głośność dźwięków', '<span class="s3-rng"><input id="volume" type="range" min="5" max="100" step="5" value="' + (st.volume == null ? 50 : st.volume) + '" aria-label="Głośność dźwięków" style="accent-color:var(--pink)"></span>', 'volume') +
+      row('Akcent w filmach (YouGlish)', '<div class="lvl-pills s3-pills">' + [['us', 'US'], ['uk', 'UK'], ['all', 'oba']].map(a => '<button class="btn pill small' + ((st.ygAccent || 'us') === a[0] ? ' pressed' : '') + '" data-acc="' + a[0] + '">' + a[1] + '</button>').join('') + '</div>') +
+      '<div class="s3-cbs">' + cb('sounds', st.sounds !== false, 'Dźwięki włączone') + cb('speakAfter', !!st.speakAfter, 'Czytaj zdanie po odpowiedzi') + cb('autoOk', st.autoOk !== false, 'Zatwierdzaj automatycznie') + '</div>' +
+      '<p class="small-note desc" style="margin:0" id="voiceNote">' + voiceNote() + '</p>' +
+      '<p class="small-note desc" style="margin:0">' + (CAN_EMBED ? 'Filmy YouGlish odtwarzają się w programie.' : 'Program otwarty z pliku — filmy YouGlish otworzą się w nowej karcie. Żeby grały w programie, uruchamiaj go plikiem <b>Uruchom.bat</b>.') + '</p>' +
+      '<div class="s3-foot"><button class="btn small" id="testVoice">' + IC.speaker + ' Test głosu</button><button class="btn small" id="testSound">Posłuchaj dźwięków</button></div>' +
       '</section>' +
 
-      '<section class="set-card raised"><h2>Nauka</h2>' +
-      '<div class="field"><label for="name">Imię</label><div class="ctl"><input id="name" class="txt" value="' + esc(d.profile.name) + '"></div></div>' +
-      '<div class="field"><label for="newPerDay">Nowe słowa dziennie</label><div class="ctl"><input id="newPerDay" class="txt num" type="number" min="0" max="40" value="' + st.newPerDay + '"></div></div>' +
-      '<div class="field"><label for="goalMin">Cel dzienny (minuty)</label><div class="ctl"><input id="goalMin" class="txt num" type="number" min="5" max="120" value="' + st.goalMin + '"></div></div>' +
-      '<div class="field"><label for="blockMin">Długość bloku (minuty)</label><div class="ctl"><input id="blockMin" class="txt num" type="number" min="2" max="20" value="' + st.blockMin + '"></div></div>' +
-      '<div class="field"><label for="slowSec">Długa odpowiedź po (s)</label><div class="ctl"><input id="slowSec" class="txt num" type="number" min="5" max="120" value="' + st.slowSec + '"><span class="small-note">Dłuższa odpowiedź liczy się jak lekka niepewność.</span></div></div>' +
-      '<div class="field"><label for="voice">Głos lektora</label><div class="ctl"><select id="voice" class="txt">' + voiceOpts + '</select><button class="btn small" id="testVoice">' + IC.speaker + ' Test</button></div></div>' +
-      '<div class="field"><label></label><div class="ctl"><span class="small-note" id="voiceNote">' + voiceNote() + '</span></div></div>' +
-      '<div class="field"><label for="rate">Tempo lektora</label><div class="ctl"><input id="rate" type="range" min="0.6" max="1.2" step="0.05" value="' + (st.rate || 0.95) + '" style="flex:1 1 200px;accent-color:var(--pink)"><span class="small-note" id="rateVal" style="min-width:60px">' + rateLabel(st.rate || 0.95) + '</span></div></div>' +
-      '<div class="field"><label></label><div class="ctl"><label class="check"><input type="checkbox" id="speakAfter"' + (st.speakAfter ? ' checked' : '') + '> Czytaj zdanie po odpowiedzi</label></div></div>' +
-      '<div class="field"><label></label><div class="ctl"><label class="check"><input type="checkbox" id="autoOk"' + (st.autoOk !== false ? ' checked' : '') + '> Zatwierdzaj automatycznie — poprawna odpowiedź bez Entera</label></div></div>' +
-      '<div class="field"><label for="volume">Dźwięki</label><div class="ctl"><label class="check"><input type="checkbox" id="sounds"' + (st.sounds !== false ? ' checked' : '') + '> Włączone</label>' +
-      '<input id="volume" type="range" min="5" max="100" step="5" value="' + (st.volume == null ? 50 : st.volume) + '" aria-label="Głośność dźwięków" style="flex:1 1 160px;accent-color:var(--pink)"><button class="btn small" id="testSound">Posłuchaj</button></div></div>' +
-      '<div class="field"><label>Poziom słownictwa</label><div class="ctl lvl-pills">' + L.map((l, i) => '<button class="btn pill small' + (levels().vocab === i ? ' pressed' : '') + '" data-lv="' + i + '">' + l + '</button>').join('') + '</div></div>' +
+      '<section class="set-card s3"><h2>Sztuczna inteligencja</h2>' +
+      '<p class="small-note desc" style="margin:0">Z kluczem API program wyjaśnia błędy po polsku i uznaje poprawne odpowiedzi napisane inaczej niż wzorzec. Klucz założysz na <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Zostaje tylko w tej przeglądarce i nie trafia do kopii. Szybki model: sprawdzanie odpowiedzi, rozmowa, zdania do słówek. Model do wyjaśnień: Wyjaśnij, ocena tłumaczeń, plan „Krok po kroku”.</p>' +
+      row('Klucz API', '<span class="s3-key"><input id="key" class="txt s3-txt" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="' + esc(st.apiKey) + '"><button class="btn small" id="showKey" aria-label="Pokaż klucz">' + IC.eye + '</button></span>', 'key') +
+      row('Model szybki', '<input id="model" class="txt s3-txt" spellcheck="false" value="' + esc(st.model) + '">', 'model') +
+      '<div class="s3-r" id="smartField"' + (st.smartOn === false ? ' hidden' : '') + '><label for="modelSmart">Do wyjaśnień</label><input id="modelSmart" class="txt s3-txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div>' +
+      '<div class="s3-cbs">' + cb('smartOn', st.smartOn !== false, 'Lepszy model do wyjaśnień') + '</div>' +
+      '<div class="small-note s3-mini">Bez klucza działa wszystko poza Tłumaczem z AI, Rozmową, Audycją i oceną zdań.</div>' +
+      '<div class="s3-foot"><span class="status" id="aiStatus"></span><button class="btn small primary" id="testAi">Sprawdź połączenie</button></div>' +
       '</section>' +
 
-      '<section class="set-card raised"><h2>Kopia w pliku</h2>' +
-      '<p class="small-note desc" style="margin:0">Ręczna kopia do folderu Pobrane — przydatna, gdy nie używasz Dysku Google.</p><p class="small-note" style="margin:0">Ostatnia kopia: <b>' + (d.lastBackup ? new Date(d.lastBackup).toLocaleDateString('pl-PL') : 'jeszcze nie było') + '</b>.</p>' +
-      '<div class="row"><button class="btn" id="export">Zapisz kopię do pliku</button><button class="btn" id="import">Wczytaj kopię z pliku</button><input type="file" id="file" accept=".json,application/json" hidden></div></section>' +
+      '<section class="set-card s3"><h2>Ćwiczenia w sesjach</h2>' +
+      '<div class="s3-games">' +
+      gameCb('race', 'Rozgrzewka (' + raceSec() + ' s)', 'Na początek sesji — długość zmienisz w Graj') + gameCb('order', 'Ułóż zdanie') +
+      gameCb('error', 'Znajdź błąd') + gameCb('dictation', 'Dyktando') +
+      gameCb('speak', 'Powiedz to', Recog.supported() ? '' : 'Ta przeglądarka nie rozpoznaje mowy', !Recog.supported()) + gameCb('particle', 'Phrasal verbs') +
+      gameCb('tenses', 'Czasy', 'Zdania z otwartych lekcji w codziennych sesjach') + gameCb('translate', 'Przetłumacz' + (AI.enabled() ? '' : ' · AI'), AI.enabled() ? '' : 'Wymaga klucza API', !AI.enabled()) +
+      '</div></section>' +
 
-      '<section class="set-card raised"><h2>Oznaczone jako znane</h2>' +
-      '<div class="row between"><span class="small-note">Znane słowa (' + knownWords + ') są w <b>Moje słówka → Mój słownik</b> — tam je znajdziesz i przywrócisz do nauki.</span><button class="btn small" id="toBook">Otwórz słownik</button></div>' +
-      (knownOther.length ? '<h3 class="tm-sub">Zdania i ćwiczenia (' + knownOther.length + ')</h3>' : '') +
-      (knownOther.length
-        ? '<div class="known-list">' + knownOther.map(id => '<div class="list-item inset"><div>' + itemLabel(id) + '</div><button class="btn small" data-restore="' + esc(id) + '">Przywróć do powtórek</button></div>').join('') + '</div>'
-        : '') +
+      '<section class="set-card s3" id="syncCard"><h2>Kopie zapasowe</h2>' +
+      '<p class="small-note desc" style="margin:0">Dysk Google: wskaż folder na Dysku Google na komputerze (np. <b>G:\\Mój dysk\\Angielski</b>). Po każdej sesji program zapisze tam postępy; w podfolderze „kopie” zostają kopie z 14 ostatnich dni. Kopia w pliku trafia do folderu Pobrane. Klucz API nie jest zapisywany w kopiach.</p>' +
+      '<div class="small-note s3-sync" id="syncStatus">' + syncStatusHtml() + '</div>' +
+      (Sync.supported ? '<div class="s3-btns"><button class="btn small primary" id="syncPick">' + (st.syncFolder ? 'Zmień folder' : 'Wybierz folder') + '</button>' +
+        (st.syncFolder ? '<button class="btn small" id="syncNow">Zapisz teraz</button><button class="btn small" id="syncLoad">Wczytaj z Dysku</button><button class="btn small" id="syncOff">Odłącz</button>' : '') + '</div>' : '') +
+      '<div class="s3-r"><label>Kopia w pliku</label><span class="small-note">' + (d.lastBackup ? new Date(d.lastBackup).toLocaleDateString('pl-PL') : 'jeszcze nie było') + '</span></div>' +
+      '<div class="s3-foot"><button class="btn small" id="export">Zapisz plik</button><button class="btn small" id="import">Wczytaj plik</button><input type="file" id="file" accept=".json,application/json" hidden></div>' +
       '</section>' +
 
-      '<section class="set-card raised"><h2>Inne</h2>' +
-      '<p class="small-note" style="margin:0">Elementy w nauce: ' + studied + ' · słówka w bazie: ' + WORDS.list.length + ' · Zdobyte XP: ' + d.xp + ' · Najdłuższe combo: ×' + d.bestCombo + ' · Rekord rozgrzewki: ' + (d.raceBest || 0) + '</p>' +
-      '<div class="row"><button class="btn" id="retest">Powtórz test poziomu</button><button class="btn" id="wipe" style="color:var(--bad-ink)">Usuń wszystkie dane</button></div></section>' +
-      '</div>';
+      '<section class="set-card s3"><h2>Inne</h2>' +
+      '<div class="s3-r"><label>W nauce · w bazie</label><b>' + fmtNum(studied) + ' · ' + fmtNum(WORDS.list.length) + '</b></div>' +
+      '<div class="s3-r"><label>XP · najdłuższe combo</label><b>' + fmtNum(d.xp) + ' · ×' + d.bestCombo + '</b></div>' +
+      '<div class="s3-r"><label>Rekord rozgrzewki</label><b>' + (d.raceBest || 0) + '</b></div>' +
+      '<div class="s3-foot">' + (knownOther.length ? '<button class="btn small" id="knownOther">Znane zdania (' + knownOther.length + ')</button>' : '') + '<button class="btn small" id="toBook" title="Znane słowa (' + knownWords + ') przywrócisz w Moim słowniku">Otwórz słownik</button><button class="btn small" id="retest">Test poziomu</button><button class="btn small" id="wipe" style="color:var(--bad-ink)">Usuń dane</button></div>' +
+      '</section>' +
+      '</div></div>';
 
     const save = () => Store.save();
     const on = (sel, fn) => { const el = $(sel); if (el) el.onclick = fn; };
@@ -2776,6 +2766,12 @@
     on('#export', () => { exportBackup(); renderSettings(); });
     on('#import', () => $('#file').click());
     $('#file').onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); };
+    on('#knownOther', () => modal('<h2>Zdania i ćwiczenia oznaczone jako znane</h2><div class="known-list" style="max-height:60vh;overflow:auto">' + knownOther.map(id => '<div class="list-item inset"><div>' + itemLabel(id) + '</div><button class="btn small" data-restore="' + esc(id) + '">Przywróć do powtórek</button></div>').join('') + '</div><div class="row center"><button class="btn" id="mNo" data-esc>Zamknij</button></div>',
+      (ov, close) => { ov.querySelector('#mNo').onclick = close; ov.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => { close(); restoreKnown(b.dataset.restore); }); }));
+    const restoreKnown = id => {
+      knownFamily(id).concat([id]).forEach(x => { const c = d.cards[x]; if (!c || c.state !== 'known') return; if (!c.reps) delete d.cards[x]; else d.cards[x] = Object.assign({}, c, { state: 'review', due: Date.now() }); });
+      progress(); save(); renderSettings(); toast(itemShort(id) + ' — wróci w najbliższej sesji.');
+    };
     $$('[data-restore]').forEach(b => b.onclick = () => {
       const id = b.dataset.restore;
       knownFamily(id).concat([id]).forEach(x => {
