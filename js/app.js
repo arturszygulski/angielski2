@@ -1352,7 +1352,7 @@
         '<div class="sentence"><span>' + esc(a) + '<b>' + esc(sp.verb) + '</b></span><span class="gap inset deep">' + (fbFull ? esc(sp.part) : '_____') + '</span><span>' + esc(b) + '</span></div>' +
         (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(sp.verb + ' ' + S.fb.ans) + '</s></div>' : '') + '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>'
           : '<div class="answer-box"><label for="ans">Partykuła (np. up, out, off…)</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="' + esc(sp.verb) + ' …" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
-      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Dwa razy szybko i dobrze = umiesz · błąd = wracają 4 propozycje</div>';
+      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint">Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Nie pamiętasz? Podpowiedź pokaże 4 propozycje</div>';
     }
 
     else if (it.type === 'cloze') {
@@ -1452,7 +1452,7 @@
         }).join('') + '</div>' +
         (fbFull ? '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>' : '');
       controls = unsureBtn + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + '</div>' +
-        '<div class="small-note">' + K('1') + '–' + K('4') + ' wybierz · ' + K('Alt+N') + ' przed wyborem = nie jestem pewien</div>';
+        '<div class="small-note">' + K('1') + '–' + K('4') + ' wybierz' + (S.hint ? ' · użyłeś podpowiedzi — wróci trochę wcześniej' : ' · ' + K('Alt+N') + ' przed wyborem = nie jestem pewien') + '</div>';
     }
 
     else if (it.type === 'translate') {
@@ -1808,6 +1808,7 @@
 
   function showHint(it) {
     if (S.phase !== 'answer') return;
+    if (it.type === 'pvwrite' && S.view && S.view === it) { if (S.hint) return; S.hint = true; S.pvOpts = null; S.view = Object.assign({}, it, { type: 'particle', stepLabel: 'PODPOWIEDŹ · 4 PROPOZYCJE' }); renderExercise(); return; }
     if (it.type === 'cloze' && S.view && S.view === it) { if (S.hint) return; S.hint = true; S.chOpts = null; S.view = Object.assign({}, it, { type: 'choice', stepLabel: 'PODPOWIEDŹ · 4 PROPOZYCJE' }); renderExercise(); return; }
     if (it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') { if (S.hint) return; const inp = $('#ans'); if (inp) S.answer = inp.value; S.hint = true; renderExercise(); }
     else if (it.type === 'order') {
@@ -7081,8 +7082,8 @@
 
   /* ================= DRABINKA TRUDNOŚCI ================= */
   /* stopnie dla każdego rodzaju ćwiczenia: -1 łatwiej, 0 normalnie, 1 trudniej */
-  const STEPS = { cloze: [0, 1], order: [-1, 0, 1], dictation: [-1, 0, 1], speak: [-1, 0, 1], error: [-1, 0], particle: [-1, 1], tense_c: [0, 1], tense_w: [-1, 0], tense_t: [-1, 0], translate: [-1, 0] };
-  const STEP_DEFAULT = { particle: -1 };
+  const STEPS = { cloze: [0, 1], order: [-1, 0, 1], dictation: [-1, 0, 1], speak: [-1, 0, 1], error: [-1, 0], particle: [1], tense_c: [0, 1], tense_w: [-1, 0], tense_t: [-1, 0], translate: [-1, 0] };
+  const STEP_DEFAULT = {};
   const STEP_NEEDS_AI = { order: 1, speak: 1 };
   function stepList(type) {
     let l = STEPS[type] || [0];
@@ -7106,7 +7107,7 @@
       case 'dictation': if (st < 0) { v.hintLetters = true; v.stepLabel = 'Z PODPOWIEDZIĄ'; } else if (st > 0) { v.fast = true; v.stepLabel = 'SZYBCIEJ · RAZ'; } break;
       case 'speak': if (st < 0) { v.readAloud = true; v.stepLabel = 'PRZECZYTAJ'; } else if (st > 0) { v.fromPl = true; v.pl = pl || null; v.stepLabel = 'Z PAMIĘCI'; } break;
       case 'error': if (st < 0) { v.premark = true; v.stepLabel = 'ŁATWIEJ'; } break;
-      case 'particle': if (st > 0) { v.type = 'pvwrite'; v.stepLabel = 'WPISZ SAM'; } else v.stepLabel = '4 PROPOZYCJE'; break;
+      case 'particle': v.type = 'pvwrite'; break;
       case 'tense_c': if (st > 0) { v.type = 'tense_w'; v.stepLabel = 'TRUDNIEJ'; } break;
       case 'tense_w': if (st < 0) { v.type = 'tense_c'; v.stepLabel = 'ŁATWIEJ'; } break;
       case 'tense_t': if (st < 0) { v.type = 'tense_w'; v.stepLabel = 'ŁATWIEJ'; } break;
