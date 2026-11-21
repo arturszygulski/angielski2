@@ -1434,3 +1434,42 @@ input.tr-in { height: 48px; }
 .gcirc { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 22px var(--head); color: var(--ink-2); font-variant-numeric: tabular-nums; box-shadow: inset 4px 4px 9px var(--sh-in-d), inset -4px -4px 9px var(--sh-l); }
 
 .heat .hl b { font-weight: 700; color: var(--ink); }
+
+/* Kamienie milowe (upd184) */
+.mi-ov { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; padding: 24px; background: rgba(216,212,206,.82); backdrop-filter: blur(3px); animation: miIn .25s ease-out; }
+@keyframes miIn { from { opacity: 0; } to { opacity: 1; } }
+.mi-box { width: min(1000px, 100%); display: flex; flex-direction: column; gap: 16px; animation: miUp .35s ease-out; }
+@keyframes miUp { from { transform: translateY(14px) scale(.98); } to { transform: none; } }
+.mi-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: center; border-radius: 32px; padding: 32px 36px; border: 1.5px solid; }
+.mi-card.mi-w { background: #F4EBDB; border-color: #E6D6B8; } .mi-card.mi-h { background: #E7EDF5; border-color: #CCD7E5; } .mi-card.mi-d { background: #E4EFE7; border-color: #C8DCCD; }
+.mi-medal { width: 136px; height: 136px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 40px var(--head); line-height: 1; }
+.mi-medal small { font: 600 14px var(--head); margin-top: 6px; }
+.mi-w .mi-medal { background: #E6CF9F; color: #5C3E0C; } .mi-h .mi-medal { background: #BFD0E5; color: #2F4766; } .mi-d .mi-medal { background: #BCD8C3; color: #1E3B27; }
+.mi-tx { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.mi-tag { font: 700 13px var(--head); letter-spacing: .08em; }
+.mi-w .mi-tag { color: #9A6B2A; } .mi-h .mi-tag { color: #3E5677; } .mi-d .mi-tag { color: #3E7A52; }
+.mi-tx h1 { font-size: 40px; line-height: 1.1; margin: 0; }
+.mi-tx p { margin: 0; font-size: 17px; line-height: 1.55; color: var(--ink-2); max-width: 64ch; }
+.mi-src { font-size: 13px; color: var(--ink-3); }
+.mi-nx { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-2); }
+.mi-bar { flex: 1; height: 12px; border-radius: 9px; padding: 3px; background: rgba(255,255,255,.55); box-shadow: inset 2px 2px 5px rgba(0,0,0,.08); }
+.mi-bar > div { height: 100%; border-radius: 9px; }
+.mi-w .mi-bar > div { background: #C9A05A; } .mi-h .mi-bar > div { background: #5E7898; } .mi-d .mi-bar > div { background: #7FA889; }
+.mi-btns { display: flex; justify-content: flex-end; padding: 0 6px; }
+.mi-btns .btn { font-size: 18px; min-height: 54px; padding: 0 28px; }
+@media (max-width: 700px) { .mi-card { grid-template-columns: 1fr; padding: 24px; } .mi-medal { width: 104px; height: 104px; font-size: 30px; } .mi-tx h1 { font-size: 30px; } }
+/* moduł w Statystykach */
+.mi-st { display: flex; flex-direction: column; gap: 4px; }
+.mi-trk { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; padding: 14px 0; border-bottom: 1px solid #CFC9C1; }
+.mi-trk:last-child { border-bottom: none; }
+.mi-t b { font-family: var(--head); font-size: 17px; display: block; } .mi-t span { font-size: 13px; color: var(--ink-2); }
+.mi-c-w { color: #6B4A12; } .mi-c-h { color: #3E5677; } .mi-c-d { color: #24412D; }
+.mi-chain { display: flex; align-items: center; }
+.mi-m { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 16px var(--head); line-height: 1; flex: none; font-variant-numeric: tabular-nums; }
+.mi-m small { font: 500 10.5px var(--body); margin-top: 3px; opacity: .85; }
+.mi-m.on.mi-w { background: #EFE3CC; color: #6B4A12; } .mi-m.on.mi-h { background: #DCE4EE; color: #3E5677; } .mi-m.on.mi-d { background: #DCE8DF; color: #24412D; }
+.mi-m.nxt { border: 2px solid; } .mi-m.nxt.mi-w { color: #B8893F; } .mi-m.nxt.mi-h { color: #5E7898; } .mi-m.nxt.mi-d { color: #5D9A6E; }
+.mi-m.off { border: 1.5px dashed #BDB6AD; color: var(--ink-3); }
+.mi-ln { flex: 1; min-width: 10px; height: 2px; background: #C3BCB3; }
+.mi-next { margin-top: 6px; }
+@media (max-width: 700px) { .mi-trk { grid-template-columns: 1fr; } .mi-m { width: 50px; height: 50px; font-size: 13px; } }

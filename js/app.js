@@ -762,9 +762,112 @@
   }
 
   /* ================= EKRAN GŁÓWNY ================= */
+  /* ---------- Kamienie milowe: trzy ścieżki z uzasadnieniem (upd184) ---------- */
+  const MILES = {
+    w: { name: 'Słowa', sub: 'ile rozumiesz', tag: 'SŁOWA', unit: n => n === 1 ? 'słowo' : 'słów', steps: [100, 500, 1000, 2000, 3000], cls: 'w',
+      title: n => 'Znasz już ' + fmtNum(n) + ' słów!',
+      why: {
+        100: '100 najczęstszych słów angielskich (the, and, have, it…) to ok. połowa każdego tekstu. Masz już fundament, na którym stoi prawie każde zdanie.',
+        500: '500 najczęstszych słów to szkielet prostych rozmów — przedstawisz się, zapytasz o drogę, zamówisz w kawiarni. Pokrywają one ok. 70% słów w zwykłej codziennej rozmowie.',
+        1000: '1000 najczęstszych słów to ok. 80–85% słów w zwykłej codziennej rozmowie. Większość tego, co słyszysz na co dzień, składa się już ze słów, które znasz — resztę coraz częściej odgadniesz z kontekstu.',
+        2000: '2000 najczęstszych słów to ok. 90% słów w codziennej rozmowie. Nieznane słowo trafia się średnio co kilka zdań i zwykle da się je odgadnąć z kontekstu.',
+        3000: '3000 słów to ok. 95% słów w rozmowie — próg, od którego badacze uznają, że rozmowę rozumie się swobodnie, z nielicznymi lukami.'
+      },
+      src: () => 'Źródło: badania częstości słów (P. Nation, Victoria University of Wellington) — przybliżenie: badania liczą rodziny słów, program liczy słowa i zwroty.',
+      next: { 100: 'ok. połowa każdego tekstu', 500: 'ok. 70% codziennej rozmowy', 1000: 'ok. 80–85% codziennej rozmowy', 2000: 'ok. 90% codziennej rozmowy', 3000: 'ok. 95% — swobodne rozumienie rozmowy' } },
+    h: { name: 'Godziny', sub: 'droga do poziomu', tag: 'GODZINY NAUKI', unit: () => 'godzin', steps: [50, 100, 200, 400, 600], cls: 'h', suf: ' h',
+      title: n => fmtNum(n) + ' godzin nauki',
+      why: {
+        50: 'Cambridge szacuje, że na poziom A2 potrzeba łącznie ok. 180–200 godzin nauki. 50 godzin to już ćwierć tej drogi.',
+        100: 'Cambridge szacuje, że na poziom A2 potrzeba łącznie ok. 180–200 godzin nauki, a na B1 ok. 350–400. Masz za sobą ponad połowę drogi do A2.',
+        200: 'Tyle według Cambridge wystarcza na poziom A2 (ok. 180–200 godzin). Na B1 potrzeba łącznie ok. 350–400 godzin — jesteś w połowie drogi.',
+        400: 'Tyle według Cambridge potrzeba na poziom B1 (ok. 350–400 godzin). Na B2 — poziom swobodnej rozmowy na większość tematów — ok. 500–600 godzin.',
+        600: 'Tyle według Cambridge potrzeba na poziom B2 (ok. 500–600 godzin) — swobodna rozmowa na większość tematów. Na C1: ok. 700–800 godzin.'
+      },
+      src: () => 'Źródło: Cambridge English — orientacyjny łączny czas nauki („guided learning hours”) dla poziomów CEFR; to punkt odniesienia, nie norma.',
+      next: { 50: 'ćwierć drogi do A2 według Cambridge', 100: 'ponad połowa drogi do A2 według Cambridge', 200: 'poziom A2 według Cambridge', 400: 'poziom B1 według Cambridge', 600: 'poziom B2 według Cambridge' } },
+    d: { name: 'Dni nauki', sub: 'nawyk', tag: 'DNI NAUKI', unit: () => 'dni', steps: [7, 30, 66, 100, 365], cls: 'd',
+      title: n => n === 365 ? 'Rok z angielskim!' : n + ' dni z angielskim',
+      why: {
+        7: 'Pierwszy tydzień nauki za Tobą. Na początku nauka wymaga jeszcze wysiłku woli — każdy kolejny dzień wzmacnia nawyk.',
+        30: 'Miesiąc nauki. Średni czas utrwalenia nawyku to według badań 66 dni — masz za sobą prawie połowę tej drogi.',
+        66: 'Według badań to średni czas, po którym codzienna czynność staje się nawykiem — robisz ją już bez wysiłku woli. Nauka przestaje być postanowieniem, a staje się częścią dnia.',
+        100: 'Nauka jest już nawykiem, a powtórki w rosnących odstępach pracują na pamięć długotrwałą — słowa sprzed miesięcy wracają coraz rzadziej, bo je pamiętasz.',
+        365: 'Regularność daje więcej niż długie, rzadkie sesje — to jedna z najlepiej potwierdzonych zasad nauki (efekt rozłożenia nauki w czasie). Rok takiej pracy to solidny fundament.'
+      },
+      src: n => n === 365 ? 'Źródło: efekt rozłożenia nauki w czasie (spacing effect), m.in. Cepeda i in., 2006.' : 'Źródło: Lally i in., University College London, 2010 (średnio 66 dni, rozrzut 18–254).',
+      next: { 7: 'pierwszy tydzień', 30: 'miesiąc — prawie połowa drogi do nawyku', 66: 'średni czas, po którym nauka staje się nawykiem', 100: 'nauka jako trwały nawyk', 365: 'rok z angielskim' } }
+  };
+  function milesNow() {
+    const days = D().days, ks = Object.keys(days);
+    return { w: bkWords().length, h: Math.floor(ks.reduce((a, k) => a + (days[k].sec || 0), 0) / 3600), d: ks.filter(k => isStudyDay(days[k])).length };
+  }
+  /* daty zdobycia odtworzone z historii (przy pierwszym uruchomieniu) */
+  function milesBackfill() {
+    const out = { w: {}, h: {}, d: {} }, days = D().days, ks = Object.keys(days).sort();
+    let sec = 0, nd = 0;
+    ks.forEach(k => {
+      const t = new Date(k + 'T12:00:00').getTime(), x = days[k];
+      sec += x.sec || 0; if (isStudyDay(x)) nd++;
+      MILES.h.steps.forEach(s => { if (!out.h[s] && sec >= s * 3600) out.h[s] = t; });
+      MILES.d.steps.forEach(s => { if (!out.d[s] && nd >= s) out.d[s] = t; });
+    });
+    const c = D().cards, ts = bkWords().map(w => { const x = c[w.id]; return x.added || x.knownAt || x.last || Date.now(); }).sort((a, b) => a - b);
+    MILES.w.steps.forEach(s => { if (ts.length >= s) out.w[s] = ts[s - 1]; });
+    return out;
+  }
+  /* sprawdza nowe kamienie; zwraca listę do pokazania */
+  function milesTick() {
+    const d = D();
+    if (!d.miles) { d.miles = milesBackfill(); Store.save(); return []; }
+    const now = milesNow(), fresh = [];
+    ['w', 'h', 'd'].forEach(k => { const got = d.miles[k] = d.miles[k] || {}; MILES[k].steps.forEach(s => { if (now[k] >= s && !got[s]) { got[s] = Date.now(); fresh.push({ k, s }); } }); });
+    if (fresh.length) Store.save();
+    return fresh;
+  }
+  function milesShow(list) {
+    if (!list || !list.length || document.querySelector('.mi-ov')) return;
+    const { k, s } = list[0], M = MILES[k], now = milesNow()[k];
+    const nx = M.steps.find(x => x > s), pct = nx ? Math.max(2, Math.min(100, Math.round((now - s) / (nx - s) * 100))) : 100;
+    const ov = document.createElement('div'); ov.className = 'mi-ov';
+    ov.innerHTML = '<div class="mi-box"><section class="mi-card mi-' + M.cls + '"><div class="mi-medal">' + fmtNum(s) + '<small>' + (k === 'h' ? 'godzin' : M.unit(s)) + '</small></div>' +
+      '<div class="mi-tx"><div class="mi-tag">KAMIEŃ MILOWY · ' + M.tag + '</div><h1>' + esc(M.title(s)) + '</h1><p>' + esc(M.why[s]) + '</p><div class="mi-src">' + esc(M.src(s)) + '</div>' +
+      (nx ? '<div class="mi-nx"><span>' + fmtNum(s) + (M.suf || '') + '</span><div class="mi-bar"><div style="width:' + pct + '%"></div></div><span>następny: ' + fmtNum(nx) + (M.suf || ' ' + M.unit(nx)) + '</span></div>' : '<div class="mi-nx"><span>To ostatni kamień na tej ścieżce — gratulacje!</span></div>') + '</div></section>' +
+      '<div class="mi-btns"><button class="btn primary" id="miOk">' + (list.length > 1 ? 'Dalej (' + (list.length - 1) + ' więcej) ' : 'Dalej ') + K('Enter') + '</button></div></div>';
+    document.body.appendChild(ov);
+    try { Sound.play('combo'); } catch (e) { }
+    const close = () => { document.removeEventListener('keydown', kh, true); ov.remove(); if (list.length > 1) setTimeout(() => milesShow(list.slice(1)), 250); };
+    const kh = e => { if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); close(); } else e.stopPropagation(); };
+    document.addEventListener('keydown', kh, true);
+    ov.querySelector('#miOk').onclick = close;
+    ov.querySelector('#miOk').focus();
+  }
+  function milesHtml() {
+    const d = D(); if (!d.miles) milesTick();
+    const got = d.miles || { w: {}, h: {}, d: {} }, now = milesNow();
+    const fd = t => new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }).replace('.', '');
+    let total = 0, have = 0;
+    const per14 = k => { let a = 0; for (let i = 0; i < 14; i++) { const x = d.days[U.dayKey(U.addDays(U.startOfDay(), -i))]; if (x) a += k === 'h' ? (x.sec || 0) / 3600 : (x.newCount || 0); } return a / 14; };
+    const rows = ['w', 'h', 'd'].map(k => {
+      const M = MILES[k], g = got[k] || {}, nx = M.steps.find(s => !g[s]);
+      const chain = M.steps.map((s, i) => {
+        total++; if (g[s]) have++;
+        const cls = g[s] ? 'on' : s === nx ? 'nxt' : 'off';
+        const lbl = s + (M.suf || '');
+        const sm = g[s] ? fd(g[s]) : s === nx ? Math.min(now[k], s) + ' / ' + s : '';
+        return (i ? '<span class="mi-ln' + (g[s] ? ' on' : '') + '"></span>' : '') + '<span class="mi-m mi-' + M.cls + ' ' + cls + '" title="' + esc(M.next[s]) + '">' + lbl + (sm ? '<small>' + sm + '</small>' : '') + '</span>';
+      }).join('');
+      let eta = '';
+      if (nx && k !== 'd') { const p = per14(k); if (p > 0.05) { const t = U.addDays(U.startOfDay(), Math.ceil((nx - now[k]) / p)); eta = ' · przy obecnym tempie ok. ' + new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }); } }
+      const note = nx ? 'Następny: ' + fmtNum(nx) + (M.suf || ' ' + M.unit(nx)) + ' — ' + M.next[nx] + eta : 'Wszystkie kamienie na tej ścieżce zdobyte 🏆';
+      return '<div class="mi-trk"><div class="mi-t"><b class="mi-c-' + M.cls + '">' + M.name + '</b><span>' + M.sub + '</span></div><div><div class="mi-chain">' + chain + '</div><div class="small-note mi-next">' + esc(note) + '</div></div></div>';
+    }).join('');
+    return '<div class="row between"><h2>Kamienie milowe</h2><span class="small-note">zdobyte ' + have + ' z ' + total + '</span></div>' + rows;
+  }
   function renderHome() {
     if (maybeWeeklyReport()) return;
     const d = D(), t = Store.today(), st = d.settings;
+    { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); }
     Store.save();
     const goalSec = st.goalMin * 60;
     const pct = Math.min(100, Math.round(t.sec / goalSec * 100));
@@ -2304,6 +2407,7 @@
     if (res.total === 0 && res.raceHits == null && !res.boss) { if (res.textId) TXO.open = res.textId; return go(res.textId && (D().texts || {})[res.textId] ? 'texts' : res.play && res.play !== 'text' && res.play !== 'tense' ? 'play' : 'home'); }
     if (completed && !res.blockSound) Sound.play('block');
     go('result', res);
+    { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 600); }
     syncAfterSession();
   }
 
@@ -4361,6 +4465,7 @@
       '<section class="st-f"><div class="acc2"><div>' + skillAccHtml(sd) + '</div><div class="acc2-l"><div class="small-note">w czasie</div>' + linesHtml(mode, true) + '</div></div></section></div>' +
       '<div class="st-sh"><b>Postęp</b><small>niezależny od zakładek</small></div>' +
       '<section class="st-f vm vm-view">' + vocabMapHtml(true) + '</section>' +
+      '<section class="st-f mi-st">' + milesHtml() + '</section>' +
       '<div class="st-g2">' +
       '<section class="st-f"><div class="row between"><h3>Poziom w czasie</h3>' + skLegend + '</div>' + levelsChartHtml() + sentLevelHtml() +
       '<div class="st-test"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div>' + levelWhyHtml() + '</section>' +
