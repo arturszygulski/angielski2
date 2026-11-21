@@ -1343,7 +1343,7 @@
         '<div class="sentence"><span>' + esc(a) + '</span><span class="gap inset deep">' + (fbFull ? esc(ans0) : '______') + '</span><span>' + esc(b) + '</span></div>' +
         '<div class="options tnopts">' + S.chOpts.map((o, i) => { const cls = !fbFull ? '' : o === ans0 || (o === pick && S.fb.m === 'ai-ok') ? ' ok' : o === pick ? ' bad' : ' dim'; return '<button class="btn' + cls + '" data-copt="' + i + '"' + (fbFull ? ' tabindex="-1"' : '') + '><span class="k">' + (i + 1) + '</span>' + esc(o) + '</button>'; }).join('') + '</div>' +
         (fbFull ? '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>' : '');
-      controls = unsureBtn + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + '</div><div class="small-note">' + K('1') + '–' + K('4') + ' wybierz · gdy pójdzie Ci dobrze, wrócisz do wpisywania</div>';
+      controls = unsureBtn + '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + '</div><div class="small-note">' + K('1') + '–' + K('4') + ' wybierz' + (S.hint ? ' · użyłeś podpowiedzi — słowo wróci trochę wcześniej' : '') + '</div>';
     }
 
     else if (it.type === 'pvwrite') {
@@ -1808,6 +1808,7 @@
 
   function showHint(it) {
     if (S.phase !== 'answer') return;
+    if (it.type === 'cloze' && S.view && S.view === it) { if (S.hint) return; S.hint = true; S.chOpts = null; S.view = Object.assign({}, it, { type: 'choice', stepLabel: 'PODPOWIEDŹ · 4 PROPOZYCJE' }); renderExercise(); return; }
     if (it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') { if (S.hint) return; const inp = $('#ans'); if (inp) S.answer = inp.value; S.hint = true; renderExercise(); }
     else if (it.type === 'order') {
       const T2 = S.tiles;
@@ -7080,7 +7081,7 @@
 
   /* ================= DRABINKA TRUDNOŚCI ================= */
   /* stopnie dla każdego rodzaju ćwiczenia: -1 łatwiej, 0 normalnie, 1 trudniej */
-  const STEPS = { cloze: [-1, 0, 1], order: [-1, 0, 1], dictation: [-1, 0, 1], speak: [-1, 0, 1], error: [-1, 0], particle: [-1, 1], tense_c: [0, 1], tense_w: [-1, 0], tense_t: [-1, 0], translate: [-1, 0] };
+  const STEPS = { cloze: [0, 1], order: [-1, 0, 1], dictation: [-1, 0, 1], speak: [-1, 0, 1], error: [-1, 0], particle: [-1, 1], tense_c: [0, 1], tense_w: [-1, 0], tense_t: [-1, 0], translate: [-1, 0] };
   const STEP_DEFAULT = { particle: -1 };
   const STEP_NEEDS_AI = { order: 1, speak: 1 };
   function stepList(type) {
@@ -7100,7 +7101,7 @@
     const st = cardStep(c.id, raw.type), v = Object.assign({}, raw, { baseType: raw.type, step: st });
     const pl = (D().plCache || {})[c.id];
     switch (raw.type) {
-      case 'cloze': if (st < 0) { v.type = 'choice'; v.stepLabel = '4 PROPOZYCJE'; } else if (st > 0) { v.noPl = true; v.stepLabel = 'BEZ PODPOWIEDZI'; } break;
+      case 'cloze': if (st > 0) { v.noPl = true; v.stepLabel = 'BEZ PODPOWIEDZI'; } break;
       case 'order': if (st < 0) { v.prefill = true; v.stepLabel = 'ŁATWIEJ'; } else if (st > 0) { v.type = 'translate'; v.pl = pl || null; v.fromOrder = true; v.stepLabel = 'NAPISZ SAM'; } break;
       case 'dictation': if (st < 0) { v.hintLetters = true; v.stepLabel = 'Z PODPOWIEDZIĄ'; } else if (st > 0) { v.fast = true; v.stepLabel = 'SZYBCIEJ · RAZ'; } break;
       case 'speak': if (st < 0) { v.readAloud = true; v.stepLabel = 'PRZECZYTAJ'; } else if (st > 0) { v.fromPl = true; v.pl = pl || null; v.stepLabel = 'Z PAMIĘCI'; } break;
