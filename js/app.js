@@ -1352,13 +1352,13 @@
         '<div class="sentence"><span>' + esc(a) + '<b>' + esc(sp.verb) + '</b></span><span class="gap inset deep">' + (fbFull ? esc(sp.part) : '_____') + '</span><span>' + esc(b) + '</span></div>' +
         (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(sp.verb + ' ' + S.fb.ans) + '</s></div>' : '') + '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>'
           : '<div class="answer-box"><label for="ans">Partykuła (np. up, out, off…)</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="' + esc(sp.verb) + ' …" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
-      controls = unsureBtn + emptyNote + '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint">Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Nie pamiętasz? Podpowiedź pokaże 4 propozycje</div>';
+      controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: partykuła zaczyna się na „' + esc(sp.part[0]) + '”, ma ' + sp.part.length + ' ' + plLit(sp.part.length) + '.</div>' : '') + '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Podpowiedź') + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Najpierw z pamięci · podpowiedź: 1. pierwsza litera, 2. cztery propozycje</div>';
     }
 
     else if (it.type === 'cloze') {
       const [a, b] = splitSentence(it.w.s);
       const words = it.w.answers[0].split(' ').length;
-      const hintText = (it.noPl ? 'Znaczenie: ' + esc(it.w.pl) + '. ' : '') + 'Zaczyna się na „' + esc(it.w.answers[0][0]) + '”, ' + (words > 1 ? words + ' słowa.' : 'ma ' + it.w.answers[0].length + ' liter.');
+      const hintText = (it.noPl ? 'Znaczenie: ' + esc(it.w.pl) + '. ' : '') + 'Zaczyna się na „' + esc(it.w.answers[0][0]) + '”, ' + (words > 1 ? words + ' słowa.' : 'ma ' + it.w.answers[0].length + ' ' + plLit(it.w.answers[0].length) + '.');
       body =
         (it.noPl && !fbFull ? '<div><div class="prompt-lbl">Uzupełnij zdanie — bez polskiej podpowiedzi</div><div class="prompt-word">?</div></div>' : '<div><div class="prompt-lbl">Uzupełnij zdanie słowem:</div><div class="prompt-word">' + esc(it.w.pl) + '</div></div>') +
         '<div class="sentence"><span>' + esc(a) + '</span><span class="gap inset deep">' + (fbFull ? esc(S.fb.fill) : '______') + '</span><span>' + esc(b) + '</span></div>' +
@@ -1366,7 +1366,7 @@
         '<div class="answer-box"><label for="ans">Twoja odpowiedź</label>' +
         '<input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="wpisz brakujące słowo" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>';
       controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: ' + hintText + '</div>' : '') +
-        '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>' +
+        '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Podpowiedź') + knownBtn + idkBtn + checkBtn + '</div>' +
         '<div class="small-note">' + K('Shift+Enter') + ' sprawdź jako „nie jestem pewien” · ' + K('Enter') + ' ' + K('Enter') + ' przy pustym polu = nie wiem</div>';
     }
 
@@ -1412,8 +1412,9 @@
           '<div class="answer-box"><label for="ans">Popraw zaznaczony fragment</label>' +
           '<input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="poprawna forma" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>';
       }
-      controls = (S.errSel == null ? '' : unsureBtn + emptyNote) +
-        '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn + (S.errSel == null ? '' : checkBtn) + '</div>';
+      const eHalf = S.hint === 1 && S.errSel == null && E ? '<div class="hint">Podpowiedź: błąd jest w ' + ((E.span[0] + E.span[1]) / 2 < E.tokens.length / 2 ? 'pierwszej' : 'drugiej') + ' połowie zdania.</div>' : '';
+      controls = (S.errSel == null ? eHalf : unsureBtn + emptyNote) +
+        '<div class="row center" style="gap:14px;margin-top:4px">' + (S.errSel == null ? hintBtn('Podpowiedź') : '') + knownBtn + idkBtn + (S.errSel == null ? '' : checkBtn) + '</div>';
     }
 
     else if (it.type === 'dictation') {
@@ -1426,7 +1427,7 @@
       } else {
         body = '<div class="prompt-lbl">Posłuchaj i zapisz całe zdanie</div>' +
           '<div class="row center"><button class="btn play-big primary" id="speak" aria-label="Odtwórz (Alt+S)">' + IC.speakerBig + '</button></div>' +
-          (it.fast ? '<div class="small-note">Tryb trudniejszy: lektor szybciej, tylko jedno odsłuchanie.</div>' : '<div class="row center" style="gap:12px"><span class="small-note">' + K('Alt+S') + ' odtwórz</span><button class="btn small" id="slow">Wolniej ' + K('Alt+P') + '</button></div>') +
+          (it.fast ? '<div class="small-note">Tryb trudniejszy: lektor szybciej, tylko jedno odsłuchanie.</div>' : '<div class="row center" style="gap:12px"><span class="small-note">' + K('Alt+S') + ' odtwórz</span>' + hintBtn('Wolniej', 'small') + '</div>') +
           (it.hintLetters ? '<div class="dict-hint" aria-label="Podpowiedź: pierwsze litery">' + esc(fullSentence(it).split(' ').map(w => w.replace(/[A-Za-z]+/, m => m[0] + '_'.repeat(m.length - 1))).join('  ')) + '</div>' : '') +
           '<div class="answer-box" style="max-width:760px"><label for="ans">Co słyszysz?</label>' +
           '<input id="ans" class="answer" style="font-size:22px" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="wpisz całe zdanie" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>';
@@ -1476,7 +1477,7 @@
               (Recog.supported() ? '<button class="btn mic-sm' + (S.listening ? ' on primary' : '') + '" id="mic" aria-label="' + (S.listening ? 'Zatrzymaj' : 'Powiedz (Alt+M)') + '">' + IC.micSm + '</button>' : '') + '</div>' +
               (S.recogErr ? '<div class="fb bad" role="status">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '') + '</div>');
         controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: ' + hintText + '</div>' : '') +
-          '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Podpowiedź ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>' +
+          '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Podpowiedź') + knownBtn + idkBtn + checkBtn + '</div>' +
           '<div class="small-note">Liczy się, czy Anglik Cię zrozumie — nie musi być słowo w słowo.' + (Recog.supported() ? ' ' + K('Alt+M') + ' mów zamiast pisać.' : '') + '</div>';
       }
     }
@@ -1510,7 +1511,8 @@
             : '<div class="interim inset deep" id="interim" aria-live="polite">' + esc(S.interim || '') + '</div>') +
           (S.recogErr ? '<div class="fb bad" role="status" style="max-width:640px">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '');
       }
-      controls = '<div class="row center" style="gap:14px;margin-top:4px">' + knownBtn + idkBtn +
+      const sFirst = S.hint === 1 && !fbFull && !it.readAloud ? '<div class="hint">Podpowiedź: zaczyna się od „' + esc(fullSentence(it).split(' ').slice(0, 2).join(' ')) + ' …”</div>' : '';
+      controls = sFirst + '<div class="row center" style="gap:14px;margin-top:4px">' + (!fbFull && !it.readAloud && !S.spPend ? hintBtn('Podpowiedź') : '') + knownBtn + idkBtn +
         '<button class="btn" id="skip" title="Nie mogę teraz mówić — pomiń">Pomiń ' + K('Alt+K') + '</button>' +
         (S.spPend && !S.listening ? '<button class="btn primary" id="check">Sprawdź ' + K('Enter') + '</button>' : '') + '</div>';
     }
@@ -1717,7 +1719,7 @@
         if (altKey(e, 'KeyU') || (e.key === 'Enter' && e.altKey && !e.ctrlKey && !e.metaKey)) { e.preventDefault(); markKnown(); return; }
         if (altKey(e, 'KeyW')) { e.preventDefault(); dontKnow(); return; }
         if (altKey(e, 'KeyN') && $('#unsure')) { e.preventDefault(); toggleUnsure(); return; }
-        if (altKey(e, 'KeyP')) { e.preventDefault(); if (it.type === 'dictation') $('#slow') && $('#slow').click(); else showHint(it); return; }
+        if (altKey(e, 'KeyP')) { e.preventDefault(); showHint(it); return; }
         if (altKey(e, 'KeyS') && $('#speak') && !$('#speak').hidden) { e.preventDefault(); speakFn(); return; }
         if (it.type === 'choice' && !e.altKey && !e.ctrlKey && !e.metaKey) {
           if (/^[1-4]$/.test(e.key)) { e.preventDefault(); pickChoice(it, +e.key - 1); }
@@ -1806,22 +1808,36 @@
     }, 300);
   }
 
+  function hintBtn(first, cls) { const lv = S.hint || 0; return '<button class="btn' + (cls ? ' ' + cls : '') + '" id="hint"' + (lv >= 2 ? ' disabled' : '') + '>' + (lv === 0 ? first : 'Więcej pomocy') + ' ' + K('Alt+P') + '</button>'; }
   function showHint(it) {
     if (S.phase !== 'answer') return;
-    if (it.type === 'pvwrite' && S.view && S.view === it) { if (S.hint) return; S.hint = true; S.pvOpts = null; S.view = Object.assign({}, it, { type: 'particle', stepLabel: 'PODPOWIEDŹ · 4 PROPOZYCJE' }); renderExercise(); return; }
-    if (it.type === 'cloze' && S.view && S.view === it) { if (S.hint) return; S.hint = true; S.chOpts = null; S.view = Object.assign({}, it, { type: 'choice', stepLabel: 'PODPOWIEDŹ · 4 PROPOZYCJE' }); renderExercise(); return; }
-    if (it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') { if (S.hint) return; const inp = $('#ans'); if (inp) S.answer = inp.value; S.hint = true; renderExercise(); }
-    else if (it.type === 'order') {
-      const T2 = S.tiles;
-      let p = 0;
+    const lv = S.hint || 0, inp = $('#ans');
+    if (inp) S.answer = inp.value;
+    const swap = o => { S.view = Object.assign({}, it, o); };
+    const LBL2 = 'POMOC · ';
+    if (it.type === 'order') {
+      const T2 = S.tiles; let p = 0;
       while (p < S.order.length && T2.tiles[S.order[p]].t === T2.correct[p]) p++;
       S.order = S.order.slice(0, p); S.ins = null;
-      if (p < T2.correct.length) {
-        const k = T2.tiles.findIndex((x, idx) => x.t === T2.correct[p] && !S.order.includes(idx));
-        if (k >= 0) S.order.push(k);
-      }
-      S.hint = true; S.orderIncomplete = false; renderExercise();
+      if (p < T2.correct.length) { const k = T2.tiles.findIndex((x, idx) => x.t === T2.correct[p] && !S.order.includes(idx)); if (k >= 0) S.order.push(k); }
+      S.hint = Math.min(2, lv + 1); S.orderIncomplete = false; renderExercise(); return;
     }
+    if (lv >= 2) return;
+    if (lv === 0) {
+      S.hint = 1;
+      if (it.type === 'dictation') Speech.speak(fullSentence(it), (D().settings.rate || 0.95) * 0.7);
+      renderExercise(); return;
+    }
+    S.hint = 2;
+    if (it.type === 'cloze') { S.chOpts = null; swap({ type: 'choice', stepLabel: LBL2 + '4 PROPOZYCJE' }); }
+    else if (it.type === 'pvwrite') { S.pvOpts = null; swap({ type: 'particle', stepLabel: LBL2 + '4 PROPOZYCJE' }); }
+    else if (it.type === 'tense_w') { S.tnOpts = null; swap({ type: 'tense_c', stepLabel: LBL2 + '4 FORMY' }); }
+    else if (it.type === 'tense_t') { swap({ type: 'tense_w', stepLabel: LBL2 + 'WPISZ FORMĘ' }); S.answer = ''; }
+    else if (it.type === 'translate') { S.tiles = null; S.order = []; S.ins = null; swap({ type: 'order', plPrompt: it.pl, stepLabel: LBL2 + 'KAFELKI' }); }
+    else if (it.type === 'dictation') swap({ hintLetters: true, stepLabel: LBL2 + 'PIERWSZE LITERY' });
+    else if (it.type === 'error') { if (S.errTok) S.errSel = S.errTok.span[0]; }
+    else if (it.type === 'speak') swap({ readAloud: true, fromPl: false, stepLabel: LBL2 + 'PRZECZYTAJ' });
+    renderExercise();
   }
   function pickParticle(it, i) {
     if (!S || S.phase !== 'answer' || !S.pvOpts || i >= S.pvOpts.length) return;
@@ -2126,7 +2142,8 @@
     let xp = 0;
     if (correct) {
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo);
-      xp = (xpBase(it) + (S.combo >= 3 ? 5 : 0)) * (S.boss ? 2 : 1);
+      xp = Math.round((xpBase(it) + (S.combo >= 3 ? 5 : 0)) * (S.boss ? 2 : 1) * (S.hint >= 2 ? 0.3 : S.hint ? 0.6 : 1));
+      if (S.hint >= 2 && !S.finishing && !S.play) S.queue.splice(Math.min(S.queue.length, S.pos + 6), 0, { id: c.id, isNew: false, relearn: true });
       S.xp += xp; D().xp += xp; t.xp += xp;
       if (S.combo > D().bestCombo) { D().bestCombo = S.combo; D().bestComboAt = Date.now(); }
     } else {
@@ -5825,6 +5842,7 @@
     if (r.promos && r.promos.length) setTimeout(() => toast('Awans! ' + r.promos.join(' ')), 300);
     go('guide');
   }
+  function plLit(n) { const d = n % 10, t = n % 100; return n === 1 ? 'literę' : d >= 2 && d <= 4 && (t < 12 || t > 14) ? 'litery' : 'liter'; }
   function plKart(n) { const d = n % 10, t = n % 100; return n === 1 ? 'karta' : d >= 2 && d <= 4 && (t < 12 || t > 14) ? 'karty' : 'kart'; }
   function renderGuide() {
     screen = 'guide';
@@ -6231,7 +6249,7 @@
         (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(S.fb.ans) + '</s></div>' : '')
           : '<div class="answer-box"><label for="ans">Forma czasownika z nawiasu (' + esc(ts.base) + ')</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="np. was riding" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
       controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: to <b>' + esc(T.name) + '</b> — ' + esc(T.form[0][1]) + '</div>' : '') +
-        '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Który czas? ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>';
+        '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Który czas?') + knownBtn + idkBtn + checkBtn + '</div>';
     } else {
       body = '<div class="prompt-lbl">Przetłumacz na angielski — uważaj na czas</div><div class="pl-sent">' + esc(ts.pl) + '</div>' +
         (fbFull
@@ -6240,7 +6258,7 @@
             (Recog.supported() ? '<button class="btn mic-sm' + (S.listening ? ' on primary' : '') + '" id="mic" aria-label="Powiedz (Alt+M)">' + IC.micSm + '</button>' : '') + '</div>' +
             (S.recogErr ? '<div class="fb bad" role="status">' + IC.alert + '<span>' + esc(S.recogErr) + '</span></div>' : '') + '</div>');
       controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: użyj czasu <b>' + esc(T.name) + '</b>.</div>' : '') +
-        '<div class="row center" style="gap:14px;margin-top:4px"><button class="btn" id="hint"' + (S.hint ? ' disabled' : '') + '>Który czas? ' + K('Alt+P') + '</button>' + knownBtn + idkBtn + checkBtn + '</div>';
+        '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Który czas?') + knownBtn + idkBtn + checkBtn + '</div>';
     }
     return { body, controls };
   }
@@ -7082,7 +7100,7 @@
 
   /* ================= DRABINKA TRUDNOŚCI ================= */
   /* stopnie dla każdego rodzaju ćwiczenia: -1 łatwiej, 0 normalnie, 1 trudniej */
-  const STEPS = { cloze: [0, 1], order: [-1, 0, 1], dictation: [-1, 0, 1], speak: [-1, 0, 1], error: [-1, 0], particle: [1], tense_c: [0, 1], tense_w: [-1, 0], tense_t: [-1, 0], translate: [-1, 0] };
+  const STEPS = { cloze: [0, 1], order: [-1, 0, 1], dictation: [0, 1], speak: [0, 1], error: [0], particle: [1], tense_c: [1], tense_w: [0], tense_t: [0], translate: [0] };
   const STEP_DEFAULT = {};
   const STEP_NEEDS_AI = { order: 1, speak: 1 };
   function stepList(type) {
@@ -7108,7 +7126,7 @@
       case 'speak': if (st < 0) { v.readAloud = true; v.stepLabel = 'PRZECZYTAJ'; } else if (st > 0) { v.fromPl = true; v.pl = pl || null; v.stepLabel = 'Z PAMIĘCI'; } break;
       case 'error': if (st < 0) { v.premark = true; v.stepLabel = 'ŁATWIEJ'; } break;
       case 'particle': v.type = 'pvwrite'; break;
-      case 'tense_c': if (st > 0) { v.type = 'tense_w'; v.stepLabel = 'TRUDNIEJ'; } break;
+      case 'tense_c': v.type = 'tense_w'; break;
       case 'tense_w': if (st < 0) { v.type = 'tense_c'; v.stepLabel = 'ŁATWIEJ'; } break;
       case 'tense_t': if (st < 0) { v.type = 'tense_w'; v.stepLabel = 'ŁATWIEJ'; } break;
       case 'translate': if (st < 0) { v.type = 'order'; v.plPrompt = raw.pl; v.stepLabel = 'Z KAFELKÓW'; } break;
