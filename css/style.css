@@ -1512,3 +1512,16 @@ input.tr-in { height: 48px; }
 @media (max-width: 1050px) { .s3-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px) { .s3-grid { grid-template-columns: 1fr; } }
 .s3-pills .btn.pressed { color: var(--pink-ink); background: #D0CBC4; }
+/* Ustawienia: „i” w rogu, przyciski z ikonkami, czerwone Usuń dane (upd193) */
+.set-card.s3 { padding: 14px 18px; gap: 6px; }
+.set-card.s3 > .info-btn { top: 12px; right: 12px; }
+.set-card.s3 h2 { padding-right: 44px; min-height: 32px; display: flex; align-items: center; margin-bottom: 6px; }
+.s3-grid { gap: 16px; } .s3-wrap { gap: 14px; padding-top: 20px; }
+.s3-r { min-height: 32px; }
+.set-card.s3 .btn.small { min-height: 32px; font-size: 13px; padding: 0 11px; display: inline-flex; align-items: center; gap: 5px; }
+.set-card.s3 .btn.small svg, .s3-link svg { flex: none; opacity: .85; }
+.s3-btns { gap: 7px; align-items: center; }
+.s3-link { border: none; background: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font: 600 13px var(--head); color: var(--ink-2); text-decoration: underline; padding: 0 4px; }
+.s3-link:hover { color: var(--bad-ink); }
+.set-card.s3 .btn.s3-danger { margin-right: auto; background: #EBD3CE; color: #8E2B20; box-shadow: 4px 4px 9px rgba(150,60,45,.25), -4px -4px 9px var(--sh-l); }
+.set-card.s3 .btn.s3-danger:hover { background: #E5C3BC; }

@@ -2658,6 +2658,17 @@
     const gameRow = (key, label, note, disabled) =>
       '<label class="check"><input type="checkbox" data-game="' + key + '"' + (games[key] !== false && !disabled ? ' checked' : '') + (disabled ? ' disabled' : '') + '> ' + label + (note ? ' <span class="small-note">' + note + '</span>' : '') + '</label>';
 
+    const SI = d0 => '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d0 + '</svg>';
+    const SIC = {
+      sound: SI('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'), ok: SI('<path d="M20 6L9 17l-5-5"/>'),
+      folder: SI('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+      up: SI('<path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8"/><path d="M12 12v8M9 15l3-3 3 3"/>'), down: SI('<path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8"/><path d="M12 12v8M9 17l3 3 3-3"/>'),
+      unlink: SI('<path d="M9 15l6-6"/><path d="M10 6l1-1a4 4 0 0 1 6 6l-1 1M14 18l-1 1a4 4 0 0 1-6-6l1-1"/>'),
+      save: SI('<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/>'), load: SI('<path d="M12 20V9M7 14l5-5 5 5"/><path d="M5 4h14"/>'),
+      list: SI('<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>'), book: SI('<path d="M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M4 17a3 3 0 0 1 3-3h12"/>'),
+      target: SI('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'), trash: SI('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>'),
+      speaker: SI('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>')
+    };
     const cb = (id, on, label, extra) => '<label class="check s3-cb"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + label + '</label>' + (extra || '');
     const row = (lbl, ctl, forId) => '<div class="s3-r"><label' + (forId ? ' for="' + forId + '"' : '') + '>' + lbl + '</label>' + ctl + '</div>';
     const numIn = (id, v, min, max) => '<input id="' + id + '" class="txt num s3-num" type="number" min="' + min + '" max="' + max + '" value="' + v + '">';
@@ -2675,7 +2686,8 @@
       row('Długość bloku (min)', numIn('blockMin', st.blockMin, 2, 20), 'blockMin') +
       row('Długa odpowiedź po (s)', numIn('slowSec', st.slowSec, 5, 120), 'slowSec') +
       row('Poziom słownictwa', '<div class="lvl-pills s3-pills">' + L.map((l, i) => '<button class="btn pill small' + (levels().vocab === i ? ' pressed' : '') + '" data-lv="' + i + '">' + l + '</button>').join('') + '</div>') +
-      '<p class="small-note desc" style="margin:0">Nowe ćwiczenia dziennie — oprócz nowych słów. Długa odpowiedź — dłuższe myślenie liczy się jak lekka niepewność.</p>' +
+      '<p class="small-note desc" style="margin:0">Nowe ćwiczenia dziennie — oprócz nowych słów. Długa odpowiedź — dłuższe myślenie liczy się jak lekka niepewność. Test poziomu ustawi poziomy wszystkich umiejętności od nowa.</p>' +
+      '<div class="s3-foot"><button class="btn small" id="retest">' + SIC.target + 'Test poziomu</button></div>' +
       '</section>' +
 
       '<section class="set-card s3"><h2>Lektor i dźwięk</h2>' +
@@ -2686,7 +2698,7 @@
       '<div class="s3-cbs">' + cb('sounds', st.sounds !== false, 'Dźwięki włączone') + cb('speakAfter', !!st.speakAfter, 'Czytaj zdanie po odpowiedzi') + cb('autoOk', st.autoOk !== false, 'Zatwierdzaj automatycznie') + '</div>' +
       '<p class="small-note desc" style="margin:0" id="voiceNote">' + voiceNote() + '</p>' +
       '<p class="small-note desc" style="margin:0">' + (CAN_EMBED ? 'Filmy YouGlish odtwarzają się w programie.' : 'Program otwarty z pliku — filmy YouGlish otworzą się w nowej karcie. Żeby grały w programie, uruchamiaj go plikiem <b>Uruchom.bat</b>.') + '</p>' +
-      '<div class="s3-foot"><button class="btn small" id="testVoice">' + IC.speaker + ' Test głosu</button><button class="btn small" id="testSound">Posłuchaj dźwięków</button></div>' +
+      '<div class="s3-foot"><button class="btn small" id="testVoice">' + SIC.speaker + 'Test głosu</button><button class="btn small" id="testSound">' + SIC.sound + 'Posłuchaj dźwięków</button></div>' +
       '</section>' +
 
       '<section class="set-card s3"><h2>Sztuczna inteligencja</h2>' +
@@ -2696,7 +2708,7 @@
       '<div class="s3-r" id="smartField"' + (st.smartOn === false ? ' hidden' : '') + '><label for="modelSmart">Do wyjaśnień</label><input id="modelSmart" class="txt s3-txt" spellcheck="false" value="' + esc(st.modelSmart == null ? 'claude-sonnet-5-5' : st.modelSmart) + '"></div>' +
       '<div class="s3-cbs">' + cb('smartOn', st.smartOn !== false, 'Lepszy model do wyjaśnień') + '</div>' +
       '<div class="small-note s3-mini">Bez klucza działa wszystko poza Tłumaczem z AI, Rozmową, Audycją i oceną zdań.</div>' +
-      '<div class="s3-foot"><span class="status" id="aiStatus"></span><button class="btn small primary" id="testAi">Sprawdź połączenie</button></div>' +
+      '<div class="s3-foot"><span class="status" id="aiStatus"></span><button class="btn small primary" id="testAi">' + SIC.ok + 'Sprawdź połączenie</button></div>' +
       '</section>' +
 
       '<section class="set-card s3"><h2>Ćwiczenia w sesjach</h2>' +
@@ -2710,17 +2722,16 @@
       '<section class="set-card s3" id="syncCard"><h2>Kopie zapasowe</h2>' +
       '<p class="small-note desc" style="margin:0">Dysk Google: wskaż folder na Dysku Google na komputerze (np. <b>G:\\Mój dysk\\Angielski</b>). Po każdej sesji program zapisze tam postępy; w podfolderze „kopie” zostają kopie z 14 ostatnich dni. Kopia w pliku trafia do folderu Pobrane. Klucz API nie jest zapisywany w kopiach.</p>' +
       '<div class="small-note s3-sync" id="syncStatus">' + syncStatusHtml() + '</div>' +
-      (Sync.supported ? '<div class="s3-btns"><button class="btn small primary" id="syncPick">' + (st.syncFolder ? 'Zmień folder' : 'Wybierz folder') + '</button>' +
-        (st.syncFolder ? '<button class="btn small" id="syncNow">Zapisz teraz</button><button class="btn small" id="syncLoad">Wczytaj z Dysku</button><button class="btn small" id="syncOff">Odłącz</button>' : '') + '</div>' : '') +
+      (Sync.supported ? '<div class="s3-btns"><button class="btn small primary" id="syncPick">' + SIC.folder + (st.syncFolder ? 'Zmień folder' : 'Wybierz folder') + '</button>' +
+        (st.syncFolder ? '<button class="btn small" id="syncNow">' + SIC.up + 'Zapisz teraz</button><button class="btn small" id="syncLoad">' + SIC.down + 'Wczytaj z Dysku</button><button class="s3-link" id="syncOff">' + SIC.unlink + 'Odłącz</button>' : '') + '</div>' : '') +
       '<div class="s3-r"><label>Kopia w pliku</label><span class="small-note">' + (d.lastBackup ? new Date(d.lastBackup).toLocaleDateString('pl-PL') : 'jeszcze nie było') + '</span></div>' +
-      '<div class="s3-foot"><button class="btn small" id="export">Zapisz plik</button><button class="btn small" id="import">Wczytaj plik</button><input type="file" id="file" accept=".json,application/json" hidden></div>' +
+      '<div class="s3-foot"><button class="btn small" id="export">' + SIC.save + 'Zapisz plik</button><button class="btn small" id="import">' + SIC.load + 'Wczytaj plik</button><input type="file" id="file" accept=".json,application/json" hidden></div>' +
       '</section>' +
 
       '<section class="set-card s3"><h2>Inne</h2>' +
       '<div class="s3-r"><label>W nauce · w bazie</label><b>' + fmtNum(studied) + ' · ' + fmtNum(WORDS.list.length) + '</b></div>' +
-      '<div class="s3-r"><label>XP · najdłuższe combo</label><b>' + fmtNum(d.xp) + ' · ×' + d.bestCombo + '</b></div>' +
-      '<div class="s3-r"><label>Rekord rozgrzewki</label><b>' + (d.raceBest || 0) + '</b></div>' +
-      '<div class="s3-foot">' + (knownOther.length ? '<button class="btn small" id="knownOther">Znane zdania (' + knownOther.length + ')</button>' : '') + '<button class="btn small" id="toBook" title="Znane słowa (' + knownWords + ') przywrócisz w Moim słowniku">Otwórz słownik</button><button class="btn small" id="retest">Test poziomu</button><button class="btn small" id="wipe" style="color:var(--bad-ink)">Usuń dane</button></div>' +
+      '<div class="s3-r"><label>XP · combo · rozgrzewka</label><b>' + fmtNum(d.xp) + ' · ×' + d.bestCombo + ' · ' + (d.raceBest || 0) + '</b></div>' +
+      '<div class="s3-foot"><button class="btn small s3-danger" id="wipe">' + SIC.trash + 'Usuń dane</button>' + (knownOther.length ? '<button class="btn small" id="knownOther">' + SIC.list + 'Znane zdania (' + knownOther.length + ')</button>' : '') + '<button class="btn small" id="toBook" title="Znane słowa (' + knownWords + ') przywrócisz w Moim słowniku">' + SIC.book + 'Otwórz słownik</button></div>' +
       '</section>' +
       '</div></div>';
 
