@@ -4111,8 +4111,8 @@
       prevBars = labels.map((_, i) => aggDays(U.addDays(prevStart, i), 1).sec / 60);
       goal = D().settings.goalMin; vsLabel = 'vs te same dni poprzedniego tygodnia'; rangeWord = 'tydzień'; curName = 'Ten tydzień'; prevName = 'Poprzedni';
       for (let s = mondayOf(first); s < curStart; s = U.addDays(s, 7)) periods.push({ start: s, a: aggDays(s, 7), n: 7 });
-      // średnia wszystkich takich dni tygodnia od początku nauki (dni bez nauki = 0 min); bez dzisiejszego, niepełnego dnia
-      var avgBars = labels.map((_, i) => { let sum = 0, cnt = 0; for (let t = U.addDays(mondayOf(first), i); t < today; t = U.addDays(t, 7)) { if (t < first) continue; const x = D().days[U.dayKey(t)]; sum += x ? (x.sec || 0) / 60 : 0; cnt++; } return cnt ? sum / cnt : null; });
+      // średnia wszystkich takich dni tygodnia od początku nauki (dni bez nauki = 0 min), łącznie z dzisiejszym — rośnie na bieżąco
+      var avgCnt = [], avgBars = labels.map((_, i) => { let sum = 0, cnt = 0; for (let t = U.addDays(mondayOf(first), i); t <= today; t = U.addDays(t, 7)) { if (t < first) continue; const x = D().days[U.dayKey(t)]; sum += x ? (x.sec || 0) / 60 : 0; cnt++; } avgCnt[i] = cnt; return cnt ? sum / cnt : null; });
     } else {
       const d0 = new Date(today); curStart = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime(); elapsed = d0.getDate();
       const prevStart = new Date(d0.getFullYear(), d0.getMonth() - 1, 1).getTime();
@@ -4150,7 +4150,7 @@
     // ranking i rekord okresu
     const allTotals = periods.map(p => ({ start: p.start, min: p.a.sec / 60 }));
     const bestPeriod = allTotals.reduce((b, x) => !b || x.min > b.min ? x : b, null);
-    return Object.assign({ avgBars: mode === 'week' && typeof avgBars !== 'undefined' ? avgBars : null }, { mode, cur, prev, C, P, kpis, labels, curBars, prevBars, goal, vsLabel, rangeWord, curName, prevName, elapsed, periods, bestPeriod, curStart });
+    return Object.assign({ avgBars: mode === 'week' && typeof avgBars !== 'undefined' ? avgBars : null, avgCnt: mode === 'week' && typeof avgCnt !== 'undefined' ? avgCnt : null }, { mode, cur, prev, C, P, kpis, labels, curBars, prevBars, goal, vsLabel, rangeWord, curName, prevName, elapsed, periods, bestPeriod, curStart });
   }
   function insightText(sd) {
     const parts = [];
@@ -4248,7 +4248,7 @@
       const hc = c == null ? 0 : Math.max(c > 0 ? 4 : 0, c / top * H), hp = Math.max(p > 0 ? 4 : 0, p / top * H);
       const tip = lab + ': ' + (c == null ? '—' : fmtDur(c * 60)) + (sd.mode === 'all' ? '' : ' · ' + sd.prevName.toLowerCase() + ': ' + Math.round(p) + ' min');
       const av = sd.avgBars ? sd.avgBars[i] : null, ha = av == null ? 0 : Math.max(av > 0 ? 4 : 0, av / top * H);
-      return '<div class="bcol' + (sd.avgBars ? ' b3' : '') + '" tabindex="0" title="' + esc(tip + (av != null ? ' · średnio ' + Math.round(av) + ' min' : '')) + '"><div class="bp" style="height:' + hp + 'px"></div><div class="bc" style="height:' + hc + 'px;' + (c == null ? 'opacity:0' : '') + '"></div>' + (sd.avgBars ? '<div class="ba" style="height:' + ha + 'px"></div>' : '') + '<div class="btip raised-sm">' + esc(tip) + '</div></div>';
+      return '<div class="bcol' + (sd.avgBars ? ' b3' : '') + '" tabindex="0" title="' + esc(tip + (av != null ? ' · średnio ' + Math.round(av) + ' min (z ' + sd.avgCnt[i] + ' ' + (sd.avgCnt[i] === 1 ? 'dnia' : 'dni') + ')' : '')) + '"><div class="bp" style="height:' + hp + 'px"></div><div class="bc" style="height:' + hc + 'px;' + (c == null ? 'opacity:0' : '') + '"></div>' + (sd.avgBars ? '<div class="ba" style="height:' + ha + 'px"></div>' : '') + '<div class="btip raised-sm">' + esc(tip) + '</div></div>';
     }).join('');
     return '<div class="chart-bars" style="height:' + H + 'px">' + grid + '<div class="goal" style="top:' + goalTop + 'px"></div><div class="bcols">' + bars + '</div></div>' +
       '<div class="blabels">' + sd.labels.map((l, i) => '<span' + (sd.curBars[i] == null ? ' style="opacity:.55"' : '') + '>' + l + '</span>').join('') + '</div>';
