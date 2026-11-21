@@ -65,7 +65,7 @@
     translate: { title: 'Przetłumacz', skill: 'grammar', tag: 'TŁUMACZENIE' },
     particle: { title: 'Dobierz partykułę', skill: 'vocab', tag: 'PHRASAL VERBS' },
     choice: { title: 'Wybierz słowo', skill: 'vocab', tag: 'SŁOWNICTWO' },
-    pvwrite: { title: 'Wpisz partykułę', skill: 'vocab', tag: 'PHRASAL VERBS' },
+    pvwrite: { title: 'Phrasal verb z pamięci', skill: 'vocab', tag: 'PHRASAL VERBS' },
     tense_c: { title: 'Wybierz czas', skill: 'grammar', tag: 'CZASY' },
     tense_w: { title: 'Odmień czasownik', skill: 'grammar', tag: 'CZASY' },
     tense_t: { title: 'Przetłumacz — czasy', skill: 'grammar', tag: 'CZASY' }
@@ -1347,12 +1347,15 @@
     }
 
     else if (it.type === 'pvwrite') {
-      const sp = pvSplit(it.w), [a, b] = splitSentence(it.w.s);
-      body = '<div><div class="prompt-lbl">Wpisz brakującą partykułę — znaczenie:</div><div class="prompt-word">' + esc(it.w.pl) + '</div></div>' +
-        '<div class="sentence"><span>' + esc(a) + '<b>' + esc(sp.verb) + '</b></span><span class="gap inset deep">' + (fbFull ? esc(sp.part) : '_____') + '</span><span>' + esc(b) + '</span></div>' +
-        (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(sp.verb + ' ' + S.fb.ans) + '</s></div>' : '') + '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>'
-          : '<div class="answer-box"><label for="ans">Partykuła (np. up, out, off…)</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="' + esc(sp.verb) + ' …" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
-      controls = unsureBtn + emptyNote + (S.hint ? '<div class="hint">Podpowiedź: partykuła zaczyna się na „' + esc(sp.part[0]) + '”, ma ' + sp.part.length + ' ' + plLit(sp.part.length) + '.</div>' : '') + '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Podpowiedź') + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Najpierw z pamięci · podpowiedź: 1. pierwsza litera, 2. cztery propozycje</div>';
+      const sp = pvSplit(it.w), [a, b] = splitSentence(it.w.s), whole = !S.hint;
+      const tyAns = S.fb && S.fb.full ? S.fb.full : sp.verb + ' ' + (S.fb ? S.fb.ans : '');
+      body = '<div><div class="prompt-lbl">' + (whole && !fbFull ? 'Wpisz brakujący phrasal verb — znaczenie:' : 'Wpisz brakującą partykułę — znaczenie:') + '</div><div class="prompt-word">' + esc(it.w.pl) + '</div></div>' +
+        (whole && !fbFull
+          ? '<div class="sentence"><span>' + esc(a) + '</span><span class="gap inset deep">_____ _____</span><span>' + esc(b) + '</span></div>'
+          : '<div class="sentence"><span>' + esc(a) + '<b>' + esc(sp.verb) + '</b></span><span class="gap inset deep">' + (fbFull ? esc(sp.part) : '_____') + '</span><span>' + esc(b) + '</span></div>') +
+        (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(tyAns) + '</s></div>' : '') + '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>'
+          : '<div class="answer-box"><label for="ans">' + (whole ? 'Cały zwrot — czasownik i partykuła' : 'Partykuła (np. up, out, off…)') + '</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="' + (whole ? 'np. look after' : esc(sp.verb) + ' …') + '" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
+      controls = unsureBtn + emptyNote + (S.hint === 1 ? '<div class="hint">Podpowiedź: czasownik to <b>' + esc(sp.verb) + '</b> — dopisz partykułę.</div>' : '') + '<div class="row center" style="gap:14px;margin-top:4px">' + hintBtn('Podpowiedź') + knownBtn + idkBtn + checkBtn + '</div><div class="small-note">Najpierw z pamięci · podpowiedź: 1. czasownik, 2. cztery partykuły</div>';
     }
 
     else if (it.type === 'cloze') {
@@ -1825,6 +1828,7 @@
     if (lv >= 2) return;
     if (lv === 0) {
       S.hint = 1;
+      if (it.type === 'pvwrite') { const vb = pvSplit(it.w).verb; S.answer = U.norm(S.answer || '').replace(new RegExp('^' + escapeRe(vb) + '\\s*'), ''); }
       if (it.type === 'dictation') Speech.speak(fullSentence(it), (D().settings.rate || 0.95) * 0.7);
       renderExercise(); return;
     }
@@ -2217,10 +2221,10 @@
       if (fb.m === 'ai-ok') { main = esc(fb.ans) + xp; smalls.push(ai(fb.expl) + ' Wzorcowo: ' + esc(w.answers[0]) + ' — ' + esc(w.pl) + '.'); }
     } else if (it.type === 'pvwrite') {
       const w = it.w;
-      if (fb.kind === 'bad') main = 'Poprawnie: <b>' + esc(w.answers[0]) + '</b> — ' + esc(w.pl) + '.';
+      if (fb.kind === 'bad') { main = 'Poprawnie: <b>' + esc(w.answers[0]) + '</b> — ' + esc(w.pl) + '.'; if (fb.verbOk) smalls.push('Czasownik dobry (<b>' + esc(pvSplit(w).verb) + '</b>) — pomyliła się partykuła.'); }
       else if (fb.kind === 'idk') { title = 'Tak to wygląda:'; main = esc(w.answers[0]) + ' — ' + esc(w.pl); }
       else main = esc(w.answers[0]) + ' — ' + esc(w.pl) + xp;
-      if (fb.m === 'ai-ok') { main = esc(pvSplit(w).verb + ' ' + fb.ans) + xp; smalls.push(ai(fb.expl) + ' Wzorcowo: ' + esc(w.answers[0]) + ' — ' + esc(w.pl) + '.'); }
+      if (fb.m === 'ai-ok') { main = esc(fb.full || pvSplit(w).verb + ' ' + fb.ans) + xp; smalls.push(ai(fb.expl) + ' Wzorcowo: ' + esc(w.answers[0]) + ' — ' + esc(w.pl) + '.'); }
     } else if (it.ts) {
       main = tenseFeedback(it, fb, xp, smalls, t => { title = t; });
     } else if (it.type === 'particle') {
@@ -7223,17 +7227,18 @@
   }
   /* wybór/partykuła niezgodne z kluczem: AI sprawdza, czy też pasuje w tym zdaniu (np. „put away your phone” obok „put down”) */
   function altOkList(w) { return ((D().altOk || {})[w.id] || []); }
-  async function judgeAlt(it, phrase, ans, elapsed, extraAns) {
+  async function judgeAlt(it, phrase, ans, elapsed, extraAns, more) {
+    const mx = o => Object.assign(o, more || {});
     const c = cur(), sess = S, w = it.w;
-    if (altOkList(w).indexOf(phrase.toLowerCase()) >= 0) return applyOutcome(c, it, 'ai-ok', elapsed, { ans: extraAns, expl: 'To też pasuje w tym zdaniu (sprawdzone wcześniej).' });
-    if (!AI.enabled()) return applyOutcome(c, it, 'wrong', elapsed, { ans: extraAns });
+    if (altOkList(w).indexOf(phrase.toLowerCase()) >= 0) return applyOutcome(c, it, 'ai-ok', elapsed, mx({ ans: extraAns, expl: 'To też pasuje w tym zdaniu (sprawdzone wcześniej).' }));
+    if (!AI.enabled()) return applyOutcome(c, it, 'wrong', elapsed, mx({ ans: extraAns }));
     S.phase = 'checking'; renderExercise();
     let m = 'wrong', expl = '', aiErr = '';
     try { const r = await AI.checkAnswer(w, phrase); expl = r.explanation; if (r.acceptable) m = 'ai-ok'; }
     catch (e) { aiErr = AI.humanError(e); }
     if (S !== sess || cur() !== c) return;
     if (m === 'ai-ok') { const ao = D().altOk = D().altOk || {}; ao[w.id] = (ao[w.id] || []).concat([phrase.toLowerCase()]); }
-    applyOutcome(c, it, m, elapsed, { ans: extraAns, expl, aiErr });
+    applyOutcome(c, it, m, elapsed, mx({ ans: extraAns, expl, aiErr }));
   }
   function pickChoice(it, i) {
     if (!S || S.phase !== 'answer' || !S.chOpts || i >= S.chOpts.length) return;
@@ -7246,11 +7251,19 @@
     S.answer = ans;
     if (!ans.trim()) return emptyEnter();
     if (asUnsure) S.unsure = true;
-    const part = pvSplit(it.w).part, a = U.norm(ans).replace(new RegExp('^' + escapeRe(pvSplit(it.w).verb) + '\\s+'), '');
+    const sp = pvSplit(it.w);
+    if (!S.hint) { // cały zwrot z pamięci
+      const full = U.norm(ans), m0 = matchAnswer(it.w.answers, ans);
+      const words = full.split(' '), rest = words[0] === sp.verb ? words.slice(1).join(' ') : full;
+      if (m0 !== 'wrong') return applyOutcome(cur(), it, m0, thinkElapsed(), { ans: rest, full });
+      return judgeAlt(it, full, rest, thinkElapsed(), rest, { full, verbOk: words[0] === sp.verb.toLowerCase() });
+    }
+    const part = sp.part, a = U.norm(ans).replace(new RegExp('^' + escapeRe(sp.verb) + '\\s+'), '');
     const m = a === part ? 'exact' : isTypoOf(a, part) ? 'typo' : 'wrong';
-    if (m === 'wrong' && a) return judgeAlt(it, pvSplit(it.w).verb + ' ' + a, a, thinkElapsed(), a);
+    if (m === 'wrong' && a) return judgeAlt(it, sp.verb + ' ' + a, a, thinkElapsed(), a);
     applyOutcome(cur(), it, m, thinkElapsed(), { ans: a });
   }
+
 
 
   /* ================= ZDANIE JEST ZŁE — zgłoszenia i poprawki ================= */
