@@ -1349,9 +1349,9 @@
     else if (it.type === 'pvwrite') {
       const sp = pvSplit(it.w), [a, b] = splitSentence(it.w.s), whole = !S.hint;
       const tyAns = S.fb && S.fb.full ? S.fb.full : sp.verb + ' ' + (S.fb ? S.fb.ans : '');
-      body = '<div><div class="prompt-lbl">' + (whole && !fbFull ? 'Wpisz brakujący phrasal verb — znaczenie:' : 'Wpisz brakującą partykułę — znaczenie:') + '</div><div class="prompt-word">' + esc(it.w.pl) + '</div></div>' +
-        (whole && !fbFull
-          ? '<div class="sentence"><span>' + esc(a) + '</span><span class="gap inset deep">_____ _____</span><span>' + esc(b) + '</span></div>'
+      body = '<div><div class="prompt-lbl">' + (whole ? 'Wpisz brakujący phrasal verb — znaczenie:' : 'Wpisz brakującą partykułę — znaczenie:') + '</div><div class="prompt-word">' + esc(it.w.pl) + '</div></div>' +
+        (whole
+          ? '<div class="sentence"><span>' + esc(a) + '</span><span class="gap inset deep">' + (fbFull ? esc(it.w.answers[0]) : '_____ _____') + '</span><span>' + esc(b) + '</span></div>'
           : '<div class="sentence"><span>' + esc(a) + '<b>' + esc(sp.verb) + '</b></span><span class="gap inset deep">' + (fbFull ? esc(sp.part) : '_____') + '</span><span>' + esc(b) + '</span></div>') +
         (fbFull ? (S.fb.ans && S.fb.kind !== 'ok' ? '<div class="hint">Ty: <s>' + esc(tyAns) + '</s></div>' : '') + '<button class="btn pill" id="speak">' + IC.speaker + ' Odsłuchaj zdanie ' + K('S') + '</button>'
           : '<div class="answer-box"><label for="ans">' + (whole ? 'Cały zwrot — czasownik i partykuła' : 'Partykuła (np. up, out, off…)') + '</label><input id="ans" class="answer" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="' + (whole ? 'np. look after' : esc(sp.verb) + ' …') + '" value="' + esc(S.answer) + '"' + (ph !== 'answer' ? ' disabled' : '') + '></div>');
