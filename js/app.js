@@ -2951,7 +2951,7 @@
         const got = l <= lv, tip = got ? 'Poziom ' + l + ' — ' + (pl[l] ? fd(pl[l]) : 'osiągnięty') : 'Poziom ' + l + ' — jeszcze przed Tobą';
         row += '<span class="pl-dot' + (got ? ' on' : '') + (l === lv ? ' me' : '') + '" data-tip="' + esc(tip) + '" tabindex="0" aria-label="' + esc(tip) + '"></span>';
       }
-      dots += '<div class="pl-row' + (Math.min(5, Math.floor(lv / 10)) === i ? ' cur' : '') + '"><span class="pl-rn">' + PL_RANKS[i] + '</span><div class="pl-dots">' + row + '</div></div>';
+      dots += '<div class="pl-row' + (Math.min(5, Math.floor(lv / 10)) === i ? ' cur' : '') + '"><span class="pl-rn">' + PL_RANKS[i] + '</span><div class="pl-dots">' + row + '</div><small class="pl-rg">poz. ' + rg[0] + (rg[1] > rg[0] ? '–' + rg[1] : '') + '</small></div>';
     });
     const toMax = Math.max(0, xpForLevel(PL_MAX) - D().xp), ri = Math.min(5, Math.floor(lv / 10)), next = ri < 5 ? (ri + 1) * 10 : null;
     const hist = Object.keys(pl).map(Number).filter(l => l <= lv).sort((a, b) => b - a);
@@ -4321,7 +4321,7 @@
         h += '<div class="cell' + wk + (m ? '' : ' empty') + '" style="background:' + ramp[lvl(m)] + '" title="' + new Date(t).toLocaleDateString('pl-PL') + ': ' + (m ? m + ' min' : 'bez nauki') + '"></div>';
       }
     }
-    return '<div class="heat-wrap"><div class="heat heat-m" style="grid-template-columns:' + cols + ';column-gap:' + gap + 'px">' + mon + '</div>' +
+    return '<div class="heat-wrap" style="--hw:' + W + '"><div class="heat heat-m" style="grid-template-columns:' + cols + ';column-gap:' + gap + 'px">' + mon + '</div>' +
       '<div class="heat heat-g" style="grid-template-columns:' + cols + ';gap:' + gap + 'px;--hg:' + gap + 'px">' + h + '</div></div>' +
       '<div class="heat-legend"><span>mniej</span>' + ramp.map((c, i) => '<span class="sw' + (i ? '' : ' empty') + '" style="background:' + c + '"></span>').join('') + '<span>więcej</span></div>';
   }
@@ -4507,51 +4507,83 @@
       (r.d == null || r.cur || r.d === 0 ? '<em></em>' : '<em class="' + (r.d > 0 ? 'up' : 'dn') + '">' + (r.d > 0 ? '▲ ' : '▼ ') + Math.abs(r.d) + '%</em>') +
       '<span class="st-rpn">' + r.a.newCount + ' nowych' + (r.a.total ? ' · ' + Math.round(r.a.correct / r.a.total * 100) + '%' : '') + '</span></button>').join('') + '</div>';
   }
+  /* Statystyki — 8 zakładek w 3 grupach (upd196) */
+  function lastPeriodsHtml(mode) {
+    const out = [], today = U.startOfDay();
+    if (mode === 'week') { const m0 = mondayOf(today); for (let i = 3; i >= 0; i--) { const s = U.addDays(m0, -7 * i); out.push({ l: new Date(s).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }), m: aggDays(s, 7).sec / 60, cur: !i }); } }
+    else { const d = new Date(today); for (let i = 3; i >= 0; i--) { const a = new Date(d.getFullYear(), d.getMonth() - i, 1), b = new Date(d.getFullYear(), d.getMonth() - i + 1, 1); out.push({ l: MONTHS[a.getMonth()].slice(0, 3).toLowerCase(), m: aggDays(a.getTime(), Math.round((b - a) / U.DAY)).sec / 60, cur: !i }); } }
+    const mx = Math.max.apply(null, out.map(o => o.m).concat([1]));
+    return '<div class="st-lbl">' + (mode === 'week' ? 'Ostatnie 4 tygodnie' : 'Ostatnie 4 miesiące') + '</div><div class="st-fc st-l4">' + out.map(o => '<div title="' + o.l + ': ' + Math.round(o.m) + ' min"><small>' + Math.round(o.m) + '</small><i style="height:' + Math.round(o.m / mx * 56) + 'px;background:' + (o.cur ? '#C8607F' : '#B9B2A8') + '"></i><span>' + o.l + '</span></div>').join('') + '</div>';
+  }
+  function recordsKv() {
+    const h = recordsFlat(); if (h.indexOf('rec2') < 0) return h;
+    const m = h.match(/<span>(.*?)<\/span><b>(.*?)<\/b>/g) || [];
+    return m.map(x => x.replace(/<span>(.*?)<\/span><b>(.*?)<\/b>/, '<div class="st-kv"><span>$1</span><b>$2</b></div>')).join('');
+  }
+  function badgeTiles() {
+    const got = D().badges || {}, on = BADGES.filter(b => got[b.id]);
+    const off = BADGES.filter(b => !got[b.id]).map(b => ({ b, p: badgeProg(b.id) })).sort((x, y) => (y.p ? y.p.cur / y.p.max : -1) - (x.p ? x.p.cur / x.p.max : -1));
+    const tile = (b, isOn, p) => '<div class="st-bt' + (isOn ? ' on' : '') + '" title="' + esc(b.name + ' — ' + b.desc + (p ? ' (' + p.txt + ')' : '')) + '"><i>' + (isOn ? '★' : '') + '</i><b>' + esc(b.name) + '</b><small>' +
+      (isOn ? (got[b.id] ? new Date(got[b.id]).toLocaleDateString('pl-PL') : '') : p ? Math.round(p.cur / p.max * 100) + '%' : esc(b.desc)) + '</small>' + (p ? '<span class="bp"><span style="width:' + Math.round(p.cur / p.max * 100) + '%"></span></span>' : '') + '</div>';
+    return '<div class="st-bgrid">' + on.map(b => tile(b, true)).join('') + off.map(x => tile(x.b, false, x.p)).join('') + '</div>';
+  }
   function renderStats(mode) {
     S = null;
     mode = mode === 'month' || mode === 'all' ? mode : 'week';
     if (checkBadges().length) Store.save();
     const sd = statsData(mode);
-    const secName = mode === 'week' ? 'Ten tydzień' : mode === 'month' ? 'Ten miesiąc' : 'Od początku';
     const skLegend = '<div class="legend">' + Object.keys(SK_COLORS).map(k => '<span><i style="background:' + SK_COLORS[k] + ';height:3px"></i>' + SKILL_NAME[k] + '</span>').join('') + '</div>';
-    const rep = reportsTable();
-    const TABS = [['min', 'Minuty'], ['acc', 'Trafność'], ['vm', 'Mapa słownictwa'], ['mi', 'Kamienie milowe'], ['lvl', 'Poziom w czasie'], ['pl', 'Poziom gracza'], ['act', 'Aktywność i rekordy'], ['rep', 'Raporty'], ['bd', 'Odznaki']];
-    let tab = D().settings.stTab; if (!TABS.some(t => t[0] === tab)) tab = 'min';
+    const TABS = [['min', 'Minuty'], ['sk', 'Umiejętności'], ['act', 'Aktywność i rekordy'], null, ['vm', 'Mapa słownictwa'], ['mi', 'Kamienie milowe'], null, ['rep', 'Raporty'], ['pl', 'Poziom gracza'], ['bd', 'Odznaki']];
+    const TL = TABS.filter(Boolean);
+    let tab = D().settings.stTab; if (tab === 'acc' || tab === 'lvl') tab = 'sk'; if (!TL.some(t => t[0] === tab)) tab = 'min';
+    const ph = (h, right) => '<div class="row between st-ph"><h3>' + h + '</h3>' + (right || '') + '</div>';
+    const kv = (a, b) => '<div class="st-kv"><span>' + a + '</span><b>' + b + '</b></div>';
     const tabBody = () => {
       if (tab === 'min') {
-        const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C8607F"></i>miesiąc</span>' : '<span><i style="background:#C8607F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span>' + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '</div>';
-        return '<div class="row between st-ph"><h3>' + (mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu') + '</h3>' + legendHtml + '</div>' +
-          '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 320 })) + '</div><div class="st-side">' + minSideHtml(sd) + '<div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div>';
+        const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#C8607F"></i>miesiąc</span>' : '<span><i style="background:#C8607F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
+        return ph(mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu', legendHtml) +
+          '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side">' + minSideHtml(sd) + lastPeriodsHtml(mode) + '<div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div>';
       }
-      if (tab === 'acc') return '<div class="acc2 st-acc"><div>' + skillAccHtml(sd) + '</div><div class="acc2-l"><div class="small-note">w czasie</div>' + linesHtml(mode, true) + '</div></div>';
+      if (tab === 'sk') {
+        const due = monthTestDue();
+        return ph('Umiejętności', skLegend) +
+          '<div class="st-11"><div class="st-skl"><div class="st-lbl">Trafność ' + (mode === 'week' ? 'w tym tygodniu' : mode === 'month' ? 'w tym miesiącu' : 'od początku') + '</div>' + skillAccHtml(sd).replace(/^<h3>.*?<\/h3>/, '') +
+          '<div class="small-note">poziom rośnie przy trafności ≥ 85% — <button class="lnk2" id="sWhy">skąd ten poziom?</button></div></div>' +
+          '<div class="st-side"><div class="st-lbl">Poziom w czasie</div>' + levelsChartHtml() + kv('Poziom zdań', sentLevel() + ' / 5') +
+          '<div class="st-kv"><span>' + (due ? 'Test miesiąca czeka na Ciebie' : 'Następny test miesiąca · ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:8px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Ostatni wynik</button>' : '') + '<button class="btn small' + (due ? ' primary' : '') + '" id="sTest">Zrób test</button></span></div></div></div>';
+      }
       if (tab === 'vm') return '<div class="vm vm-view">' + vocabMapHtml(true) + '</div>';
       if (tab === 'mi') return '<div class="mi-st">' + milesHtml() + '</div>';
-      if (tab === 'lvl') return '<div class="st-lvl">' + '<section class="st-f"><div class="row between"><h3>Poziom w czasie</h3>' + skLegend + '</div>' + levelsChartHtml() + sentLevelHtml() +
-      '<div class="st-test"><span class="small-note">' + (monthTestDue() ? 'Test miesiąca czeka na Ciebie.' : 'Następny test miesiąca: ' + new Date(nextTestAt()).toLocaleDateString('pl-PL')) + '</span><span class="row" style="gap:10px">' + (lastTestEntry() ? '<button class="btn small" id="sLastTest">Wynik ostatniego testu</button>' : '') + '<button class="btn small' + (monthTestDue() ? ' primary' : '') + '" id="sTest">Zrób test teraz</button></span></div>' + levelWhyHtml() + '</section>' + '</div>';
       if (tab === 'pl') {
-        const ph = playerLevelHtml(), cut = ph.indexOf('<div class="pl-two">'), pld = playerLevelDates(), lvNow = plLevel();
-        const aw = Object.keys(pld).map(Number).filter(l => l <= lvNow && l > 1).sort((x, y) => y - x).slice(0, 5);
-        return '<div class="row between st-ph"><h3>Poziom gracza</h3><span class="small-note">punkty za pracę — nie poziom angielskiego</span></div>' +
-          '<div class="st-21 st-pl"><div class="pg-panel">' + ph.slice(0, cut) + '</div><div class="st-side pg-panel">' + ph.slice(cut) +
-          (aw.length ? '<div class="st-lbl">Ostatnie awanse</div>' + aw.map(l => '<div class="st-kv"><span>Poziom ' + l + '</span><b>' + new Date(pld[l]).toLocaleDateString('pl-PL') + '</b></div>').join('') : '') +
+        const li = levelInfo(D().xp), lv = plLevel(), gated = li.level > lv, pld = playerLevelDates();
+        const full = playerLevelHtml(), left = full.slice(0, full.indexOf('<div class="pl-two">'));
+        const aw = Object.keys(pld).map(Number).filter(l => l <= lv && l > 1).sort((x, y) => y - x).slice(0, 3);
+        const toMax = Math.max(0, xpForLevel(PL_MAX) - D().xp);
+        return ph('Poziom gracza', '<span class="small-note">punkty za pracę — nie poziom angielskiego</span>') +
+          '<div class="st-11 st-pl"><div>' + left + '</div><div class="st-side">' +
+          (gated ? '<div class="pl-gate">Do rangi <b>' + PL_RANKS[Math.min(5, Math.floor(lv / 10)) + 1] + '</b> potrzebny wyższy poziom angielskiego — zrób test miesiąca. XP zbiera się dalej: czeka już ' + plPoz(li.level - lv) + '.</div>'
+            : '<div class="st-lbl">Do poziomu ' + (lv + 1) + '</div><div class="bar thin inset"><div style="width:' + Math.round(li.into / li.need * 100) + '%"></div></div>' + kv('Brakuje', fmtNum(li.need - li.into) + ' XP')) +
+          kv('Za Tobą', fmtNum(D().xp) + ' XP · ' + plPoz(Math.min(lv, PL_MAX))) +
+          kv('Do rangi ' + PL_RANKS[5], toMax ? '~' + fmtNum(Math.round(toMax / 100) * 100) + ' XP · ' + plPoz(PL_MAX - lv) : '✓ osiągnięty') +
+          (aw.length ? '<div class="st-lbl">Ostatnie awanse</div>' + aw.map(l => kv('Poziom ' + l, new Date(pld[l]).toLocaleDateString('pl-PL'))).join('') : '') +
           '<div class="small-note st-foot">Za dobrą odpowiedź 10–18 XP zależnie od poziomu materiału; z podpowiedzią mniej.</div></div></div>';
       }
       if (tab === 'act') {
         const ks = Object.keys(D().days), sd2 = ks.filter(k => isStudyDay(D().days[k])).length, all = Math.max(1, daysBetween(firstDay(), U.startOfDay()) + 1);
-        return '<div class="st-21"><div id="heatBox">' + heatTitle() + heatHtml() + '</div><div class="st-side"><div class="st-lbl">Rekordy</div>' + recordsFlat() +
-          '<div class="st-kv"><span>Obecna seria</span><b>' + streak() + ' ' + (streak() === 1 ? 'dzień' : 'dni') + '</b></div><div class="st-kv"><span>Dni z nauką</span><b>' + sd2 + ' z ' + all + '</b></div></div></div>';
+        return '<div class="st-ph" id="heatHead">' + heatTitle() + '</div><div class="st-21 st-act"><div id="heatBox">' + heatHtml() + '</div><div class="st-side"><div class="st-lbl">Rekordy</div>' + recordsKv() +
+          kv('Obecna seria', streak() + ' ' + (streak() === 1 ? 'dzień' : 'dni')) + kv('Dni z nauką', sd2 + ' z ' + all) + '</div></div>';
       }
-      if (tab === 'rep') return '<div class="row between st-ph"><h3>Raporty tygodniowe</h3><span class="small-note">kliknij tydzień — otworzy pełny raport</span></div>' + reportsBars();
-      return badgesFlat();
+      if (tab === 'rep') return ph('Raporty tygodniowe', '<span class="small-note">kliknij tydzień — otworzy pełny raport</span>') + reportsBars();
+      const n = BADGES.filter(b => (D().badges || {})[b.id]).length;
+      return ph('Odznaki <span class="small-note">' + n + ' z ' + BADGES.length + '</span>', '<span class="small-note">zdobyte w kolorze · reszta z postępem</span>') + badgeTiles();
     };
-    stBdAll = true;
     app.innerHTML =
       '<div class="wrap stats-flat st2 st3">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button>' +
       '<div class="ex-title"><b style="font-size:26px">Statystyki</b></div>' +
       '<div class="seg inset" role="tablist" aria-label="Zakres"><button class="btn' + (mode === 'week' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'week') + '" data-mode="week">Tydzień ' + K('1') + '</button><button class="btn' + (mode === 'month' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'month') + '" data-mode="month">Miesiąc ' + K('2') + '</button><button class="btn' + (mode === 'all' ? ' on' : '') + '" role="tab" aria-selected="' + (mode === 'all') + '" data-mode="all">Od początku ' + K('3') + '</button></div></header>' +
-      '<div class="st-tabs" role="tablist">' + TABS.map(t => '<button class="st-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-stt="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
-      '<section class="st-page">' + tabBody() + '</section>' +
+      '<div class="st-tabs" role="tablist">' + TABS.map(t => t ? '<button class="st-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-stt="' + t[0] + '">' + t[1] + '</button>' : '<span class="st-gap"></span>').join('') + '</div>' +
+      '<section class="st-page st-t-' + tab + '">' + tabBody() + '</section>' +
       '<section class="st-f"><p class="st-ins">' + esc(insightText(sd)) + '</p><div class="st-kp">' + sd.kpis.map(k => kpiFlat(k, sd)).join('') + kpiTotal(sd) + '</div></section>' +
       '</div>';
     $('#back').onclick = () => go('home');
@@ -4560,27 +4592,27 @@
     $$('[data-stt]').forEach(b => b.onclick = () => setTab(b.dataset.stt));
     if ($('#sTest')) $('#sTest').onclick = () => startTest(true);
     if ($('#sLastTest')) $('#sLastTest').onclick = showLastTest;
+    if ($('#sWhy')) $('#sWhy').onclick = () => {
+      lwhyOpen = true;
+      modal('<h2 style="margin:0 0 6px">Skąd ten poziom?</h2><div class="st-why">' + levelWhyHtml() + '</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn primary" id="whyX" data-esc>Zamknij ' + K('Esc') + '</button></div>', (ov, close) => {
+        ov.querySelector('#whyX').onclick = close;
+        ov.querySelectorAll('[data-setlv]').forEach(b => b.onclick = () => {
+          const [k, v] = b.dataset.setlv.split(':'); const lv = levels();
+          if (lv[k] === +v) return;
+          lv[k] = +v; hist()[k] = []; recordLevels('manual', { skill: k });
+          progress(); Store.save(); close(); renderStats(mode);
+          toast(SKILL_NAME[k] + ': ustawiono ' + L[+v] + '.');
+        });
+      });
+    };
     if ($('#vmGo')) $('#vmGo').onclick = e => { e.preventDefault(); go('words', 'rev'); };
-    const bindHeat = () => $$('[data-hy]').forEach(b => b.onclick = () => { heatYear = b.dataset.hy ? +b.dataset.hy : null; $('#heatBox').innerHTML = heatTitle() + heatHtml(); bindHeat(); });
+    const bindHeat = () => $$('[data-hy]').forEach(b => b.onclick = () => { heatYear = b.dataset.hy ? +b.dataset.hy : null; $('#heatHead').innerHTML = heatTitle(); $('#heatBox').innerHTML = heatHtml(); bindHeat(); });
     bindHeat();
-    const bindAcc = () => { const t = $('#accToggle'); if (t) t.onclick = () => { stAccLines = !stAccLines; $('#accBox').innerHTML = accBoxHtml(mode, sd, skLegend); bindAcc(); }; };
-    bindAcc();
-    const bindBd = () => { const t = $('#bdAll'); if (t) t.onclick = () => { stBdAll = !stBdAll; $('#bdBox').innerHTML = badgesFlat(); bindBd(); }; };
-    bindBd();
-    if ($('#repAll')) $('#repAll').onclick = () => { stRepAll = !stRepAll; const y = scrollY; renderStats(mode); scrollTo(0, y); };
-    const lw = $('.lwhy'); if (lw) lw.ontoggle = () => { lwhyOpen = lw.open; };
-    $$('[data-setlv]').forEach(b => b.onclick = () => {
-      const [k, v] = b.dataset.setlv.split(':'); const lv = levels();
-      if (lv[k] === +v) return;
-      lv[k] = +v; hist()[k] = []; recordLevels('manual', { skill: k });
-      progress(); Store.save(); lwhyOpen = true; renderStats(mode);
-      toast(SKILL_NAME[k] + ': ustawiono ' + L[+v] + '.');
-    });
     $$('[data-rep]').forEach(b => b.onclick = () => go('report', { week: b.dataset.rep, from: 'stats' }));
     keyHandler = e => {
       if (e.key === 'Escape') { e.preventDefault(); go('home'); return; }
       if (e.key === '1') renderStats('week'); else if (e.key === '2') renderStats('month'); else if (e.key === '3') renderStats('all');
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); const k = TABS.findIndex(t => t[0] === tab), nk = (k + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length; setTab(TABS[nk][0]); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); const k = TL.findIndex(t => t[0] === tab), nk = (k + (e.key === 'ArrowRight' ? 1 : TL.length - 1)) % TL.length; setTab(TL[nk][0]); }
     };
   }
   function accBoxHtml(mode, sd, skLegend) {
