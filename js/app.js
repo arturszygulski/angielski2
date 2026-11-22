@@ -580,7 +580,7 @@
     if (screen === 'talk' && name !== 'talk') stopTalkAudio();
     if (screen === 'trx' && name !== 'trx' && TR && TR.mic) { Recog.stop(); TR.mic = null; }
     registerCustom();
-    screen = name;
+    screen = name; document.documentElement.dataset.scr = name;
     window.scrollTo(0, 0);
     ({ welcome: renderWelcome, home: renderHome, exercise: renderExercise, race: renderRace, result: renderResult, settings: renderSettings,
        play: renderPlayMenu, yg: renderYG, words: renderWords, trx: renderTrx, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
@@ -865,7 +865,7 @@
     return '<div class="row between"><h2>Kamienie milowe</h2><span class="small-note">zdobyte ' + have + ' z ' + total + '</span></div>' + rows;
   }
   function renderHome() {
-    guideLoad();
+    guideLoad(); document.documentElement.dataset.scr = 'home';
     if (maybeWeeklyReport()) return;
     const d = D(), t = Store.today(), st = d.settings;
     { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); }

@@ -1662,3 +1662,8 @@ input.tr-in { height: 48px; }
 .st-bt.on { background: #F0E4CB; border-color: #DCC59A; }
 .st-bt.on i { background: #C9A05A; }
 .st-bt .bp span { background: #C9A05A; }
+
+/* Strona główna — tło z miękkim światłem z lewej góry (upd200); powierzchnie przezroczyste, żeby gradient przechodził pod nimi */
+html[data-scr="home"] { background: radial-gradient(120% 90% at 12% 0%, #EAE7E2 0%, #DCD8D2 38%, #D8D4CE 60%, #CDC8C0 100%); min-height: 100%; }
+html[data-scr="home"] body { background: transparent; }
+html[data-scr="home"] #app .btn:not(.primary):not(.t2-guide), html[data-scr="home"] #app .raised, html[data-scr="home"] #app .panel, html[data-scr="home"] #app .inset, html[data-scr="home"] #app .cal-day:not(.is-today) { background-color: transparent; }
