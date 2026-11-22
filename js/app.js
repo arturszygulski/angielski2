@@ -969,7 +969,7 @@
 
       '<section class="lower"><div class="skills">' + tiles + '</div>' +
       '<div class="cal cal-flat"><div class="row between" style="align-items:baseline"><b style="font-family:var(--head);font-size:20px">' + MONTHS[m] + '</b>' +
-      '<b class="pink" style="font-size:15px">Seria: ' + str + ' ' + (str === 1 ? 'dzień' : 'dni') + '</b></div>' +
+      '<span class="cal-ser">Seria <b>' + str + '</b> ' + (str === 1 ? 'dzień' : 'dni') + '</span></div>' +
       '<div class="cal-dow"><div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>So</div><div>Nd</div></div>' +
       '<div class="cal-grid">' + cal + '</div></div></section>' +
 

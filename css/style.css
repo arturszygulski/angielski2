@@ -1641,3 +1641,11 @@ input.tr-in { height: 48px; }
 .gs-row b { font-family: var(--head); min-width: 70px; text-align: right; }
 .gs-next { font-size: 14.5px; color: var(--ink-2); margin-top: 14px; }
 .gs-next b { color: var(--ink); }
+
+/* Strona główna — róż tylko na głównej akcji (60-30-10) (upd198) */
+.cal-day.done:not(.is-today) { color: #4E6A8A; }
+.cal-flat .cal-dow div:nth-child(n+6) { color: var(--ink) !important; font-weight: 800; }
+.sw.off .tr { background: #C9C3BB; box-shadow: inset 2px 2px 4px rgba(40,30,20,.3); }
+.qa-fab, .qa-fab:hover { color: var(--ink-2); }
+.cal-ser { font-size: 14px; color: var(--ink-2); display: inline-flex; align-items: baseline; gap: 5px; }
+.cal-ser b { font: 700 26px var(--head); color: #4E6A8A; line-height: 1; }
