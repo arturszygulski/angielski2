@@ -1688,3 +1688,6 @@ html body { background: transparent; }
 .bcol + .bcol::before { display: none; }
 .bcol { background: rgba(255,255,255,.16); border-radius: 12px 12px 0 0; box-shadow: inset 0 0 0 1px rgba(150,140,128,.18); }
 .bcol:nth-child(even) { background: rgba(120,110,100,.06); }
+/* Minuty dzień po dniu: jasne pasy dni bez obrysu, sobota i niedziela jasnoszare (upd203) */
+.bcol, .bcol:nth-child(even) { background: rgba(255,255,255,.26); box-shadow: none; }
+.bcols:has(> .bcol:nth-child(7):last-child) > .bcol:nth-child(n+6) { background: rgba(150,140,128,.17); }
