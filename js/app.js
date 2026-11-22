@@ -2693,8 +2693,8 @@
 
       '<section class="set-card s3"><h2>Lektor i dźwięk</h2>' +
       row('Głos', '<select id="voice" class="txt s3-sel">' + voiceOpts + '</select>', 'voice') +
-      row('Tempo lektora', '<span class="s3-rng"><input id="rate" type="range" min="0.6" max="1.2" step="0.05" value="' + (st.rate || 0.95) + '" style="accent-color:#56708F"><span class="small-note" id="rateVal">' + rateLabel(st.rate || 0.95) + '</span></span>', 'rate') +
-      row('Głośność dźwięków', '<span class="s3-rng"><input id="volume" type="range" min="5" max="100" step="5" value="' + (st.volume == null ? 50 : st.volume) + '" aria-label="Głośność dźwięków" style="accent-color:#56708F"></span>', 'volume') +
+      row('Tempo lektora', '<span class="s3-rng"><input id="rate" type="range" min="0.6" max="1.2" step="0.05" value="' + (st.rate || 0.95) + '" style="accent-color:#5A84BC"><span class="small-note" id="rateVal">' + rateLabel(st.rate || 0.95) + '</span></span>', 'rate') +
+      row('Głośność dźwięków', '<span class="s3-rng"><input id="volume" type="range" min="5" max="100" step="5" value="' + (st.volume == null ? 50 : st.volume) + '" aria-label="Głośność dźwięków" style="accent-color:#5A84BC"></span>', 'volume') +
       row('Akcent w filmach (YouGlish)', '<div class="lvl-pills s3-pills">' + [['us', 'US'], ['uk', 'UK'], ['all', 'oba']].map(a => '<button class="btn pill small' + ((st.ygAccent || 'us') === a[0] ? ' pressed' : '') + '" data-acc="' + a[0] + '">' + a[1] + '</button>').join('') + '</div>') +
       '<div class="s3-cbs">' + cb('sounds', st.sounds !== false, 'Dźwięki włączone') + cb('speakAfter', !!st.speakAfter, 'Czytaj zdanie po odpowiedzi') + cb('autoOk', st.autoOk !== false, 'Zatwierdzaj automatycznie') + '</div>' +
       '<p class="small-note desc" style="margin:0" id="voiceNote">' + voiceNote() + '</p>' +
@@ -4299,7 +4299,7 @@
     return { start: weeks > 53 ? U.addDays(last, -7 * 52) : first, end: last };
   }
   function heatHtml() {
-    const ramp = ['transparent', '#CBD6E2', '#9FB3C9', '#6F8BAA', '#45617F'];
+    const ramp = ['transparent', '#D0DFF0', '#A2C0E2', '#6E97CB', '#3F6597'];
     const lvl = m => m <= 0 ? 0 : m < 6 ? 1 : m < 15 ? 2 : m < 30 ? 3 : 4;
     const today = U.startOfDay(), R = heatRange();
     const W = Math.round((R.end - R.start) / (7 * U.DAY)) + 1;
@@ -4514,7 +4514,7 @@
     if (mode === 'week') { const m0 = mondayOf(today); for (let i = 3; i >= 0; i--) { const s = U.addDays(m0, -7 * i); out.push({ l: new Date(s).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }), m: aggDays(s, 7).sec / 60, cur: !i }); } }
     else { const d = new Date(today); for (let i = 3; i >= 0; i--) { const a = new Date(d.getFullYear(), d.getMonth() - i, 1), b = new Date(d.getFullYear(), d.getMonth() - i + 1, 1); out.push({ l: MONTHS[a.getMonth()].slice(0, 3).toLowerCase(), m: aggDays(a.getTime(), Math.round((b - a) / U.DAY)).sec / 60, cur: !i }); } }
     const mx = Math.max.apply(null, out.map(o => o.m).concat([1]));
-    return '<div class="st-lbl">' + (mode === 'week' ? 'Ostatnie 4 tygodnie' : 'Ostatnie 4 miesiące') + '</div><div class="st-fc st-l4">' + out.map(o => '<div title="' + o.l + ': ' + Math.round(o.m) + ' min"><small>' + Math.round(o.m) + '</small><i style="height:' + Math.round(o.m / mx * 56) + 'px;background:' + (o.cur ? '#56708F' : '#B9B2A8') + '"></i><span>' + o.l + '</span></div>').join('') + '</div>';
+    return '<div class="st-lbl">' + (mode === 'week' ? 'Ostatnie 4 tygodnie' : 'Ostatnie 4 miesiące') + '</div><div class="st-fc st-l4">' + out.map(o => '<div title="' + o.l + ': ' + Math.round(o.m) + ' min"><small>' + Math.round(o.m) + '</small><i style="height:' + Math.round(o.m / mx * 56) + 'px;background:' + (o.cur ? 'linear-gradient(180deg,#7BA3D6,#43699C)' : '#B9B2A8') + '"></i><span>' + o.l + '</span></div>').join('') + '</div>';
   }
   function recordsKv() {
     const h = recordsFlat(); if (h.indexOf('rec2') < 0) return h;
@@ -4541,7 +4541,7 @@
     const kv = (a, b) => '<div class="st-kv"><span>' + a + '</span><b>' + b + '</b></div>';
     const tabBody = () => {
       if (tab === 'min') {
-        const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#56708F"></i>miesiąc</span>' : '<span><i style="background:#56708F"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
+        const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#5A84BC"></i>miesiąc</span>' : '<span><i style="background:#5A84BC"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
         return ph(mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu', legendHtml) +
           '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side">' + minSideHtml(sd) + lastPeriodsHtml(mode) + '<div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div>';
       }
@@ -6250,7 +6250,7 @@
       '<section class="note raised"><div class="ic inset" style="color:#B9456B">' + IC.chart + '</div><div class="tx" style="font-size:18px;line-height:1.45">' + esc(insight) + '</div></section>' +
       '<section class="kpis">' + kpis + '</section>' +
       '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Minuty dzień po dniu</h2>' +
-      '<div class="legend"><span><i style="background:#56708F"></i>Ten tydzień</span><span><i style="background:#ADA79F"></i>Tydzień wcześniej</span><span><i class="dash"></i>Cel ' + sd.goal + ' min</span></div></div>' + barsHtml(sd) + '</div>' +
+      '<div class="legend"><span><i style="background:#5A84BC"></i>Ten tydzień</span><span><i style="background:#ADA79F"></i>Tydzień wcześniej</span><span><i class="dash"></i>Cel ' + sd.goal + ' min</span></div></div>' + barsHtml(sd) + '</div>' +
       '<div class="panel raised side"><h2>Umiejętności</h2>' + skRows + '</div></section>' +
       '<section class="lower"><div class="panel raised grow"><h2>Wyróżnienia</h2>' + (hi.length ? hi.map(x => '<div class="rec inset"><div class="small-note">' + esc(x[0]) + '</div><b>' + esc(x[1]) + '</b></div>').join('') : '<div class="small-note">W tym tygodniu bez wyróżnień — następny będzie lepszy.</div>') + '</div>' +
       '<div class="panel raised side"><h2>Szło najtrudniej</h2>' + (R.hard.length ? R.hard.map(x => '<div class="rec inset"><div class="small-note" style="min-width:0">' + esc(x.cat) + '</div><b>' + x.n + '×</b></div>').join('') + '<button class="btn small" id="toMist">Otwórz dziennik błędów ' + K('D') + '</button>' : '<div class="small-note">Brak zapisanych błędów w tym tygodniu.</div>') + '</div></section>' +
