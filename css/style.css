@@ -1696,3 +1696,4 @@ html body { background: transparent; }
 .pl-track > div { background: #5A84BC; }
 .gbar > div { background: #5A84BC !important; }
 .st-page .bar > div, .kpi .bar > div, .st-rpb i { background: #5A84BC; }
+.gbar > div { background: linear-gradient(90deg, #A2C0E2, #43699C) !important; } /* pasek celu dziennego zostaje z gradientem (upd206) */
