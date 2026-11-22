@@ -1649,3 +1649,16 @@ input.tr-in { height: 48px; }
 .qa-fab, .qa-fab:hover { color: var(--ink-2); }
 .cal-ser { font-size: 14px; color: var(--ink-2); display: inline-flex; align-items: baseline; gap: 5px; }
 .cal-ser b { font: 700 26px var(--head); color: #4E6A8A; line-height: 1; }
+
+/* Kolory wg ról (upd199): niebieski = dane, miodowy = nagrody, zielony = włączone, antracyt = wybrany stan, róż = akcja */
+.check input, .set-card.s3 input[type=checkbox] { accent-color: #5D9A6E; }
+.s3-pills .btn.pressed { color: var(--ink); }
+.bcol .bc { background: #56708F; }
+.st-page .bar > div, .kpi .bar > div { background: linear-gradient(90deg, #8FA6C0, #56708F); }
+.pl-dot.on { background: #56708F; box-shadow: inset 1px 1px 2px rgba(20,40,70,.3); }
+.pl-dot.me { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #3F5A7A; }
+.pl-row.cur .pl-rn { color: #3F5A7A; }
+.st-pl .pl-top span.pink { color: #3F5A7A; }
+.st-bt.on { background: #F0E4CB; border-color: #DCC59A; }
+.st-bt.on i { background: #C9A05A; }
+.st-bt .bp span { background: #C9A05A; }
