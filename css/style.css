@@ -1663,7 +1663,8 @@ input.tr-in { height: 48px; }
 .st-bt.on i { background: #C9A05A; }
 .st-bt .bp span { background: #C9A05A; }
 
-/* Strona główna — tło z miękkim światłem z lewej góry (upd200); powierzchnie przezroczyste, żeby gradient przechodził pod nimi */
-html[data-scr="home"] { background: radial-gradient(120% 90% at 12% 0%, #EAE7E2 0%, #DCD8D2 38%, #D8D4CE 60%, #CDC8C0 100%); min-height: 100%; }
-html[data-scr="home"] body { background: transparent; }
-html[data-scr="home"] #app .btn:not(.primary):not(.t2-guide), html[data-scr="home"] #app .raised, html[data-scr="home"] #app .panel, html[data-scr="home"] #app .inset, html[data-scr="home"] #app .cal-day:not(.is-today) { background-color: transparent; }
+/* Tło z miękkim światłem z lewej góry na wszystkich ekranach (upd200, upd201); powierzchnie przezroczyste, żeby gradient przechodził pod nimi */
+html { background: radial-gradient(120% 90% at 12% 0%, #EAE7E2 0%, #DCD8D2 38%, #D8D4CE 60%, #CDC8C0 100%) no-repeat; background-color: #CDC8C0; min-height: 100%; }
+html body { background: transparent; }
+#app .btn:not(.primary):not(.t2-guide):not(.s3-danger), #app .raised, #app .panel, #app .inset, #app .cal-day:not(.is-today) { background-color: transparent; }
+.qa-fab { background: rgba(216,212,206,.35); }
