@@ -1691,3 +1691,8 @@ html body { background: transparent; }
 /* Minuty dzień po dniu: jasne pasy dni bez obrysu, sobota i niedziela jasnoszare (upd203) */
 .bcol, .bcol:nth-child(even) { background: rgba(255,255,255,.26); box-shadow: none; }
 .bcols:has(> .bcol:nth-child(7):last-child) > .bcol:nth-child(n+6) { background: rgba(150,140,128,.17); }
+/* Paski wypełnienia jak w Mapie słownictwa: płaski, pełny kolor w wklęsłym torze, bez gradientu (upd205) */
+.bar > div, .steps .done, .mz-row .mini > div { background: var(--pink); }
+.pl-track > div { background: #5A84BC; }
+.gbar > div { background: #5A84BC !important; }
+.st-page .bar > div, .kpi .bar > div, .st-rpb i { background: #5A84BC; }

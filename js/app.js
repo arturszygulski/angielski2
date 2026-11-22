@@ -3074,7 +3074,7 @@
   }
   function bossBarHtml() {
     const left = S.bossMax - Object.keys(S.bossHit).length;
-    return '<div class="boss-bar"><span class="small-note">Życie bossa</span><div class="bar thin inset" style="flex:1"><div style="width:' + (left / S.bossMax * 100) + '%;background:linear-gradient(90deg,#A54B6A,#C8607F)"></div></div><b>' + left + ' / ' + S.bossMax + '</b></div>';
+    return '<div class="boss-bar"><span class="small-note">Życie bossa</span><div class="bar thin inset" style="flex:1"><div style="width:' + (left / S.bossMax * 100) + '%;background:#B85674"></div></div><b>' + left + ' / ' + S.bossMax + '</b></div>';
   }
 
   /* ---------- Graj ---------- */
@@ -5050,7 +5050,7 @@
       const st = textStats(T), tr = T.tr;
       const trDone = tr ? Object.keys(tr.done || {}).length : 0, trOk = tr ? Object.values(tr.done || {}).filter(d => d.v === 'ok' || d.self).length : 0;
       const pct = trDone ? Math.round(trDone / st.sents * 100) : st.marked ? Math.round(st.done / st.marked * 100) : 0;
-      const grad = trDone ? 'linear-gradient(90deg,#B9CBE0,#5E7898)' : 'linear-gradient(90deg,#3E8A5A,#7DBB8E)';
+      const grad = trDone ? '#5A84BC' : '#5D9A6E';
       return { st, tr, trDone, trOk, pct, grad };
     };
     const rowHtml = (T, i) => {
@@ -6817,7 +6817,7 @@
       '<header style="text-align:center"><h1 style="font-size:38px">Rozmowa zakończona</h1>' +
       '<p class="muted" style="font-size:18px;margin:6px 0 0">' + esc(X.scene.title) + ' · ' + (X.goalFinal ? '<b class="ok-ink">cel osiągnięty ✓</b>' : 'cel nieosiągnięty') + ' · +' + X.xp + ' XP' + (X.promo ? '<br><b class="pink">' + esc(X.promo) + '</b>' : '') + '</p></header>' +
       '<section class="kpis talk-kpis">' +
-      '<div class="kpi raised"><div class="small-note" style="font-size:15px">Zrozumiałość</div><span class="kpi-val">' + (Sm ? Sm.score + '%' : '—') + '</span><div class="bar thin inset"><div style="width:' + (Sm ? Sm.score : 0) + '%;background:linear-gradient(90deg,#789E66,#A9C79A)"></div></div></div>' +
+      '<div class="kpi raised"><div class="small-note" style="font-size:15px">Zrozumiałość</div><span class="kpi-val">' + (Sm ? Sm.score + '%' : '—') + '</span><div class="bar thin inset"><div style="width:' + (Sm ? Sm.score : 0) + '%;background:#789E66"></div></div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Twoje wypowiedzi</div><span class="kpi-val">' + me.length + '</span><div class="small-note">niezrozumiane: ' + me.filter(m => m.ok === false).length + '</div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Średnio słów</div><span class="kpi-val">' + String(X.avg).replace('.', ',') + '</span><div class="small-note">na jedną wypowiedź</div></div>' +
       '<div class="kpi raised"><div class="small-note" style="font-size:15px">Podpowiedzi</div><span class="kpi-val">' + X.hintsUsed + '</span><div class="small-note">im mniej, tym samodzielniej</div></div></section>' +
