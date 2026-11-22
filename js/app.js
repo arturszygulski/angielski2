@@ -3205,7 +3205,7 @@
         ? '<div class="fb bad" role="status" style="max-width:600px">' + IC.alert + '<span>' + (X.ans ? 'Ty: <s>' + esc(X.ans) + '</s> → ' : '') + 'Poprawnie: <b>' + esc(w.answers[0]) + '</b> · ' + (swLearn(X, w) ? 'trafi do nauki' : 'zostaje w kolejce nowych słów') + '</span></div>' + aiLine
         : '<div class="fb ok" role="status" style="max-width:600px">' + IC.check + '<span><b>' + (X.res === 'typo' ? 'Prawie — literówka.' : 'Dobrze!') + '</b> ' + esc(w.answers[0]) + '</span></div>';
       const btns = !show
-        ? '<div class="row center" style="gap:14px"><button class="btn" id="swIdk">Nie wiem</button><button class="btn primary" id="swOk">Sprawdź ' + K('Enter') + '</button></div><div class="small-note">' + K('Enter') + ' przy pustym polu = nie wiem</div>'
+        ? '<div class="row center" style="gap:14px"><button class="btn" id="swIdk">Nie wiem ' + K('Alt+W') + '</button><button class="btn primary" id="swOk">Sprawdź ' + K('Enter') + '</button></div><div class="small-note">' + K('Enter') + ' przy pustym polu = nie wiem</div>'
         : X.busy ? ''
         : X.res === 'bad'
           ? '<div class="row center" style="gap:14px">' + (X.ans && !X.ai && AI.enabled() ? '<button class="btn chal-btn" id="swChal" title="Challenge — AI sprawdzi (C). Uważasz, że Twoja odpowiedź też jest dobra? AI oceni i wyjaśni." aria-label="Challenge — AI sprawdzi (C)">?!</button>' : '') + '<button class="btn primary" id="swNext">Dalej ' + K('Enter') + '</button></div>'
@@ -3238,7 +3238,7 @@
       if (e.repeat) return;
       if (e.key === 'Escape') { e.preventDefault(); back(); return; }
       if (done) { if (e.key === 'Enter' && $('#swMore')) { e.preventDefault(); $('#swMore').click(); } return; }
-      if (X.phase === 'q') { if (e.key === 'Enter') { e.preventDefault(); check(false); } return; }
+      if (X.phase === 'q') { if (e.altKey && e.code === 'KeyW' && $('#swIdk')) { e.preventDefault(); $('#swIdk').click(); return; } if (e.key === 'Enter') { e.preventDefault(); check(false); } return; }
       if (e.key === 'Enter') { e.preventDefault(); ($('#swKnow') || $('#swNext')).click(); return; }
       if (plainKey(e, 'KeyN') && $('#swLearn')) { e.preventDefault(); $('#swLearn').click(); }
       if (plainKey(e, 'KeyC') && $('#swChal')) { e.preventDefault(); $('#swChal').click(); }
