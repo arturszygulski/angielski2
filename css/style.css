@@ -1697,3 +1697,4 @@ html body { background: transparent; }
 .gbar > div { background: #5A84BC !important; }
 .st-page .bar > div, .kpi .bar > div, .st-rpb i { background: #5A84BC; }
 .gbar > div { background: linear-gradient(90deg, #A2C0E2, #43699C) !important; } /* pasek celu dziennego zostaje z gradientem (upd206) */
+.bcol .bp, .bcol .bc, .bcol .ba { border-radius: 11px 11px 0 0 !important; } /* zaokrąglone góry słupków (upd207) */
