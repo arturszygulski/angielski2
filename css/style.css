@@ -1732,3 +1732,5 @@ html body { background: transparent; }
 .vm-row:not(.vm-pv) > b { color: var(--ink-3); }
 .vm-row.cur > b { color: var(--ink); font-size: 22px; font-weight: 800; }
 .pl-dot.me { box-shadow: inset 1px 1px 2px rgba(20,40,70,.3) !important; } /* poziom gracza: bez obrączki wokół bieżącej kropki (upd212) */
+/* Pola do wpisania: bez różowej ramki przy fokusie — tylko głębsze wklęśnięcie (upd213) */
+.txt:focus, .answer:focus, .bk-search:focus, .tr-in:focus, textarea:focus { outline: none; box-shadow: inset 5px 5px 11px var(--sh-in-d), inset -4px -4px 10px var(--sh-l); }
