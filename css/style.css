@@ -1698,3 +1698,12 @@ html body { background: transparent; }
 .st-page .bar > div, .kpi .bar > div, .st-rpb i { background: #5A84BC; }
 .gbar > div { background: linear-gradient(90deg, #A2C0E2, #43699C) !important; } /* pasek celu dziennego zostaje z gradientem (upd206) */
 .bcol .bp, .bcol .bc, .bcol .ba { border-radius: 11px 11px 0 0 !important; } /* zaokrąglone góry słupków (upd207) */
+/* Boss tygodnia aktywny: cały moduł wypukły w kolorze tła, miodowe akcenty (upd208) */
+.note.bs-note.bs-on { background: transparent; border: 0; cursor: pointer; box-shadow: 7px 7px 16px var(--sh-d), -7px -7px 16px var(--sh-l); padding: 16px 26px 16px 18px; border-radius: 24px; transition: box-shadow .15s; outline: none; }
+.note.bs-note.bs-on:hover, .note.bs-note.bs-on:focus-visible { box-shadow: 9px 9px 20px var(--sh-d), -8px -8px 18px var(--sh-l); }
+.note.bs-note.bs-on:active { box-shadow: inset 4px 4px 9px var(--sh-in-d), inset -4px -4px 9px var(--sh-l); }
+.note.bs-note.bs-on .ic { background: #C9A05A; color: #fff; box-shadow: none; }
+.note.bs-note.bs-on .tx b { color: var(--ink); }
+.note.bs-note.bs-on .tx span { color: var(--ink-2); }
+.bs-on .bs-go { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font: 700 17px var(--head); color: #9A6B1E; }
+.bs-on .bs-go .kbd { color: #9A6B1E !important; border-color: #C9A05A; }
