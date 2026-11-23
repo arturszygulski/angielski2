@@ -4326,6 +4326,36 @@
       '<div class="heat heat-g" style="grid-template-columns:' + cols + ';gap:' + gap + 'px;--hg:' + gap + 'px">' + h + '</div></div>' +
       '<div class="heat-legend"><span>mniej</span>' + ramp.map((c, i) => '<span class="sw' + (i ? '' : ' empty') + '" style="background:' + c + '"></span>').join('') + '<span>więcej</span></div>';
   }
+  /* Aktywność: cały rok kalendarzowy w 2 rzędach (sty–cze, lip–gru), strzałki do zmiany roku (upd210) */
+  let actYear = new Date().getFullYear();
+  function heatYearTitle() {
+    const y0 = new Date(firstDay()).getFullYear(), y1 = new Date().getFullYear();
+    actYear = Math.min(y1, Math.max(y0, actYear));
+    const CH = d => '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+    return '<div class="row between"><h3>Aktywność w roku</h3><div class="hy-nav"><button class="btn" data-hyy="-1" aria-label="Poprzedni rok"' + (actYear <= y0 ? ' disabled' : '') + '>' + CH('M15 5l-7 7 7 7') + '</button><b>' + actYear + '</b><button class="btn" data-hyy="1" aria-label="Następny rok"' + (actYear >= y1 ? ' disabled' : '') + '>' + CH('M9 5l7 7-7 7') + '</button></div></div>';
+  }
+  function heatYearHtml() {
+    const ramp = ['transparent', '#D0DFF0', '#A2C0E2', '#6E97CB', '#3F6597'], lvl = m => m <= 0 ? 0 : m < 6 ? 1 : m < 15 ? 2 : m < 30 ? 3 : 4;
+    const Y = actYear, today = U.startOfDay(), MN = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'], LB = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', '<b>So</b>', '<b>Nd</b>'];
+    let html = '<div class="hy-wrap">';
+    [0, 1].forEach(h => {
+      const a = new Date(Y, h * 6, 1).getTime(), z = new Date(Y, h * 6 + 6, 0).getTime(), st = mondayOf(a), W = Math.round((mondayOf(z) - st) / (7 * U.DAY)) + 1;
+      let g = '<div></div>';
+      for (let w = 0; w < W; w++) { let lab = ''; for (let k = 0; k < 7; k++) { const t = U.addDays(st, w * 7 + k), d = new Date(t); if (t >= a && t <= z && d.getDate() === 1) lab = MN[d.getMonth()]; } g += '<div class="m">' + lab + '</div>'; }
+      for (let r = 0; r < 7; r++) {
+        g += '<div class="l">' + LB[r] + '</div>';
+        for (let w = 0; w < W; w++) {
+          const t = U.addDays(st, w * 7 + r);
+          if (t < a || t > z) { g += '<i class="x"></i>'; continue; }
+          if (t > today) { g += '<i class="f"></i>'; continue; }
+          const d = D().days[U.dayKey(t)], m = d ? Math.round((d.sec || 0) / 60) : 0;
+          g += '<i style="background:' + ramp[lvl(m)] + '" title="' + new Date(t).toLocaleDateString('pl-PL') + ': ' + (m ? m + ' min' : 'bez nauki') + '"></i>';
+        }
+      }
+      html += '<div class="hy-half" style="--w:' + W + '">' + g + '</div>';
+    });
+    return html + '<div class="hy-leg"><span>mniej</span>' + ramp.map(c => '<span class="s" style="background:' + c + '"></span>').join('') + '<span>więcej</span></div></div>';
+  }
   function heatTitle() {
     const first = firstDay(), y0 = new Date(first).getFullYear(), y1 = new Date().getFullYear();
     const R = heatRange(), W = Math.round((R.end - R.start) / (7 * U.DAY)) + 1;
@@ -4571,7 +4601,7 @@
       }
       if (tab === 'act') {
         const ks = Object.keys(D().days), sd2 = ks.filter(k => isStudyDay(D().days[k])).length, all = Math.max(1, daysBetween(firstDay(), U.startOfDay()) + 1);
-        return '<div class="st-ph" id="heatHead">' + heatTitle() + '</div><div class="st-21 st-act"><div id="heatBox">' + heatHtml() + '</div><div class="st-side"><div class="st-lbl">Rekordy</div>' + recordsKv() +
+        return '<div class="st-ph" id="heatHead">' + heatYearTitle() + '</div><div class="st-21 st-act"><div id="heatBox">' + heatYearHtml() + '</div><div class="st-side"><div class="st-lbl">Rekordy</div>' + recordsKv() +
           kv('Obecna seria', streak() + ' ' + (streak() === 1 ? 'dzień' : 'dni')) + kv('Dni z nauką', sd2 + ' z ' + all) + '</div></div>';
       }
       if (tab === 'rep') return ph('Raporty tygodniowe', '<span class="small-note">kliknij tydzień — otworzy pełny raport</span>') + reportsBars();
@@ -4607,7 +4637,8 @@
       });
     };
     if ($('#vmGo')) $('#vmGo').onclick = e => { e.preventDefault(); go('words', 'rev'); };
-    const bindHeat = () => $$('[data-hy]').forEach(b => b.onclick = () => { heatYear = b.dataset.hy ? +b.dataset.hy : null; $('#heatHead').innerHTML = heatTitle(); $('#heatBox').innerHTML = heatHtml(); bindHeat(); });
+    const bindHeat = () => $$('[data-hyy]').forEach(b => b.onclick = () => { actYear += +b.dataset.hyy; $('#heatHead').innerHTML = heatYearTitle(); $('#heatBox').innerHTML = heatYearHtml(); bindHeat(); });
+    bindHeat();
     bindHeat();
     $$('[data-rep]').forEach(b => b.onclick = () => go('report', { week: b.dataset.rep, from: 'stats' }));
     keyHandler = e => {
