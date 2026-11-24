@@ -1807,3 +1807,11 @@ html body { background: transparent; }
 .blabels span:nth-child(6):nth-last-child(2), .blabels span:nth-child(7):last-child { font-weight: 700; color: var(--ink); }
 .bcol, .bcol:nth-child(even) { background: rgba(255,255,255,.34); }
 .bcols:has(> .bcol:nth-child(7):last-child) > .bcol:nth-child(n+6) { background: rgba(255,255,255,.17); }
+/* Plan zrobiony (oba moduły): jasna zieleń z gradientem, bez obrysu, ten sam check w zielonym kółku (upd220) */
+.t2-guide.gp-done, .t2-done { border: 0; box-shadow: none; background: linear-gradient(160deg, #E3EFE6, #BFD8C6); color: #24412D; }
+.t2-guide.gp-done b, .t2-done b { color: #1F3B27; }
+.t2-guide.gp-done .gp-n, .t2-done small { color: #3E6249; }
+.t2-done-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; background: linear-gradient(160deg, #8EBE9B, #4F8A60); color: #fff; }
+.t2-done-ic svg, .t2-guide.gp-done .t2-done-ic svg { width: 24px; height: 24px; stroke: #fff; }
+.t2-guide.gp-done .t2-done-ic { margin-bottom: 4px; }
+.t2-done #extra { background: #D3E5D8; color: #1F3B27; box-shadow: 4px 4px 10px rgba(50,90,60,.3), -3px -3px 8px rgba(255,255,255,.7); }

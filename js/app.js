@@ -6128,7 +6128,7 @@
     const g = GUIDE, n = g ? g.steps.length : 0;
     if (g && g.i >= n) {
       const mins = Math.max(0, Math.round((Store.today().sec - g.sec0) / 60));
-      return '<div class="t2-guide gp-done" title="Dzisiejszy plan krok po kroku jest zrobiony — szczegóły w statystykach">' + IC.check + '<b>Plan<br>zrobiony</b><span class="gp-n">' + n + ' z ' + n + ' · ' + mins + ' min</span></div>';
+      return '<div class="t2-guide gp-done" title="Dzisiejszy plan krok po kroku jest zrobiony">' + '<span class="t2-done-ic">' + IC.check + '</span><b>Plan<br>zrobiony</b><span class="gp-n">' + n + ' z ' + n + ' · ' + mins + ' min</span></div>';
     }
     if (g) return '<button class="btn t2-guide" id="guide" title="Wróć do dzisiejszego planu"><b>Wróć<br>do planu</b><span class="gp-n">krok ' + (g.i + 1) + ' z ' + n + '</span><span class="gp-dots">' + g.steps.map((x, k) => '<i' + (k < g.i ? ' class="on"' : '') + '></i>').join('') + '</span>' + K('L') + '</button>';
     return '<button class="btn t2-guide" id="guide" title="Program układa plan i prowadzi Cię krok po kroku"><b>Krok<br>po kroku</b>' + K('L') + '</button>';
