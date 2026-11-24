@@ -4808,7 +4808,7 @@
     const kv = (a, b) => '<div class="st-kv"><span>' + a + '</span><b>' + b + '</b></div>';
     const tabBody = () => {
       if (tab === 'min') {
-        const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#5A84BC"></i>miesiąc</span>' : '<span><i style="background:#5A84BC"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:#ADA79F"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
+        const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#5A84BC"></i>miesiąc</span>' : '<span><i style="background:#5A84BC"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:rgba(110,100,90,.2)"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
         return ph(mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu', legendHtml) +
           '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side">' + minSideHtml(sd) + lastPeriodsHtml(mode) + '<div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div>';
       }
@@ -6521,7 +6521,7 @@
       '<section class="note raised"><div class="ic inset" style="color:#B9456B">' + IC.chart + '</div><div class="tx" style="font-size:18px;line-height:1.45">' + esc(insight) + '</div></section>' +
       '<section class="kpis">' + kpis + '</section>' +
       '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Minuty dzień po dniu</h2>' +
-      '<div class="legend"><span><i style="background:#5A84BC"></i>Ten tydzień</span><span><i style="background:#ADA79F"></i>Tydzień wcześniej</span><span><i class="dash"></i>Cel ' + sd.goal + ' min</span></div></div>' + barsHtml(sd) + '</div>' +
+      '<div class="legend"><span><i style="background:#5A84BC"></i>Ten tydzień</span><span><i style="background:rgba(110,100,90,.2)"></i>Tydzień wcześniej</span><span><i class="dash"></i>Cel ' + sd.goal + ' min</span></div></div>' + barsHtml(sd) + '</div>' +
       '<div class="panel raised side"><h2>Umiejętności</h2>' + skRows + '</div></section>' +
       '<section class="lower"><div class="panel raised grow"><h2>Wyróżnienia</h2>' + (hi.length ? hi.map(x => '<div class="rec inset"><div class="small-note">' + esc(x[0]) + '</div><b>' + esc(x[1]) + '</b></div>').join('') : '<div class="small-note">W tym tygodniu bez wyróżnień — następny będzie lepszy.</div>') + '</div>' +
       '<div class="panel raised side"><h2>Szło najtrudniej</h2>' + (R.hard.length ? R.hard.map(x => '<div class="rec inset"><div class="small-note" style="min-width:0">' + esc(x.cat) + '</div><b>' + x.n + '×</b></div>').join('') + '<button class="btn small" id="toMist">Otwórz dziennik błędów ' + K('D') + '</button>' : '<div class="small-note">Brak zapisanych błędów w tym tygodniu.</div>') + '</div></section>' +

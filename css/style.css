@@ -1796,3 +1796,14 @@ html body { background: transparent; }
 .pr-how-h { display: flex; align-items: baseline; gap: 10px; } .pr-how-h b { font: 700 22px var(--head); } .pr-how-h span { color: var(--ink-2); font-size: 15px; }
 .pr-how-c p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
 .pr-how-pl { margin-top: 12px; padding-top: 10px; border-top: 1px solid #D2CCC4; font-size: 14.5px; line-height: 1.5; }
+/* Minuty dzień po dniu: ten tydzień · poprzedni (lekko ciemniejszy od tła, wąski) · średnia (jasny niebieski, wąska); dni niżej, So/Nd pogrubione; weekend odrobinę ciemniejszy (upd219) */
+.bcol { gap: 4px; }
+.bcol .bc { order: 1; }
+.bcol .bp { order: 2; background: rgba(110,100,90,.2); }
+.bcol .ba { order: 3; background: #B9CEE8; }
+.bcol .bp, .bcol .ba, .bcol.b3 .bp, .st-minchart .bcol .bp { width: min(10.5px, 11%); }
+.legend i.avgi { background: #B9CEE8 !important; }
+.blabels { margin-top: 10px; }
+.blabels span:nth-child(6):nth-last-child(2), .blabels span:nth-child(7):last-child { font-weight: 700; color: var(--ink); }
+.bcol, .bcol:nth-child(even) { background: rgba(255,255,255,.34); }
+.bcols:has(> .bcol:nth-child(7):last-child) > .bcol:nth-child(n+6) { background: rgba(255,255,255,.17); }
