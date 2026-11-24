@@ -531,7 +531,7 @@
   /* czas nauki: liczy się tylko, gdy okno programu jest aktywne (inny program kliknięty = stop od razu)
      i był ruch myszą / klawiatura w ostatnich 15 s — chyba że mówi lektor, słucha mikrofon albo czekasz na AI */
   const IDLE_SEC = 15, IDLE_SEC_VIDEO = 60;
-  const TIME_MOD = { talk: 'talk', listen: 'listen', reader: 'texts', trx: 'texts', tense: 'tenses', test: 'test', sweep: 'ex', topic: 'ex' };
+  const TIME_MOD = { pron: 'ex', talk: 'talk', listen: 'listen', reader: 'texts', trx: 'texts', tense: 'tenses', test: 'test', sweep: 'ex', topic: 'ex' };
   const audioOn = () => { try { return !!(window.speechSynthesis && speechSynthesis.speaking); } catch (e) { return false; } };
   const winActive = () => !document.hidden && (typeof document.hasFocus !== 'function' || document.hasFocus());
   const recentInput = lim => Date.now() - lastInput <= lim * 1000;
@@ -583,7 +583,7 @@
     screen = name; document.documentElement.dataset.scr = name;
     window.scrollTo(0, 0);
     ({ welcome: renderWelcome, home: renderHome, exercise: renderExercise, race: renderRace, result: renderResult, settings: renderSettings,
-       play: renderPlayMenu, yg: renderYG, words: renderWords, trx: renderTrx, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, sweep: renderSweep, topic: renderTopic })[name](arg);
+       play: renderPlayMenu, yg: renderYG, words: renderWords, trx: renderTrx, mistakes: renderMistakes, stats: renderStats, texts: renderTexts, reader: renderReader, listen: renderListen, report: renderReport, tenses: renderTenses, tense: renderTenseLesson, talk: renderTalk, guide: renderGuide, pron: renderPron, sweep: renderSweep, topic: renderTopic })[name](arg);
     qaFabSync();
   }
 
@@ -1922,10 +1922,15 @@
         if (S !== sess || cur() !== c) return;
         S.listening = false;
         const full = fullSentence(it);
-        let best = alts[0], bs = -1, bt = false;
-        alts.forEach(a => { const t = containsTarget(a, it.w.answers), s = listenScore(full, a); if ((t && !bt) || (t === bt && s > bs)) { best = a; bs = s; bt = t; } });
-        const m = bt && bs >= 0.9 ? 'exact' : bt && bs >= 0.45 ? 'typo' : 'wrong'; // „Dobrze” tylko gdy prawie całe zdanie się zgadza
+        /* uczciwa ocena (upd214): liczy się najbardziej prawdopodobne odczytanie; szukane słowo tylko w dalszym odczytaniu = „prawie” */
+        const top = alts[0], topT = containsTarget(top, it.w.answers);
+        let bs = listenScore(full, top), bt = topT, alt = false;
+        if (!topT) { const k = alts.findIndex(a => containsTarget(a, it.w.answers)); if (k > 0) { bs = listenScore(full, alts[k]); bt = true; alt = true; } }
+        let m = bt && bs >= 0.9 ? 'exact' : bt && bs >= 0.45 ? 'typo' : 'wrong'; // „Dobrze” tylko gdy prawie całe zdanie się zgadza
+        if (alt && m === 'exact') m = 'typo';
+        if (!topT) { const pp = pronNoteConfusion(it.w.answers[0], top, full); if (pp) { Store.save(); setTimeout(() => toast('Para „' + pp.a + ' – ' + pp.b + '” trafiła do ćwiczeń Wymowy (Graj → 0).'), 600); } }
         const el = S.spPend ? S.spPend.el : (Date.now() - S.cardStart) / 1000;
+        const best = top;
         S.spPend = { m, el, heard: best, score: bs, hasTarget: bt };
         // całe zdanie się zgadza — oceniamy od razu; inaczej najpierw pokazujemy, co usłyszałem (można powtórzyć, zanim program oceni)
         if (speakMatch(wordDiff(full, best)) && m === 'exact') return confirmSpeak();
@@ -2971,6 +2976,8 @@
   function navTile(nav, icon, title, sub, key, cls) {
     return '<button class="btn nav-tile raised' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '" title="' + esc(sub) + '"><span class="ic inset">' + icon + '</span><span class="tx"><b>' + title + '</b><small>' + sub + '</small></span>' + K(key) + '</button>';
   }
+  /* polska typografia: krótkie słowa (z, w, i, do…) nie zostają na końcu linii */
+  function nbspPl(s) { return String(s).replace(/(^|[\s(])(z|w|i|a|o|u|do|na|po|we|ze|od|bez)\s+/gi, '$1$2\u00a0'); }
   function backHeader(title, sub) {
     return '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button>' +
       '<div class="ex-title"><b>' + title + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div><div style="width:110px"></div></header>';
@@ -3093,7 +3100,8 @@
     { id: 'speak', title: 'Powiedz to', desc: 'mów do mikrofonu' },
     { id: 'translate', title: 'Przetłumacz', desc: 'z polskiego na angielski' },
     { id: 'particle', title: 'Dobierz partykułę', desc: 'phrasal verbs: up, out, off…' },
-    { id: 'yg', title: 'Usłysz w filmie', desc: 'prawdziwe nagrania z YouTube' }
+    { id: 'yg', title: 'Usłysz w filmie', desc: 'prawdziwe nagrania z YouTube' },
+    { id: 'pron', title: 'Wymowa', desc: 'pary dźwięków: tram – Trump, ship – sheep' }
   ];
   function gameNote(id) {
     if (id === 'speak' && !Recog.supported()) return 'ta przeglądarka nie rozpoznaje mowy';
@@ -3110,10 +3118,10 @@
   function renderPlayMenu() {
     S = null;
     /* „polecane” = dwie gry najrzadziej używane w ostatnich 14 dniach */
-    const recG = PLAY_GAMES.filter(g => !gameNote(g.id) && (g.id === 'race' || g.id === 'yg' || typeEnabled(g.id)))
+    const recG = PLAY_GAMES.filter(g => !gameNote(g.id) && (g.id === 'race' || g.id === 'yg' || g.id === 'pron' || typeEnabled(g.id)))
       .map(g => ({ id: g.id, u: usage(g.id) })).sort((a, b) => a.u - b.u || PLAY_GAMES.findIndex(x => x.id === b.id) - PLAY_GAMES.findIndex(x => x.id === a.id)).slice(0, 2).map(x => x.id);
     app.innerHTML =
-      '<div class="wrap narrow">' + backHeader('Graj', 'Dobre odpowiedzi nie przesuwają powtórek, błędy wrócą w najbliższej sesji.') +
+      '<div class="wrap narrow pm-wide">' + backHeader('Graj', 'Dobre odpowiedzi nie przesuwają powtórek, błędy wrócą w najbliższej sesji.') +
       (function () {
         const lm = playLimits(), pill = (kind, v, lab) => '<button class="btn pill small' + (lm[kind] === v ? ' pressed' : '') + '" data-lim="' + kind + ':' + v + '">' + lab + '</button>';
         return '<section class="set-card raised limits"><div class="row between"><h2 style="font-size:19px">Limit rundy <span class="small-note">— kończy się to, co nastąpi pierwsze</span></h2><span class="small-note">' + K('L') + ' wł./wył.</span></div>' +
@@ -3125,10 +3133,10 @@
       '<section class="games">' + PLAY_GAMES.map((g, i) => {
         const note = gameNote(g.id);
         return '<button class="btn game raised' + (note ? ' off' : '') + '" data-game-go="' + g.id + '"' + (note ? ' aria-disabled="true"' : '') + '>' +
-          '<span class="num-key">' + (i + 1) + '</span><b>' + g.title + '</b>' + (!note && recG.indexOf(g.id) >= 0 ? '<span class="rec-tag">polecane</span>' : '') + '<small>' + (note || g.desc) + '</small>' +
+          '<span class="num-key">' + ((i + 1) % 10) + '</span><b>' + nbspPl(g.title) + '</b>' + (g.id === 'pron' && pronMine().length ? '<span class="rec-tag pr-tag">' + pronMine().length + ' ' + (pronMine().length === 1 ? 'twoja para' : pronMine().length < 5 ? 'twoje pary' : 'twoich par') + '</span>' : !note && recG.indexOf(g.id) >= 0 ? '<span class="rec-tag">polecane</span>' : '') + '<small>' + nbspPl(note || g.desc) + '</small>' +
           (g.id === 'race' ? '<small class="pink">' + raceSec() + ' s' + (raceBestFor(raceSec()) ? ' · rekord: ' + raceBestFor(raceSec()) : '') + '</small>' : '') + '</button>';
       }).join('') + '</section>' +
-      '<p class="small-note" style="text-align:center">Wybierz klawiszem ' + K('1') + '–' + K('9') + ' albo kliknij. XP, combo i minuty liczą się normalnie.</p>' +
+      '<p class="small-note" style="text-align:center">Wybierz klawiszem ' + K('1') + '–' + K('0') + ' albo kliknij. XP, combo i minuty liczą się normalnie.</p>' +
       (function () { const n = sweepLeft(0); return n ? '<section class="note raised"><div class="tx"><b>Przegląd A1</b><span>szybko przejrzyj łatwe słowa — znane oznaczysz, nieznane pójdą do nauki · zostało ' + n + ' z ' + WORDS.list.filter(w => w.lvl === 0 && !w.custom).length + '</span></div><button class="btn primary" id="sweepGo">Przeglądaj ' + K('P') + '</button></section>' : ''; })() +
       '</div>';
     $('#back').onclick = () => go('home');
@@ -3146,9 +3154,197 @@
         Store.save(); renderPlayMenu(); toast(st.playMin || st.playQ ? 'Limit rundy włączony.' : 'Bez limitu.'); return;
       }
       if (plainKey(e, 'KeyP') && $('#sweepGo')) { e.preventDefault(); startSweep(0, 'play'); return; }
-      if (!e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key)) { e.preventDefault(); startPlay(PLAY_GAMES[+e.key - 1].id); }
+      if (!e.altKey && !e.ctrlKey && /^[0-9]$/.test(e.key)) { e.preventDefault(); const g = PLAY_GAMES[(+e.key + 9) % 10]; if (g) startPlay(g.id); }
     };
   }
+  /* ================= WYMOWA: pary dźwięków (upd214) =================
+     Krok 1 — ucho: lektor mówi jedno słowo z pary, wybierasz które. Krok 2 — usta: mówisz słowo, rozpoznawanie sprawdza, czy usłyszało je, a nie parę.
+     Pary: zestawy dźwięków trudnych dla Polaków + Twoje pary zebrane z „Powiedz to” (gdy rozpoznawanie usłyszy podobne słowo zamiast szukanego). */
+  const PRON_SETS = [
+    { id: 'ae', name: '/æ/ – /ʌ/', ex: 'cat – cut', sa: '/æ/', sb: '/ʌ/', ta: 'szerokie /æ/ jak w cat: opuść szczękę i rozciągnij usta na boki, prawie „e”', tb: 'krótkie, luźne /ʌ/ jak w cut — zwykłe polskie „a”',
+      pairs: [['cat', 'cut', 'kot', 'ciąć'], ['bad', 'bud', 'zły', 'pąk'], ['cap', 'cup', 'czapka', 'filiżanka'], ['ran', 'run', 'biegł', 'biegać'], ['hat', 'hut', 'kapelusz', 'chata'], ['match', 'much', 'mecz', 'dużo'], ['bag', 'bug', 'torba', 'robak'], ['tram', 'Trump', 'tramwaj', 'nazwisko']] },
+    { id: 'aee', name: '/æ/ – /e/', ex: 'bad – bed', sa: '/æ/', sb: '/e/', ta: 'szerokie /æ/: szczęka nisko, usta rozciągnięte — dłuższe i bardziej otwarte niż „e”', tb: 'zwykłe, krótkie polskie „e”',
+      pairs: [['bad', 'bed', 'zły', 'łóżko'], ['man', 'men', 'mężczyzna', 'mężczyźni'], ['sad', 'said', 'smutny', 'powiedział'], ['pan', 'pen', 'patelnia', 'długopis'], ['bat', 'bet', 'nietoperz', 'zakład'], ['land', 'lend', 'ląd', 'pożyczać']] },
+    { id: 'ii', name: '/iː/ – /ɪ/', ex: 'sheep – ship', sa: '/iː/', sb: '/ɪ/', ta: 'długie, napięte /iː/ — uśmiechnij się i przeciągnij „ii”', tb: 'krótkie, luźne /ɪ/ — bliżej polskiego „y”',
+      pairs: [['sheep', 'ship', 'owca', 'statek'], ['leave', 'live', 'wyjeżdżać', 'mieszkać'], ['feel', 'fill', 'czuć', 'wypełnić'], ['eat', 'it', 'jeść', 'to'], ['seat', 'sit', 'miejsce', 'siedzieć'], ['heat', 'hit', 'upał', 'uderzyć'], ['sleep', 'slip', 'spać', 'poślizgnąć się']] },
+    { id: 'th', name: 'th', ex: 'think – sink', sa: '/θ/', sb: 's / f / t', ta: '/θ/ — czubek języka lekko między zębami i dmuchnij', tb: 'bez języka między zębami',
+      pairs: [['think', 'sink', 'myśleć', 'tonąć'], ['three', 'free', 'trzy', 'wolny'], ['thank', 'tank', 'dziękować', 'czołg'], ['mouth', 'mouse', 'usta', 'mysz'], ['thick', 'sick', 'gruby', 'chory'], ['path', 'pass', 'ścieżka', 'podać']] },
+    { id: 'wv', name: '/w/ – /v/', ex: 'west – vest', sa: '/w/', sb: '/v/', ta: '/w/ — usta w dzióbek jak do „ł”, zęby nie dotykają warg', tb: '/v/ — górne zęby na dolnej wardze, jak polskie „w”',
+      pairs: [['west', 'vest', 'zachód', 'kamizelka'], ['wine', 'vine', 'wino', 'winorośl'], ['wet', 'vet', 'mokry', 'weterynarz'], ['wary', 'very', 'ostrożny', 'bardzo'], ['worse', 'verse', 'gorzej', 'wers']] },
+    { id: 'end', name: 'końcówki', ex: 'bad – bat', sa: 'dźwięczna', sb: 'bezdźwięczna', ta: 'dźwięczna końcówka — nie ubezdźwięczniaj jej, samogłoska przed nią jest dłuższa', tb: 'bezdźwięczna końcówka — krótko i ostro',
+      pairs: [['bad', 'bat', 'zły', 'nietoperz'], ['dog', 'dock', 'pies', 'dok'], ['bag', 'back', 'torba', 'plecy'], ['feed', 'feet', 'karmić', 'stopy'], ['prize', 'price', 'nagroda', 'cena'], ['eyes', 'ice', 'oczy', 'lód']] },
+    { id: 'er', name: '/ɜː/ – /ɔː/', ex: 'work – walk', sa: '/ɜː/', sb: '/ɔː/', ta: '/ɜː/ — jak niemieckie ö, usta nie zaokrąglone, bez „r” na końcu', tb: '/ɔː/ — długie, zaokrąglone „o”',
+      pairs: [['work', 'walk', 'pracować', 'spacerować'], ['shirt', 'short', 'koszula', 'krótki'], ['bird', 'board', 'ptak', 'deska'], ['firm', 'form', 'firma', 'formularz'], ['word', 'ward', 'słowo', 'oddział']] },
+    { id: 'ng', name: '/ŋ/ – /ŋk/', ex: 'sing – sink', sa: '/ŋ/', sb: '/ŋk/', ta: '/ŋ/ — nosowe „ng”, bez „g” ani „k” na końcu', tb: '/ŋk/ — wyraźne „k” na końcu',
+      pairs: [['sing', 'sink', 'śpiewać', 'zlew'], ['thing', 'think', 'rzecz', 'myśleć'], ['wing', 'wink', 'skrzydło', 'mrugać'], ['bang', 'bank', 'huk', 'bank']] }
+  ];
+  const pronData = () => { const d = D(); d.pron = d.pron || {}; d.pron.sets = d.pron.sets || {}; d.pron.mine = d.pron.mine || {}; return d.pron; };
+  const pronMine = () => { const m = pronData().mine; return Object.keys(m).map(k => m[k]).filter(p => (p.st || 0) < 4).sort((x, y) => (y.at || 0) - (x.at || 0)); };
+  const pronNorm = s => String(s || '').toLowerCase().replace(/[^a-z' ]+/g, ' ').split(/\s+/).filter(Boolean);
+  function pronSetOf(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    for (const s of PRON_SETS) for (const p of s.pairs) { const x = p[0].toLowerCase(), y = p[1].toLowerCase(); if ((x === a && y === b) || (x === b && y === a)) return { set: s, aIsA: x === a }; }
+    return null;
+  }
+  /* z „Powiedz to”: szukane słowo nie padło, a padło podobne — zapisz parę */
+  function pronNoteConfusion(target, heard, full) {
+    const tw = pronNorm(target), hw = pronNorm(heard), fw = pronNorm(full);
+    let best = null;
+    tw.forEach(t => {
+      if (t.length < 2 || hw.indexOf(t) >= 0) return;
+      hw.forEach(h => { if (h === t || fw.indexOf(h) >= 0 || Math.abs(h.length - t.length) > 2) return; const d = U.lev(t, h); if (d <= 2 && d < t.length && (!best || d < best.d)) best = { t, h, d }; });
+    });
+    if (!best) return null;
+    const m = pronData().mine, k = best.t + '|' + best.h;
+    const p = m[k] || (m[k] = { a: best.t, b: best.h, n: 0, ok: 0, st: 0, seen: 0 });
+    p.seen++; p.at = Date.now(); p.st = 0;
+    return p;
+  }
+  let PR = null;
+  function pronPool() {
+    const out = [], ps = pronData();
+    pronMine().slice(0, 4).forEach(p => { const f = pronSetOf(p.a, p.b); out.push({ a: p.a, b: p.b, pa: '', pb: '', set: f ? f.set.id : null, mine: p.a + '|' + p.b }); });
+    const rate = s => { const a = ps.sets[s.id] || []; return a.length ? a.filter(Boolean).length / a.length : 0.5; };
+    PRON_SETS.slice().sort((x, y) => rate(x) - rate(y) || (ps.sets[x.id] || []).length - (ps.sets[y.id] || []).length).slice(0, 2)
+      .forEach(s => U.shuffle(s.pairs.slice()).slice(0, 4).forEach(p => out.push({ a: p[0], b: p[1], pa: p[2], pb: p[3], set: s.id })));
+    return out;
+  }
+  function startPron(guide) {
+    const pool = U.shuffle(pronPool()), mouth = Recog.supported(), q = [];
+    for (let i = 0; i < 12; i++) { const p = pool[i % pool.length]; q.push({ kind: mouth && i >= 6 ? 'mouth' : 'ear', p, t: Math.random() < 0.5 ? 'a' : 'b', res: null, helped: false, tries: 0 }); }
+    PR = { q, i: 0, xp: 0, ok: 0, guide: !!guide, done: false, listening: false, heard: '', note: '' };
+    bumpUse('pron');
+    go('pron');
+    pronAuto();
+  }
+  const prCur = () => PR && PR.q[PR.i];
+  const prWord = (c, side) => side === 'a' ? c.p.a : c.p.b;
+  const prOther = c => c.t === 'a' ? 'b' : 'a';
+  function pronAuto() { const c = prCur(); if (c && c.kind === 'ear' && !c.res) setTimeout(() => { if (prCur() === c && screen === 'pron') Speech.speak(prWord(c, c.t)); }, 250); }
+  function pronTip(c) {
+    const S0 = PRON_SETS.find(s => s.id === c.p.set), tw = prWord(c, c.t), ow = prWord(c, prOther(c));
+    if (!S0) return 'Posłuchaj obu słów (P) i porównaj, czym się różnią.';
+    const isA = S0.pairs.some(p => p[0].toLowerCase() === tw.toLowerCase() && p[1].toLowerCase() === ow.toLowerCase());
+    return 'W <i>' + esc(tw) + '</i> jest ' + (isA ? S0.ta : S0.tb) + '.';
+  }
+  function pronResult(c, ok, near) {
+    c.res = ok ? 'ok' : near ? 'near' : 'bad';
+    const ps = pronData(), t = Store.today();
+    if (c.p.set) { const a = ps.sets[c.p.set] || (ps.sets[c.p.set] = []); a.push(ok ? 1 : 0); if (a.length > 20) a.shift(); }
+    if (c.p.mine && ps.mine[c.p.mine]) { const m = ps.mine[c.p.mine]; m.n++; if (ok) { m.ok++; m.st = (m.st || 0) + 1; } else m.st = 0; }
+    const base = c.kind === 'mouth' ? 10 : 6, xp = ok ? Math.round(base * (c.helped ? 0.6 : 1)) : near ? 4 : 0;
+    PR.xp += xp; if (ok) PR.ok++;
+    D().xp += xp; t.xp += xp; t.total = (t.total || 0) + 1; t.correct = (t.correct || 0) + (ok ? 1 : 0);
+    Sound.play(ok ? 'ok' : near ? 'uns' : 'bad');
+    Store.save();
+    if (!ok && c.kind === 'ear') setTimeout(() => { if (prCur() === c) Speech.speak([prWord(c, c.t), prWord(c, prOther(c))], 0.85); }, 400);
+  }
+  function pronPick(side) { const c = prCur(); if (!c || c.res || c.kind !== 'ear') return; c.picked = side; pronResult(c, side === c.t); renderPron(); }
+  function pronListen() {
+    const c = prCur(); if (!c || c.kind !== 'mouth') return;
+    if (PR.listening) { Recog.stop(); return; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    PR.listening = true; PR.heard = ''; PR.note = ''; renderPron();
+    const X = PR;
+    Recog.listen({
+      silenceMs: 1200, firstMs: 6000,
+      onInterim: t => { if (PR !== X) return; const el = $('#prHeard'); if (el) el.textContent = t; },
+      onResult: alts => {
+        if (PR !== X || prCur() !== c) return;
+        PR.listening = false;
+        const T = prWord(c, c.t).toLowerCase(), O = prWord(c, prOther(c)).toLowerCase(), top = pronNorm(alts[0]);
+        PR.heard = alts[0];
+        if (c.res) { PR.note = top.indexOf(T) >= 0 ? 'ok' : top.indexOf(O) >= 0 ? 'bad' : 'unclear'; renderPron(); return; } // kolejne próby — tylko ćwiczenie
+        if (top.indexOf(T) >= 0) pronResult(c, true);
+        else if (top.indexOf(O) >= 0) pronResult(c, false);
+        else if (alts.slice(1).some(a => pronNorm(a).indexOf(T) >= 0)) pronResult(c, false, true);
+        else { c.tries++; PR.note = 'unclear'; if (c.tries >= 3) pronResult(c, false); }
+        renderPron();
+      },
+      onError: err => { if (PR !== X) return; PR.listening = false; PR.note = err === 'no-speech' ? 'nospeech' : 'err'; PR.err = recogMsg(err); renderPron(); }
+    });
+  }
+  function pronNext() {
+    const c = prCur(); if (!c || !c.res) return;
+    PR.i++; PR.heard = ''; PR.note = '';
+    if (PR.i >= PR.q.length) { PR.done = true; Store.save(); }
+    renderPron(); pronAuto();
+  }
+  function pronIdk() { const c = prCur(); if (!c || c.res) return; pronResult(c, false); renderPron(); }
+  function pronBoth() { const c = prCur(); if (!c) return; if (!c.res) c.helped = true; Speech.speak([prWord(c, c.t), prWord(c, prOther(c))], 0.85); if (!c.res) renderPron(); }
+  function pronSlow() { const c = prCur(); if (!c || c.kind !== 'ear') return; if (!c.res) { c.helped = true; renderPron(); } Speech.speak(prWord(c, c.t), 0.6); }
+  function pronStatsHtml() {
+    const ps = pronData(), mine = Object.keys(ps.mine).map(k => ps.mine[k]).sort((x, y) => (y.at || 0) - (x.at || 0)).slice(0, 6);
+    const row = (a, pct, b) => '<div class="pr-r"><b>' + a + '</b><span class="pr-bar"><i style="width:' + pct + '%"></i></span><small>' + b + '</small></div>';
+    return '<div class="pr-st"><div><div class="st-lbl">Twoje pary (z „Powiedz to”)</div>' +
+      (mine.length ? mine.map(p => row(esc(p.a) + ' – ' + esc(p.b), p.n ? Math.round(p.ok / p.n * 100) : 0, (p.st || 0) >= 4 ? 'opanowane' : p.n ? Math.round(p.ok / p.n * 100) + '%' : 'nowa')).join('') : '<div class="small-note">Pojawią się, gdy w „Powiedz to” rozpoznawanie usłyszy podobne słowo zamiast szukanego (np. Trump zamiast tram).</div>') +
+      '</div><div><div class="st-lbl">Dźwięki trudne dla Polaków</div>' +
+      PRON_SETS.map(s => { const a = ps.sets[s.id] || []; const pct = a.length ? Math.round(a.filter(Boolean).length / a.length * 100) : 0; return row(s.name, pct, s.ex); }).join('') + '</div></div>';
+  }
+  function renderPron() {
+    if (!PR) return go('play');
+    screen = 'pron';
+    const X = PR, n = X.q.length, c = prCur();
+    const dots = '<span class="pr-dots">' + X.q.map((x, k) => '<i class="' + (x.res === 'ok' ? 'ok' : x.res === 'near' ? 'near' : x.res ? 'no' : k === X.i && !X.done ? 'cur' : '') + '"></i>').join('') + ' ' + Math.min(X.i + (c && c.res ? 1 : 0), n) + '/' + n + '</span>';
+    const head = '<header class="ex-head"><button class="btn" id="back">' + IC.back + (X.done ? ' Wróć ' : ' Przerwij ') + K('Esc') + '</button><div class="ex-title"><b>Wymowa: pary dźwięków</b><span>' + (X.guide ? 'Krok po kroku · ' : '') + (X.done ? 'koniec rundy' : (c.kind === 'ear' ? 'ucho' : 'usta') + ' · ' + (X.i + 1) + '/' + n) + '</span></div><div style="width:150px;text-align:right" class="small-note">+' + X.xp + ' XP</div></header>';
+    let body;
+    if (X.done) {
+      body = '<section class="pr-card"><div class="pr-top"><span>Koniec rundy</span>' + dots + '</div>' +
+        '<div class="pr-sum"><b>' + X.ok + ' / ' + n + '</b><span>dobrze · +' + X.xp + ' XP</span></div>' + pronStatsHtml() + '</section>' +
+        '<div class="pr-btns">' + (X.guide ? '<button class="btn primary" id="prNext">Dalej w planie ' + K('Enter') + '</button>' : '<button class="btn" id="prHome">Wróć do gier ' + K('Esc') + '</button><button class="btn primary" id="prAgain">Jeszcze raz ' + K('Enter') + '</button>') + '</div>';
+    } else {
+      const S0 = PRON_SETS.find(s => s.id === c.p.set), lab = (c.kind === 'ear' ? 'Słuchanie · ' : 'Mówienie · ') + (c.p.mine ? 'Twoja para' + (S0 ? ' · ' + S0.name : '') : S0.name);
+      const T = prWord(c, c.t), O = prWord(c, prOther(c)), gT = c.t === 'a' ? c.p.pa : c.p.pb;
+      let mid = '', fb = '', ctl = '';
+      if (c.kind === 'ear') {
+        const opt = side => { const w = prWord(c, side), g = side === 'a' ? c.p.pa : c.p.pb, st = c.res ? (side === c.t ? ' ok' : side === c.picked ? ' no' : ' dim') : '';
+          return '<button class="btn pr-opt' + st + '" data-pick="' + side + '"' + (c.res ? ' disabled' : '') + '><b>' + esc(w) + '</b>' + (g ? '<small>' + esc(g) + '</small>' : '') + K(side === 'a' ? '1' : '2') + '</button>'; };
+        mid = '<div class="pr-q">Posłuchaj i wybierz słowo, które usłyszałeś</div><button class="btn pr-spk" id="prPlay" title="Odtwórz jeszcze raz (Spacja)">' + IC.speakerBig + '</button><div class="pr-pair">' + opt('a') + opt('b') + '</div>';
+        if (c.res) fb = c.res === 'ok' ? '<div class="pr-fb ok"><b>Dobrze!</b> To było <i>' + esc(T) + '</i>' + (c.helped ? ' · z podpowiedzią' : '') + '.</div>' : '<div class="pr-fb no"><b>To było <i>' + esc(T) + '</i>.</b> Posłuchaj obu: najpierw <i>' + esc(T) + '</i>, potem <i>' + esc(O) + '</i>.</div>';
+        ctl = c.res ? '<button class="btn" id="prBoth">Posłuchaj obu ' + K('P') + '</button><button class="btn primary" id="prNext">Dalej ' + K('Enter') + '</button>'
+          : '<button class="btn" id="prSlow">Powtórz wolniej ' + K('R') + '</button><button class="btn" id="prIdk">Nie słyszę różnicy ' + K('Alt+W') + '</button>';
+      } else {
+        mid = '<div class="pr-q">Powiedz słowo — nie „' + esc(O) + '”!</div><div class="pr-word">' + esc(T) + '</div><div class="pr-sub">' + (S0 ? (c.t === 'a' ? S0.sa : S0.sb) : '') + (S0 && gT ? ' · ' : '') + esc(gT || '') + '</div>' +
+          '<button class="btn pr-mic' + (X.listening ? ' on' : '') + '" id="prMic" title="Mów (M albo Spacja)">' + IC.mic + '</button>' +
+          '<div class="pr-heard inset" id="prHeard">' + (X.listening ? 'Słucham…' : X.heard ? 'Usłyszałem: <b>' + esc(X.heard) + '</b>' : 'Kliknij mikrofon i powiedz słowo') + '</div>';
+        if (X.note === 'unclear' && !c.res) fb = '<div class="pr-fb">Nie rozpoznałem ani <i>' + esc(T) + '</i>, ani <i>' + esc(O) + '</i> — powiedz jeszcze raz, wyraźnie jedno słowo.</div>';
+        else if (X.note === 'nospeech' || X.note === 'err') fb = '<div class="pr-fb">' + (X.note === 'nospeech' ? 'Nic nie usłyszałem — spróbuj jeszcze raz.' : esc(X.err || 'Mikrofon nie działa.')) + '</div>';
+        else if (c.res === 'ok') fb = '<div class="pr-fb ok"><b>Dobrze!</b> Usłyszałem <i>' + esc(T) + '</i>' + (c.helped ? ' · z podpowiedzią' : '') + '.' + (X.note === 'bad' ? ' (Ostatnia próba zabrzmiała jak <i>' + esc(O) + '</i>.)' : '') + '</div>';
+        else if (c.res === 'near') fb = '<div class="pr-fb mid"><b>Prawie.</b> Najbardziej prawdopodobne było co innego, <i>' + esc(T) + '</i> dopiero w dalszym odczytaniu. ' + pronTip(c) + '</div>';
+        else if (c.res === 'bad') fb = '<div class="pr-fb mid"><b>Jeszcze nie.</b> ' + (pronNorm(X.heard).indexOf(O.toLowerCase()) >= 0 ? 'To zabrzmiało jak <i>' + esc(O) + '</i>. ' : '') + pronTip(c) + ' Spróbuj jeszcze raz (M).</div>';
+        ctl = c.res ? '<button class="btn" id="prBoth">Posłuchaj obu ' + K('P') + '</button><button class="btn" id="prMic2">Powiedz jeszcze raz ' + K('M') + '</button><button class="btn primary" id="prNext">Dalej ' + K('Enter') + '</button>'
+          : '<button class="btn" id="prBoth">Posłuchaj obu ' + K('P') + '</button><button class="btn" id="prIdk">Nie wiem ' + K('Alt+W') + '</button>';
+      }
+      body = '<section class="pr-card"><div class="pr-top"><span>' + lab + '</span>' + dots + '</div>' + mid + fb + '<div class="pr-btns in">' + ctl + '</div></section>';
+    }
+    app.innerHTML = '<div class="wrap narrow pr-wrap">' + head + body + '</div>';
+    const finish = () => { const g = X.guide; PR = null; if (g) return guideStepDone({ total: n, correct: X.ok, xp: X.xp }); go('play'); };
+    $('#back').onclick = () => { if (X.listening) Recog.stop(); if (X.guide && !X.done) { PR = null; return go('guide'); } finish(); };
+    $$('[data-pick]').forEach(b => b.onclick = () => pronPick(b.dataset.pick));
+    if ($('#prPlay')) $('#prPlay').onclick = () => Speech.speak(prWord(c, c.t));
+    if ($('#prSlow')) $('#prSlow').onclick = pronSlow;
+    if ($('#prIdk')) $('#prIdk').onclick = pronIdk;
+    if ($('#prBoth')) $('#prBoth').onclick = pronBoth;
+    if ($('#prMic')) $('#prMic').onclick = pronListen;
+    if ($('#prMic2')) $('#prMic2').onclick = pronListen;
+    if ($('#prNext')) $('#prNext').onclick = () => X.done ? finish() : pronNext();
+    if ($('#prAgain')) $('#prAgain').onclick = () => startPron(false);
+    if ($('#prHome')) $('#prHome').onclick = finish;
+    keyHandler = e => {
+      if (e.repeat) return;
+      if (e.key === 'Escape') { e.preventDefault(); $('#back').click(); return; }
+      if (X.done) { if (e.key === 'Enter') { e.preventDefault(); ($('#prNext') || $('#prAgain')).click(); } return; }
+      if (e.altKey && e.code === 'KeyW' && $('#prIdk')) { e.preventDefault(); pronIdk(); return; }
+      if (e.key === 'Enter' && c.res && !onButton()) { e.preventDefault(); pronNext(); return; }
+      if (c.kind === 'ear') {
+        if (!c.res && (e.key === '1' || e.key === '2')) { e.preventDefault(); pronPick(e.key === '1' ? 'a' : 'b'); return; }
+        if (plainKey(e, 'Space')) { e.preventDefault(); Speech.speak(prWord(c, c.t)); return; }
+        if (plainKey(e, 'KeyR')) { e.preventDefault(); pronSlow(); return; }
+      } else if (plainKey(e, 'KeyM') || plainKey(e, 'Space')) { e.preventDefault(); pronListen(); return; }
+      if (plainKey(e, 'KeyP')) { e.preventDefault(); pronBoth(); }
+    };
+  }
+
   /* ================= PRZEGLĄD POZIOMU (np. A1): wpisz → „Umiem” albo do nauki ================= */
   let SW = null;
   const swIn = lvl => lvl === 'pv' ? (w => isPV(w) && !w.custom) : (w => w.lvl === lvl && !w.custom);
@@ -3248,6 +3444,7 @@
     const note = gameNote(type);
     if (note) { toast('Ta gra jest teraz niedostępna: ' + note + '.'); return; }
     if (type === 'race') return startRacePlay();
+    if (type === 'pron') return startPron(false);
     const lm = playLimits(), lim = lm.min || lm.q ? lm : null;
     if (type === 'yg') { newSession({ play: 'yg', lim }); return go('yg'); }
     newSession({ play: type, lim, queue: buildPlayQueue(type, 15, []) });
@@ -5927,6 +6124,8 @@
     const okId = id => { const it = itemFor(id); return it && typeEnabled(it.type); };
     const mg = mistakeGroups(14, 0).find(g => g.ids.filter(okId).length >= 3);
     if (mg) add({ type: 'mistakes', title: 'Twoje błędy', mode: 'play', why: 'Najczęściej wraca: ' + mg.cat + '.', queue: U.shuffle(mg.ids.filter(okId)).slice(0, per).map(id => ({ id, isNew: false })) });
+    // wymowa — gdy w „Powiedz to” zebrały się pary mylonych słów
+    { const pm = pronMine(); if (pm.length >= 2 && Recog.supported()) add({ type: 'pron', title: 'Wymowa', mode: 'pron', why: 'Pary, które mylisz w „Powiedz to”: ' + pm.slice(0, 3).map(p => p.a + ' – ' + p.b).join(', ') + '.' }); }
     // audycja z AI, jeśli nie było jej od 2 dni (temat dobierze AI)
     if (AI.enabled()) { const dl = daysSinceUse('listen'); if (dl == null || dl >= 2) add({ type: 'listen', title: 'Audycja', mode: 'listen', why: 'Słuchanie dłuższego tekstu — ' + (dl == null ? 'dawno albo wcale' : 'ostatnio ' + dl + ' dni temu') + '.' }); }
     // dawno nie było
@@ -5940,7 +6139,7 @@
     // dopełnienie najrzadziej używanym
     GUIDE_BLOCK.slice().sort((a, b) => usage(useKey(a)) - usage(useKey(b))).forEach(t => { if (steps.length < 3 && !used[t]) { const q = guideBlock(t, per); if (q) add({ type: t, title: USE_NAME[t], mode: 'play', why: 'Najrzadziej ćwiczone ostatnio.', queue: q }); } });
     // kolejność: powtórki i nowe na początku, audycja na końcu, reszta przemieszana rodzajem
-    const head = steps.filter(x => x.mode === 'srs'), tail = steps.filter(x => x.mode === 'listen'), mid = steps.filter(x => x.mode === 'play');
+    const head = steps.filter(x => x.mode === 'srs'), tail = steps.filter(x => x.mode === 'listen'), mid = steps.filter(x => x.mode === 'play' || x.mode === 'pron');
     return head.slice(0, 1).concat(mid.slice(0, 1), head.slice(1), mid.slice(1), tail);
   }
   function startGuide() {
@@ -5970,6 +6169,7 @@
   }
   function runGuideStep() {
     const g = GUIDE, x = g && g.steps[g.i]; if (!x) return;
+    if (x.mode === 'pron') return startPron(true);
     if (x.mode === 'listen') {
       LS = { phase: 'pick', lvl: levels().listening };
       go('listen');
