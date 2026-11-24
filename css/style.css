@@ -1780,3 +1780,4 @@ html body { background: transparent; }
 .pr-bar { height: 10px; border-radius: 6px; box-shadow: inset 2px 2px 4px var(--sh-in-d), inset -2px -2px 4px var(--sh-l); display: block; overflow: hidden; }
 .pr-bar i { display: block; height: 100%; background: #5A84BC; border-radius: 6px; }
 .pr-top > span:first-child { text-transform: none; letter-spacing: .02em; font-size: 14px; }
+.hk-msg { margin-top: 8px; color: #8E6426; }

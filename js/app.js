@@ -1562,22 +1562,24 @@
   function aiTag(m) { return '<span class="ai-tag">AI' + mdlTag(m) + '</span>'; }
   /* ---------- Haczyk pamięciowy: ikonka żarówki po błędzie przy słowach, okienko po kliknięciu (klawisz H) ---------- */
   const HOOK_TYPES = { cloze: 1, choice: 1, particle: 1, pvwrite: 1 };
-  const HOOK_BUSY = {};
+  const HOOK_BUSY = {}, HOOK_MSG = {};
   const LIGHTBULB = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
   function hookWordId(it) { if (!it || !it.w || it.fromText || !it.id) return null; const id = it.id.indexOf(':') >= 0 ? it.id.slice(it.id.indexOf(':') + 1) : it.id; return WORDS.byId[id] ? id : null; }
   const c0 = it => (cur() || {}).id || it.id;
   function hookGet(wid) { return ((D().hooks || {})[wid]) || null; }
   function hookFetch(wid, avoid) {
     const w = WORDS.byId[wid]; if (!w || !AI.enabled() || HOOK_BUSY[wid]) return Promise.resolve(hookGet(wid));
-    HOOK_BUSY[wid] = true;
+    HOOK_BUSY[wid] = true; delete HOOK_MSG[wid];
     return AI.memHook(w.answers[0], w.pl, fullSentence({ w }), L[levels().vocab], avoid || [])
       .then(r => {
         const H = D().hooks = D().hooks || {}, prev = H[wid];
         if (r.ok) H[wid] = { t: r.hook, m: AI.lastModel(), at: Date.now(), tried: ((prev && prev.tried) || []).concat(prev && prev.t && !prev.own ? [prev.t] : []).slice(-5) };
         else if (!prev) H[wid] = { none: 1, at: Date.now() };
+        else if (prev.t) HOOK_MSG[wid] = 'AI nie znalazło innego dobrego haczyka — zostaje ten. Spróbuj jeszcze raz albo wpisz własny.';
+        const se = AI.smartErr(), st = D().settings; if (se && st.smartOn !== false && AI.lastModel() === (st.model || 'claude-haiku-5-5').trim()) HOOK_MSG[wid] = (HOOK_MSG[wid] ? HOOK_MSG[wid] + ' ' : '') + 'Lepszy model nie zadziałał (' + se + ') — użyto szybkiego. Sprawdź nazwę modelu w Ustawieniach → Sztuczna inteligencja.';
         Store.save(); return H[wid];
       })
-      .catch(() => hookGet(wid))
+      .catch(e => { HOOK_MSG[wid] = 'Nie udało się zapytać AI: ' + AI.humanError(e); return hookGet(wid); })
       .then(x => { delete HOOK_BUSY[wid]; return x; });
   }
   function hookBtnHtml(id) { return '<button class="btn raised hk-btn" id="' + id + '" title="Haczyk — jak zapamiętać (H)" aria-label="Haczyk — jak zapamiętać (H)">' + LIGHTBULB + '</button>'; }
@@ -1617,6 +1619,7 @@
       : (busy && !(h && h.t) ? '<div class="checking"><span class="spinner"></span>AI szuka dobrego haczyka…</div>'
         : h && h.t ? '<div class="hk-t">' + qaFmt(h.t) + '</div>'
         : '<div class="small-note">' + (AI.enabled() ? 'AI nie znalazło dobrego haczyka do tego słowa. Możesz wpisać własny.' : 'Haczyki od AI wymagają klucza API. Możesz wpisać własny.') + '</div>') +
+        (HOOK_MSG[wid] && !busy ? '<div class="small-note hk-msg">' + esc(HOOK_MSG[wid]) + '</div>' : '') +
         '<div class="hb">' + (h && h.t ? (h.own ? '<span class="small-note" style="margin-right:auto;align-self:center">Twój haczyk</span>' : '<span style="margin-right:auto;align-self:center">' + aiTag(h.m) + '</span>') : '') +
         (AI.enabled() ? '<button class="btn small raised" data-hk="other"' + (busy ? ' disabled' : '') + '>' + (busy && h && h.t ? 'Szukam…' : 'Inny') + '</button>' : '') +
         '<button class="btn small raised" data-hk="own">Mój</button></div>';
