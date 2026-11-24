@@ -3181,6 +3181,25 @@
     { id: 'ng', name: '/ŋ/ – /ŋk/', ex: 'sing – sink', sa: '/ŋ/', sb: '/ŋk/', ta: '/ŋ/ — nosowe „ng”, bez „g” ani „k” na końcu', tb: '/ŋk/ — wyraźne „k” na końcu',
       pairs: [['sing', 'sink', 'śpiewać', 'zlew'], ['thing', 'think', 'rzecz', 'myśleć'], ['wing', 'wink', 'skrzydło', 'mrugać'], ['bang', 'bank', 'huk', 'bank']] }
   ];
+  /* omówienie różnicy — jak wymówić każdy dźwięk i typowy błąd Polaka */
+  const PRON_HOW = {
+    ae: { a: 'Szczęka nisko jak u dentysty, usta rozciągnięte na boki, język płasko przy dolnych zębach. Brzmi pomiędzy polskim „a” i „e”.', b: 'Krótkie, luźne, ze środka ust — bardzo bliskie polskiemu „a”. Tu polski odruch jest dobry.', pl: 'Polacy mówią oba jak polskie „a”, więc <i>cat</i> brzmi jak <i>cut</i>, a <i>tram</i> jak <i>Trump</i>. Ćwiczenie: powiedz „e”, a potem opuść szczękę, nie ruszając językiem — to jest /æ/.' },
+    aee: { a: 'Szczęka wyraźnie nisko, usta rozciągnięte — szerzej i dłużej niż polskie „e”.', b: 'Zwykłe, krótkie polskie „e”, szczęka wyżej.', pl: 'Gdy /æ/ jest za mało otwarte, <i>man</i> brzmi jak <i>men</i>. Różnicę robi szczęka: przy /æ/ opuść ją, jakbyś ziewał.' },
+    ii: { a: 'Długie i napięte. Usta w uśmiechu, język wysoko — jak polskie „i”, ale wyraźnie dłuższe: „szii-p”.', b: 'Krótkie i luźne, między polskim „i” a „y”. Usta rozluźnione, bez uśmiechu: „szyp”.', pl: 'Polacy mówią oba jak krótkie „i”, więc <i>leave</i> i <i>live</i> brzmią tak samo. Klucz to długość i napięcie, nie barwa.' },
+    th: { a: 'Czubek języka lekko wysunięty między zęby, dmuchasz powietrze — bez nacisku, język tylko dotyka zębów.', b: 'Język schowany za zębami (s, t) albo górne zęby na wardze (f).', pl: 'Polacy zastępują th przez „s”, „f” albo „t” — <i>think</i> brzmi jak <i>sink</i> albo <i>fink</i>. Sprawdź w lustrze: przy th widać czubek języka.' },
+    wv: { a: 'Usta zaokrąglone w dzióbek jak do „u”, zęby nie dotykają warg — jak polskie „ł” w „łoś”.', b: 'Górne zęby lekko na dolnej wardze — jak polskie „w”.', pl: 'Polacy czytają literę <i>w</i> jak polskie „w”, więc <i>west</i> brzmi jak <i>vest</i>. Zapamiętaj: angielskie <i>w</i> = polskie „ł”.' },
+    end: { a: 'Końcowe d, g, z, v z głosem (gardło wibruje), a samogłoska przed nimi wyraźnie dłuższa: „baaad”.', b: 'Końcowe t, k, s, f — krótko i ostro, samogłoska krótka: „bat”.', pl: 'Po polsku końcówki się ubezdźwięczniają („chleb” = „chlep”), więc <i>bad</i> brzmi jak <i>bat</i>. Najłatwiej: przeciągnij samogłoskę przed dźwięczną końcówką.' },
+    er: { a: 'Usta rozluźnione, NIE zaokrąglone, język w środku — jak niemieckie „ö”. W brytyjskiej wymowie bez „r”.', b: 'Długie „o”, usta zaokrąglone w kółko.', pl: 'Polacy czytają <i>work</i> jak „łork”, więc brzmi jak <i>walk</i>. W <i>work</i> nie ma „o” — usta zostają płaskie.' },
+    ng: { a: 'Tył języka przy podniebieniu, dźwięk idzie nosem; słowo kończy się samym „ng”, bez „g” ani „k”.', b: 'To samo nosowe „ng”, a potem wyraźne „k”.', pl: 'Polacy dodają na końcu „k” albo „g”, więc <i>sing</i> brzmi jak <i>sink</i>. Zakończ słowo samym brzmieniem w nosie.' }
+  };
+  function pronHowHtml(c) {
+    const S0 = PRON_SETS.find(s => s.id === c.p.set), H = S0 && PRON_HOW[S0.id];
+    if (!H) return '<div class="pr-how"><div class="pr-how-t">Różnica i wymowa</div><p class="small-note">Te słowa różnią się jednym dźwiękiem. Posłuchaj obu (P) kilka razy i powtarzaj za lektorem, zwracając uwagę na samogłoskę.</p></div>';
+    const fa = S0.pairs.find(p => p[0].toLowerCase() === c.p.a.toLowerCase()) ? 'a' : 'b'; // c.p.a należy do strony A zestawu?
+    const col = (side) => { const isA = (side === 'a') === (fa === 'a'), w = prWord(c, side);
+      return '<div class="pr-how-c"><div class="pr-how-h"><b>' + esc(w) + '</b><span>' + (isA ? S0.sa : S0.sb) + '</span></div><p>' + (isA ? H.a : H.b) + '</p></div>'; };
+    return '<div class="pr-how"><div class="pr-how-t">Różnica i wymowa · ' + S0.name + '</div><div class="pr-how-g">' + col('a') + col('b') + '</div><div class="pr-how-pl"><b>Typowy błąd Polaka:</b> ' + H.pl + '</div></div>';
+  }
   const pronData = () => { const d = D(); d.pron = d.pron || {}; d.pron.sets = d.pron.sets || {}; d.pron.mine = d.pron.mine || {}; return d.pron; };
   const pronMine = () => { const m = pronData().mine; return Object.keys(m).map(k => m[k]).filter(p => (p.st || 0) < 4).sort((x, y) => (y.at || 0) - (x.at || 0)); };
   const pronNorm = s => String(s || '').toLowerCase().replace(/[^a-z' ]+/g, ' ').split(/\s+/).filter(Boolean);
@@ -3332,7 +3351,9 @@
         ctl = c.res ? '<button class="btn" id="prBoth">Posłuchaj obu ' + K('P') + '</button><button class="btn" id="prMic2">Powiedz jeszcze raz ' + K('M') + '</button><button class="btn primary" id="prNext">Dalej ' + K('Enter') + '</button>'
           : '<button class="btn" id="prBoth">Posłuchaj obu ' + K('P') + '</button><button class="btn" id="prIdk">Nie wiem ' + K('Alt+W') + '</button>';
       }
-      body = '<section class="pr-card"><div class="pr-top"><span>' + lab + '</span>' + dots + '</div>' + mid + fb + '<div class="pr-btns in">' + ctl + '</div></section>';
+      const how = (c.res && c.res !== 'ok') || c.showHow ? pronHowHtml(c) : '';
+      if (!how) ctl = '<button class="btn" id="prHow">Jak wymówić? ' + K('J') + '</button>' + ctl;
+      body = '<section class="pr-card"><div class="pr-top"><span>' + lab + '</span>' + dots + '</div>' + mid + fb + how + '<div class="pr-btns in">' + ctl + '</div></section>';
     }
     app.innerHTML = '<div class="wrap narrow pr-wrap">' + head + body + '</div>';
     const finish = () => { const g = X.guide; PR = null; if (g) return guideStepDone({ total: n, correct: X.ok, xp: X.xp }); go('play'); };
@@ -3340,6 +3361,7 @@
     $$('[data-pick]').forEach(b => b.onclick = () => pronPick(b.dataset.pick));
     if ($('#prPlay')) $('#prPlay').onclick = () => Speech.speak(prWord(c, c.t));
     if ($('#prSlow')) $('#prSlow').onclick = pronSlow;
+    if ($('#prHow')) $('#prHow').onclick = () => { if (!c.res && c.kind === 'mouth') c.helped = true; c.showHow = true; renderPron(); };
     if ($('#prIdk')) $('#prIdk').onclick = pronIdk;
     if ($('#prBoth')) $('#prBoth').onclick = pronBoth;
     if ($('#prMic')) $('#prMic').onclick = pronListen;
@@ -3358,6 +3380,7 @@
         if (plainKey(e, 'Space')) { e.preventDefault(); Speech.speak(prWord(c, c.t)); return; }
         if (plainKey(e, 'KeyR')) { e.preventDefault(); pronSlow(); return; }
       } else if (plainKey(e, 'KeyM') || plainKey(e, 'Space')) { e.preventDefault(); pronListen(); return; }
+      if (plainKey(e, 'KeyJ') && $('#prHow')) { e.preventDefault(); $('#prHow').click(); return; }
       if (plainKey(e, 'KeyP')) { e.preventDefault(); pronBoth(); }
     };
   }

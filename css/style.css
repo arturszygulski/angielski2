@@ -1788,3 +1788,11 @@ html body { background: transparent; }
 .pr-chip { font: 700 20px var(--head); padding: 6px 16px; border-radius: 12px; color: var(--ink-2); transition: transform .15s, background-color .15s; }
 .pr-chip.tgt { color: var(--ink); }
 .pr-chip.saying { outline: 2px solid #5A84BC; outline-offset: 2px; }
+/* Wymowa: omówienie różnicy (upd218) */
+.pr-how { width: min(820px, 100%); box-sizing: border-box; border: 1.5px solid #BDB6AD; border-radius: 18px; padding: 14px 20px 16px; text-align: left; }
+.pr-how-t { font: 700 12px var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.pr-how-g { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.pr-how-g > div + div { border-left: 1px solid #D2CCC4; padding-left: 24px; }
+.pr-how-h { display: flex; align-items: baseline; gap: 10px; } .pr-how-h b { font: 700 22px var(--head); } .pr-how-h span { color: var(--ink-2); font-size: 15px; }
+.pr-how-c p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
+.pr-how-pl { margin-top: 12px; padding-top: 10px; border-top: 1px solid #D2CCC4; font-size: 14.5px; line-height: 1.5; }
