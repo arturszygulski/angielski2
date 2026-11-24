@@ -1781,3 +1781,10 @@ html body { background: transparent; }
 .pr-bar i { display: block; height: 100%; background: #5A84BC; border-radius: 6px; }
 .pr-top > span:first-child { text-transform: none; letter-spacing: .02em; font-size: 14px; }
 .hk-msg { margin-top: 8px; color: #8E6426; }
+/* Wymowa: podświetlenie słowa, które mówi lektor (upd216) */
+#app .btn.pr-opt { transition: transform .15s, background-color .15s; }
+#app .btn.pr-opt.saying { background: #D0DFF0 !important; color: #2E4E78; transform: scale(1.05); opacity: 1; }
+.pr-mini { display: flex; gap: 12px; }
+.pr-chip { font: 700 20px var(--head); padding: 6px 16px; border-radius: 12px; color: var(--ink-2); transition: transform .15s, background-color .15s; }
+.pr-chip.tgt { color: var(--ink); }
+.pr-chip.saying { background: #D0DFF0; color: #2E4E78; transform: scale(1.08); }

@@ -3223,6 +3223,19 @@
   const prCur = () => PR && PR.q[PR.i];
   const prWord = (c, side) => side === 'a' ? c.p.a : c.p.b;
   const prOther = c => c.t === 'a' ? 'b' : 'a';
+  /* „Posłuchaj obu”: lektor mówi oba słowa po kolei (lewe, potem prawe), a słowo, które właśnie mówi, jest podświetlone */
+  let PR_SAY = 0;
+  function pronSayBoth(c) {
+    const id = ++PR_SAY, seq = ['a', 'b'];
+    const mark = side => $$('[data-say]').forEach(e => e.classList.toggle('saying', e.dataset.say === side));
+    const step = k => {
+      if (id !== PR_SAY || prCur() !== c || screen !== 'pron') return;
+      if (k >= seq.length) { mark(null); return; }
+      mark(seq[k]);
+      Speech.speakOne(prWord(c, seq[k]), 0.8, () => setTimeout(() => step(k + 1), 600));
+    };
+    setTimeout(() => step(0), 150);
+  }
   function pronAuto() { const c = prCur(); if (c && c.kind === 'ear' && !c.res) setTimeout(() => { if (prCur() === c && screen === 'pron') Speech.speak(prWord(c, c.t)); }, 250); }
   function pronTip(c) {
     const S0 = PRON_SETS.find(s => s.id === c.p.set), tw = prWord(c, c.t), ow = prWord(c, prOther(c));
@@ -3240,7 +3253,7 @@
     D().xp += xp; t.xp += xp; t.total = (t.total || 0) + 1; t.correct = (t.correct || 0) + (ok ? 1 : 0);
     Sound.play(ok ? 'ok' : near ? 'uns' : 'bad');
     Store.save();
-    if (!ok && c.kind === 'ear') setTimeout(() => { if (prCur() === c) Speech.speak([prWord(c, c.t), prWord(c, prOther(c))], 0.85); }, 400);
+    if (!ok && c.kind === 'ear') setTimeout(() => { if (prCur() === c) pronSayBoth(c); }, 300);
   }
   function pronPick(side) { const c = prCur(); if (!c || c.res || c.kind !== 'ear') return; c.picked = side; pronResult(c, side === c.t); renderPron(); }
   function pronListen() {
@@ -3274,7 +3287,7 @@
     renderPron(); pronAuto();
   }
   function pronIdk() { const c = prCur(); if (!c || c.res) return; pronResult(c, false); renderPron(); }
-  function pronBoth() { const c = prCur(); if (!c) return; if (!c.res) c.helped = true; Speech.speak([prWord(c, c.t), prWord(c, prOther(c))], 0.85); if (!c.res) renderPron(); }
+  function pronBoth() { const c = prCur(); if (!c) return; if (!c.res) c.helped = true; c.showBoth = true; renderPron(); pronSayBoth(c); }
   function pronSlow() { const c = prCur(); if (!c || c.kind !== 'ear') return; if (!c.res) { c.helped = true; renderPron(); } Speech.speak(prWord(c, c.t), 0.6); }
   function pronStatsHtml() {
     const ps = pronData(), mine = Object.keys(ps.mine).map(k => ps.mine[k]).sort((x, y) => (y.at || 0) - (x.at || 0)).slice(0, 6);
@@ -3301,14 +3314,15 @@
       let mid = '', fb = '', ctl = '';
       if (c.kind === 'ear') {
         const opt = side => { const w = prWord(c, side), g = side === 'a' ? c.p.pa : c.p.pb, st = c.res ? (side === c.t ? ' ok' : side === c.picked ? ' no' : ' dim') : '';
-          return '<button class="btn pr-opt' + st + '" data-pick="' + side + '"' + (c.res ? ' disabled' : '') + '><b>' + esc(w) + '</b>' + (g ? '<small>' + esc(g) + '</small>' : '') + K(side === 'a' ? '1' : '2') + '</button>'; };
+          return '<button class="btn pr-opt' + st + '" data-say="' + side + '" data-pick="' + side + '"' + (c.res ? ' disabled' : '') + '><b>' + esc(w) + '</b>' + (g ? '<small>' + esc(g) + '</small>' : '') + K(side === 'a' ? '1' : '2') + '</button>'; };
         mid = '<div class="pr-q">Posłuchaj i wybierz słowo, które usłyszałeś</div><button class="btn pr-spk" id="prPlay" title="Odtwórz jeszcze raz (Spacja)">' + IC.speakerBig + '</button><div class="pr-pair">' + opt('a') + opt('b') + '</div>';
-        if (c.res) fb = c.res === 'ok' ? '<div class="pr-fb ok"><b>Dobrze!</b> To było <i>' + esc(T) + '</i>' + (c.helped ? ' · z podpowiedzią' : '') + '.</div>' : '<div class="pr-fb no"><b>To było <i>' + esc(T) + '</i>.</b> Posłuchaj obu: najpierw <i>' + esc(T) + '</i>, potem <i>' + esc(O) + '</i>.</div>';
+        if (c.res) fb = c.res === 'ok' ? '<div class="pr-fb ok"><b>Dobrze!</b> To było <i>' + esc(T) + '</i>' + (c.helped ? ' · z podpowiedzią' : '') + '.</div>' : '<div class="pr-fb no"><b>To było <i>' + esc(T) + '</i>.</b> Posłuchaj obu — podświetla się słowo, które właśnie mówi lektor.</div>';
         ctl = c.res ? '<button class="btn" id="prBoth">Posłuchaj obu ' + K('P') + '</button><button class="btn primary" id="prNext">Dalej ' + K('Enter') + '</button>'
           : '<button class="btn" id="prSlow">Powtórz wolniej ' + K('R') + '</button><button class="btn" id="prIdk">Nie słyszę różnicy ' + K('Alt+W') + '</button>';
       } else {
         mid = '<div class="pr-q">Powiedz słowo — nie „' + esc(O) + '”!</div><div class="pr-word">' + esc(T) + '</div><div class="pr-sub">' + (S0 ? (c.t === 'a' ? S0.sa : S0.sb) : '') + (S0 && gT ? ' · ' : '') + esc(gT || '') + '</div>' +
           '<button class="btn pr-mic' + (X.listening ? ' on' : '') + '" id="prMic" title="Mów (M albo Spacja)">' + IC.mic + '</button>' +
+          (c.showBoth || c.res ? '<div class="pr-mini">' + ['a', 'b'].map(sd => '<span class="pr-chip' + (sd === c.t ? ' tgt' : '') + '" data-say="' + sd + '">' + esc(prWord(c, sd)) + '</span>').join('') + '</div>' : '') +
           '<div class="pr-heard inset" id="prHeard">' + (X.listening ? 'Słucham…' : X.heard ? 'Usłyszałem: <b>' + esc(X.heard) + '</b>' : 'Kliknij mikrofon i powiedz słowo') + '</div>';
         if (X.note === 'unclear' && !c.res) fb = '<div class="pr-fb">Nie rozpoznałem ani <i>' + esc(T) + '</i>, ani <i>' + esc(O) + '</i> — powiedz jeszcze raz, wyraźnie jedno słowo.</div>';
         else if (X.note === 'nospeech' || X.note === 'err') fb = '<div class="pr-fb">' + (X.note === 'nospeech' ? 'Nic nie usłyszałem — spróbuj jeszcze raz.' : esc(X.err || 'Mikrofon nie działa.')) + '</div>';
