@@ -8071,6 +8071,7 @@
     if (im && im !== 'none') { const c = rgb(im); if (c.length >= 2) return { a: parse(c[0]), z: parse(c[c.length - 1]) }; }
     const c = parse(cs.backgroundColor); return { a: c, z: c };
   }
+  const LAST = {}; // ostatnio pokazana liczba kreseczek dla danego paska — po przerysowaniu ekranu bez ponownego „ładowania” od zera
   const mix = (C, t) => 'rgb(' + C.a.map((v, j) => Math.round(v + (C.z[j] - v) * t)).join(',') + ')';
   function setup(bar) {
     if (bar.__seg) return;
@@ -8085,15 +8086,16 @@
     row.innerHTML = Array.from({ length: n }, () => '<i style="width:' + segW + 'px;height:' + segH + 'px"></i>').join('');
     bar.appendChild(row);
     const segs = row.children; let shown = 0, timer = 0;
+    const all = [...document.querySelectorAll(SEL)], key = (fill.id || bar.className.replace(/\s*seg-on/, '') + '#' + all.indexOf(bar)) + '|' + n;
     const target = () => Math.round(n * Math.min(100, parseFloat(fill.style.width) || 0) / 100);
-    const paint = k => { for (let i = 0; i < n; i++) { const on = i < k; segs[i].classList.toggle('on', on); segs[i].style.background = on ? mix(C, n > 1 ? i / (n - 1) : 0) : ''; } shown = k; };
+    const paint = k => { for (let i = 0; i < n; i++) { const on = i < k; segs[i].classList.toggle('on', on); segs[i].style.background = on ? mix(C, n > 1 ? i / (n - 1) : 0) : ''; } shown = k; LAST[key] = k; };
     const go = () => {
       const t = target(); clearTimeout(timer);
       if (t <= shown) { paint(t); return; }
       const step = () => { if (shown < t) { paint(shown + 1); timer = setTimeout(step, 60); } };
       step();
     };
-    paint(0); go();
+    paint(Math.min(LAST[key] || 0, target())); go();
     new MutationObserver(go).observe(fill, { attributes: true, attributeFilter: ['style'] });
   }
   function scan(root) { (root || document).querySelectorAll(SEL).forEach(b => { if (!b.__seg) setup(b); }); }
