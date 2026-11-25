@@ -8060,3 +8060,48 @@
   /* do testów i diagnozy w konsoli */
   window.__app = { go, newSession, tenseItems, tenseIdsFor, newExtraPool, itemFor, fixInfo, saveFix, undoFix, qcOldAiWords, maybeTopUp, itemLabel, newPool };
 })();
+/* Paski z kreseczek (upd225): każdy jednokolorowy pasek (.bar, .mi-bar, .st-rpb, .mini, .pr-bar) zamieniany na rząd zaokrąglonych kreseczek;
+   zgaszone wklęsłe, zapalone w kolorze paska (gradient = kolejne kreseczki coraz ciemniejsze); przy wzroście zapalają się po kolei. */
+(function () {
+  const SEL = '.bar, .mi-bar, .st-rpb, .mini, .pr-bar';
+  const rgb = s => (s.match(/rgba?\([^)]*\)/g) || []);
+  const parse = c => { const m = c.match(/[\d.]+/g) || [0, 0, 0]; return m.slice(0, 3).map(Number); };
+  function colorsOf(fill) {
+    const cs = getComputedStyle(fill), im = cs.backgroundImage;
+    if (im && im !== 'none') { const c = rgb(im); if (c.length >= 2) return { a: parse(c[0]), z: parse(c[c.length - 1]) }; }
+    const c = parse(cs.backgroundColor); return { a: c, z: c };
+  }
+  const mix = (C, t) => 'rgb(' + C.a.map((v, j) => Math.round(v + (C.z[j] - v) * t)).join(',') + ')';
+  function setup(bar) {
+    if (bar.__seg) return;
+    const fill = bar.querySelector(':scope > div, :scope > i, :scope > span'); if (!fill || bar.children.length !== 1) return;
+    const w = bar.clientWidth; if (!w) return;
+    bar.__seg = true;
+    const h = bar.clientHeight || 10, segH = Math.max(7, Math.min(14, h + 4)), segW = segH >= 12 ? 10 : 8, gap = 3;
+    const n = Math.max(4, Math.floor((w + gap) / (segW + gap)));
+    const C = colorsOf(fill);
+    bar.classList.add('seg-on');
+    const row = document.createElement('span'); row.className = 'seg-row';
+    row.innerHTML = Array.from({ length: n }, () => '<i style="width:' + segW + 'px;height:' + segH + 'px"></i>').join('');
+    bar.appendChild(row);
+    const segs = row.children; let shown = 0, timer = 0;
+    const target = () => Math.round(n * Math.min(100, parseFloat(fill.style.width) || 0) / 100);
+    const paint = k => { for (let i = 0; i < n; i++) { const on = i < k; segs[i].classList.toggle('on', on); segs[i].style.background = on ? mix(C, n > 1 ? i / (n - 1) : 0) : ''; } shown = k; };
+    const go = () => {
+      const t = target(); clearTimeout(timer);
+      if (t <= shown) { paint(t); return; }
+      const step = () => { if (shown < t) { paint(shown + 1); timer = setTimeout(step, 60); } };
+      step();
+    };
+    paint(0); go();
+    new MutationObserver(go).observe(fill, { attributes: true, attributeFilter: ['style'] });
+  }
+  function scan(root) { (root || document).querySelectorAll(SEL).forEach(b => { if (!b.__seg) setup(b); }); }
+  const start = () => {
+    const app = document.getElementById('app'); if (!app) return;
+    let q = 0;
+    new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; scan(document); }); }).observe(document.body, { childList: true, subtree: true });
+    scan(document);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();

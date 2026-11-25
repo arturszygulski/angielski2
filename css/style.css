@@ -1827,3 +1827,9 @@ html body { background: transparent; }
 .ub-row { display: grid; grid-template-columns: 240px 1fr 90px 110px; gap: 16px; align-items: center; padding: 10px 2px; border-bottom: 1px solid #D2CCC4; font-size: 15px; }
 .ub-row s { color: #9A3B2E; } .ub-row b { font-family: var(--head); } .ub-row small { color: var(--ink-3); font-size: 12.5px; }
 .ub-ok { color: #3E6249; font-weight: 700; font-size: 13.5px; }
+/* Paski z kreseczek (upd225) */
+.seg-on { background: none !important; box-shadow: none !important; overflow: visible !important; position: relative; display: flex !important; align-items: center; height: auto !important; min-height: 12px; }
+.seg-on > :first-child { position: absolute !important; opacity: 0 !important; pointer-events: none; height: 1px !important; }
+.seg-row { display: flex; gap: 3px; align-items: center; }
+.seg-row i { flex: none; border-radius: 5px; box-shadow: inset 1.5px 1.5px 3px var(--sh-in-d), inset -1.5px -1.5px 3px var(--sh-l); }
+.seg-row i.on { box-shadow: none; }
