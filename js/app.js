@@ -4946,7 +4946,7 @@
       if (tab === 'min') {
         const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#5A84BC"></i>miesiąc</span>' : '<span><i style="background:#5A84BC"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:rgba(110,100,90,.2)"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
         return ph(mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu', legendHtml) +
-          '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side">' + minSideHtml(sd) + lastPeriodsHtml(mode) + '<div class="st-fbox"><div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div></div>';
+          '<div class="st-21 st-min"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side"><div class="st-fbox st-kvbox">' + minSideHtml(sd) + '</div>' + lastPeriodsHtml(mode) + '<div class="st-fbox"><div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div></div>';
       }
       if (tab === 'sk') {
         const due = monthTestDue();
@@ -4991,6 +4991,8 @@
       '<section class="st-f"><p class="st-ins">' + esc(insightText(sd)) + '</p><div class="st-kp">' + sd.kpis.map(k => kpiFlat(k, sd)).join('') + kpiTotal(sd) + '</div></section>' +
       '</div>';
     $('#back').onclick = () => go('home');
+    /* Minuty: wykres dzień po dniu tej samej wysokości co 3 moduły po prawej (upd230) */
+    if (tab === 'min') { const side = $('.st-min .st-side'), ch = $('.st-min .st-minchart'); if (side && ch) { const lb = ch.querySelector('.blabels'), lh = lb ? lb.offsetHeight + 26 : 48; ch.innerHTML = barsHtml(Object.assign({}, sd, { h: Math.max(220, side.offsetHeight - lh) })); } }
     $$('[data-mode]').forEach(b => b.onclick = () => renderStats(b.dataset.mode));
     const setTab = t => { D().settings.stTab = t; Store.save(); renderStats(mode); };
     $$('[data-stt]').forEach(b => b.onclick = () => setTab(b.dataset.stt));
