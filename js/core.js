@@ -490,6 +490,7 @@ window.AI = (function () {
       '- Porównuj dokładnie słowa, które Artur napisał. Nie pisz, że czegoś brakuje, jeśli to jest w jego odpowiedzi; nie przypisuj mu słów z przykładowego tłumaczenia. Jego sformułowanie (np. „When” zamiast „After”) jest w porządku, jeśli pasuje do sensu.\n' +
       '- W explanation wymień tylko rzeczywiste różnice, np. brakujące „the” albo zbędne słowo, cytując je. Zanim napiszesz, że czegoś brakuje albo coś jest źle, sprawdź to słowo po słowie w odpowiedzi Artura — jeśli tam jest, nie pisz o tym wcale.\n' +
       '- Odpowiedź niepełna (urwana, z „...”/„…” w miejscu słowa albo bez części sensu) to zawsze "wrong" — w explanation podaj brakujące słowo i jego znaczenie.\n' +
+      '- W explanation zawsze najpierw wskaż błędy gramatyczne i znaczeniowe (np. przyimek: „in school” zamiast „at school”, brak „the”), a dopiero na końcu literówki. Nie pomijaj żadnej różnicy między odpowiedzią Artura a poleceniem „better”.\n' +
       '- Słowo o innym znaczeniu niż w polskim zdaniu (np. „lesson” = lekcja zamiast „subject” = przedmiot) to błąd — nazwij go wprost i wyjaśnij różnicę.\n' +
       '- Częste, naturalne warianty używane przez rodzimych użytkowników (np. „Can I get…” zamiast „Can I have…”, „I am” zamiast „I\'m”) to "natural". "understandable" daj tylko za prawdziwy błąd gramatyczny, złe słowo albo wyraźnie nienaturalne sformułowanie — nie za wybór stylu.\n' +
       (spoken ? '- Artur PODYKTOWAŁ odpowiedź do mikrofonu — rozpoznawanie mowy mogło dodać, zgubić albo przekręcić krótkie słowo (np. „on”, „the”, „a”). Jeśli różnica wygląda na błąd rozpoznania, zaznacz to delikatnie („możliwe, że mikrofon usłyszał…”).\n' : '') +
@@ -498,6 +499,15 @@ window.AI = (function () {
     let v = ['natural', 'understandable', 'wrong'].includes(j.verdict) ? j.verdict : 'wrong';
     if (/\.\.\.|…|\?\?/.test(answer)) v = 'wrong'; // urwana odpowiedź nigdy nie jest trafieniem
     return { verdict: v, better: String(j.better || ''), explanation: String(j.explanation || '') };
+  }
+  /* uparty błąd: krótka zasada + 6 zdań PL→EN z poprawnym zwrotem (upd224) */
+  async function stubDrill(wrong, right, examples) {
+    const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka (poziom A2–B1). Odpowiadasz wyłącznie przez narzędzie.';
+    const user = 'Artur uparcie robi ten sam błąd: pisze "' + wrong + '" zamiast "' + right + '".' + (examples && examples.length ? '\nPrzykłady zdań, w których się pomylił: ' + examples.map(e => '"' + e + '"').join('; ') : '') +
+      '\n\n1) rule: JEDNO krótkie zdanie po polsku — zasada, kiedy mówi się "' + right + '" (np. „w szkole” jako na lekcjach = at school, jak at work, at home). Jeśli to tylko literówka — podaj, jak zapamiętać pisownię.' +
+      '\n2) items: 6 krótkich, codziennych zdań (5–9 słów), każde z innym kontekstem, w których poprawna wersja zawiera "' + right + '". Pole pl — naturalne, poprawne polskie zdanie; pole en — poprawne angielskie tłumaczenie. Nie używaj przykładów Artura dosłownie.';
+    const j = await callJSON(system, user, 900, 30000, { type: 'object', required: ['rule', 'items'], properties: { rule: STR, items: { type: 'array', items: { type: 'object', required: ['pl', 'en'], properties: { pl: STR, en: STR } } } } });
+    return { rule: String(j.rule || '').trim(), items: (j.items || []).filter(x => x && x.pl && x.en).slice(0, 6).map(x => ({ pl: String(x.pl).trim(), en: String(x.en).trim() })) };
   }
   /* Audycja: krótki tekst do słuchania + 4 pytania */
   /* Szczegółowe wyjaśnienie błędu + krótka dyskusja */
@@ -746,7 +756,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

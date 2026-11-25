@@ -88,6 +88,7 @@
     const type = PREFIX[id.slice(0, i)], rest = id.slice(i + 1);
     if (id.slice(0, i) === 'simp') return simpleItem(rest);
     if (id.slice(0, i) === 'tp') return topicItem(rest);
+    if (id.slice(0, i) === 'stb') return stubItem(rest);
     if (!type) return null;
     if (type === 'error') {
       const [gi, wi] = rest.split('-').map(Number), g = GRAMMAR[gi];
@@ -1083,7 +1084,7 @@
     if (quick && !due.length) { nNew = 2; nX = 1; }
     const fresh = newPool().slice(0, nNew).map(id => ({ id, isNew: true, newKind: 'vocab' }));
     const freshX = newExtraPool().slice(0, nX).map(id => ({ id, isNew: true, newKind: 'extra' }));
-    if (!due.length && !fresh.length && !freshX.length) {
+    if (!due.length && !fresh.length && !freshX.length && !(quick ? [] : stubQueue()).length) {
       toast(newPool().length ? 'Na dziś wszystko zrobione!' : 'Przerobiłeś całą bazę słówek — więcej w kolejnych etapach.');
       return;
     }
@@ -1098,6 +1099,7 @@
       for (let k = 0; k < 3 && r < dueMixed.length; k++) queue.push(dueMixed[r++]);
       if (n < freshAll.length) queue.push(freshAll[n++]);
     }
+    if (!quick) { const sq = stubQueue(); sq.forEach((q, i) => queue.splice(Math.min(queue.length, 2 + i * 4), 0, q)); }
     S = newSession({ quick: !!quick, queue });
     const learned = WORDS.list.filter(w => D().cards[w.id] && !isKnownWord(w) && (D().cards[w.id].reps || 0) >= 1 && wordLv(w.id) < 5);
     /* rozgrzewka: wyścig, chyba że był już wczoraj i dziś — wtedy na początek 5 zadań najrzadziej ćwiczonego rodzaju */
@@ -1316,7 +1318,7 @@
     const TP = TYPES[it.type], ph = S.phase, st = D().settings;
     const blockSec = st.blockMin * 60, used = S.activeSec - S.blockStart;
     const dfy = itemDiff(it);
-    const tag = TP.tag + (it.simple ? ' · PROSTSZA WERSJA' : ' · ' + L[it.lvl]) + (dfy && !it.simple ? ' · ZDANIE ' + diffLabel(dfy) : '') + (it.stepLabel ? ' · ' + it.stepLabel : '') + (c.isNew ? ' · NOWE' : '') + (c.relearn ? ' · JESZCZE RAZ' : '');
+    const tag = TP.tag + (it.stub ? ' · <span class="ub-tag">UPARTY BŁĄD</span> · ' + esc(it.stubRight.toUpperCase()) : it.simple ? ' · PROSTSZA WERSJA' : ' · ' + L[it.lvl]) + (dfy && !it.simple ? ' · ZDANIE ' + diffLabel(dfy) : '') + (it.stepLabel ? ' · ' + it.stepLabel : '') + (c.isNew ? ' · NOWE' : '') + (c.relearn ? ' · JESZCZE RAZ' : '');
     if (it.type === 'order' && !S.tiles) {
       S.tiles = makeTiles(fullSentence(it));
       if (it.prefill && !S.order.length) { const T3 = S.tiles, kk = Math.max(1, Math.floor(T3.n / 3)); for (let j = 0; j < kk; j++) { const ix = T3.tiles.findIndex((x, q) => x.t === T3.correct[j] && S.order.indexOf(q) < 0); if (ix >= 0) S.order.push(ix); } }
@@ -1329,7 +1331,7 @@
     let body = '', controls = '';
     const unsureBtn = '<button class="btn unsure' + (S.unsure ? ' pressed' : '') + '" id="unsure" aria-pressed="' + S.unsure + '"><span class="dot"></span><span>Nie jestem pewien — zgaduję</span>' + K('Alt+N') + '</button>';
     const emptyNote = S.emptyPrompt ? '<div class="hint" role="status">Nic nie wpisano — naciśnij <b>Enter</b> jeszcze raz, żeby zobaczyć odpowiedź.</div>' : '';
-    const knownBtn = '<button class="btn" id="known">Umiem to ' + K('Alt+Enter') + '</button>';
+    const knownBtn = it.stub ? '' : '<button class="btn" id="known">Umiem to ' + K('Alt+Enter') + '</button>';
     const idkBtn = '<button class="btn" id="idk">Nie wiem ' + K('Alt+W') + '</button>';
     const checkBtn = '<button class="btn primary" id="check" style="padding:0 30px;font-size:19px">Sprawdź ' + K('Enter') + '</button>';
     const fbFull = ph === 'feedback';
@@ -1534,7 +1536,7 @@
       (explainEligible(S.fb) ? '<button class="btn" id="exBtn">' + (S.exOpen ? 'Zwiń ' : 'Wyjaśnij ') + K('E') + '</button>' : '') +
       (canSimplify(it, S.fb) ? '<button class="btn" id="simpBtn">' + ((D().sentFails || {})[c.id] >= 3 ? '<span class="rec-dot" title="To zdanie nie wychodzi kilka razy — spróbuj prostszej wersji"></span>' : '') + 'Uprość ' + K('Z') + '</button>' : '') +
       (it.simple ? '' : '<button class="btn' + (D().cards[c.id] && D().cards[c.id].hard ? ' pressed' : '') + '" id="hardBtn" title="Dla mnie trudne — niech wraca częściej (kliknij jeszcze raz, by zdjąć)">Trudne ' + K('T') + '</button>') +
-      (D().cards[c.id] && D().cards[c.id].state === 'known' ? '' : '<button class="btn" id="known">Umiem to ' + K('Alt+Enter') + '</button>') +
+      ((D().cards[c.id] && D().cards[c.id].state === 'known') || it.stub ? '' : '<button class="btn" id="known">Umiem to ' + K('Alt+Enter') + '</button>') +
       '<button class="btn" id="next">Dalej ' + K('Enter') + '</button></div>' +
       (it.w && !it.fromText ? '<button class="btn yg-ic" id="ygBtn" title="Filmy — posłuchaj słowa w filmach (V)" aria-label="Filmy (V)"' + (S.ygOpen ? ' disabled' : '') + '><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="4" fill="#C2584A"/><path d="M10 9.2v5.6l4.8-2.8z" fill="#fff"/></svg></button>' : '') +
       (fixInfo(it) ? '<button class="btn rep-ic" id="repBtn" title="Zdanie jest złe? (X)" aria-label="Zdanie jest złe? (X)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>' : '');
@@ -1547,6 +1549,7 @@
       '<div class="timer inset deep" id="timer" title="' + (S.play || S.boss ? 'Czas gry' : 'Czas do końca bloku') + '">' + (S.play || S.boss ? (S.play ? limTimer() : U.mmss(S.activeSec)) : U.mmss(Math.max(0, blockSec - used))) + '</div></div></header>' +
       (S.boss ? bossBarHtml() : S.play ? (S.lim ? '<div class="bar thin inset"><div id="blockbar" style="width:' + limPct() + '%"></div></div>' : '') : '<div class="bar thin inset"><div id="blockbar" style="width:' + Math.min(100, used / blockSec * 100) + '%"></div></div>') +
       '<main class="ex-card raised"><div class="ex-top"><div class="tag">' + tag + '</div>' + (function () {
+        if (it.stub) { const x = stubs()[it.stub]; return x ? '<div class="wscale"><span class="ub-dots">' + [0, 1, 2, 3].map(i => '<i' + (i < (x.state === 'done' ? STUB_DAYS : x.days.length) ? ' class="ok"' : '') + '></i>').join('') + '</span><span class="small-note">' + (x.state === 'done' ? 'opanowany' : x.days.length + '/' + STUB_DAYS + ' dni bez błędu') + '</span></div>' : ''; }
         const wid = scaleKey(it); if (!wid) return '';
         const w2 = ph === 'feedback' && S.fb && S.fb.wsc;
         const note = w2 ? (w2.same ? 'dziś już liczone' : w2.d > 0 ? (w2.lv === 5 ? 'opanowane!' : '+1') : w2.d < 0 ? '−1' : 'bez zmian') : '';
@@ -2116,6 +2119,8 @@
     else { g = 3; kind = 'ok'; }
 
     const isFirst = !(c.id in S.first);
+    if (isFirst && it.type === 'translate' && !it.stub && (m === 'typo' || !correct) && m !== 'idk') { const sm = stubDetect(it, extra); if (sm) extra = Object.assign({}, extra, { stubMsg: sm }); }
+    if (isFirst && it.stub) extra = Object.assign({}, extra, { stubMsg: stubProgress(it, kind, correct) });
     if (isFirst) { S.snap = S.snap || {}; const pc0 = D().cards[c.id]; const wk0 = scaleKey(it), ws0 = wk0 && (D().wsc || {})[wk0]; S.snap[c.id] = { card: pc0 ? JSON.parse(JSON.stringify(pc0)) : null, mlen: (D().mistakes || []).length, wk: wk0, wsc: ws0 ? JSON.parse(JSON.stringify(ws0)) : null }; }
     S.stepMsg = '';
     if (isFirst && it.ts) pushTenseHist(it.ts.tid, correct);
@@ -2269,7 +2274,8 @@
     if (fb.kind === 'bad' && fb.expl && fb.m !== 'ai-ok') smalls.push(ai(fb.expl));
     if (fb.kind === 'bad' && !fb.expl && fb.aiErr) smalls.push(esc(fb.aiErr));
     if (fb.kind === 'bad' || fb.kind === 'idk') smalls.push('Wróci jeszcze w tej sesji.');
-    if (fb.stepMsg) smalls.push('<span class="step-msg">' + esc(fb.stepMsg) + '</span>');
+    if (fb.stepMsg && !it.stub) smalls.push('<span class="step-msg">' + esc(fb.stepMsg) + '</span>');
+    if (fb.stubMsg) smalls.push('<span class="ub-msg">' + fb.stubMsg + '</span>');
     if (fb.kind === 'uns' && fb.isFirst) smalls.push('Wróci za 1–2 dni, żeby się utrwaliło.');
     if (fb.slow) smalls.push((fb.hinted ? 'Z podpowiedzią' : 'Długo to trwało') + ' — wróci trochę wcześniej.');
     if ((it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') && fb.kind === 'typo') smalls.push('Liczę jako trafienie, ale wróci trochę wcześniej.');
@@ -3722,6 +3728,117 @@
   function ygNext() { if (limitDone()) { ygTeardown(); return finishSession(true); } const Y = S.yg; Y.idx++; ygLoadWord(); }
 
   /* ---------- Dziennik błędów ---------- */
+  /* ================= UPARTE BŁĘDY (upd224) =================
+     Ten sam błąd w tłumaczeniu 3 razy (np. in school → at school) = karta „Uparty błąd”: codziennie jedno krótkie zdanie z tym zwrotem,
+     znika po 4 różnych dniach bez błędu; powrót błędu = od nowa. Wykrywanie: porównanie odpowiedzi z poprawioną wersją (słowo po słowie). */
+  const STUB_N = 3, STUB_DAYS = 4;
+  const FUNC_W = /^(in|at|on|to|for|of|from|with|by|into|onto|about|the|a|an|is|are|was|were|do|does|did|have|has|had|am|be|been|will|would)$/;
+  const stubs = () => (D().stub = D().stub || {});
+  const stubTok = s => String(s || '').toLowerCase().replace(/[“”„"]/g, '').replace(/[.,!?;:]+/g, ' ').split(/\s+/).filter(Boolean);
+  function stubDiff(ans, ref) {
+    const A = stubTok(ans), B = stubTok(ref), n = A.length, m = B.length;
+    if (!n || !m || n > 40 || m > 40) return [];
+    const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = []; let i = 0, j = 0;
+    while (i < n || j < m) {
+      if (i < n && j < m && A[i] === B[j]) { i++; j++; continue; }
+      const i0 = i, j0 = j;
+      while ((i < n || j < m) && !(i < n && j < m && A[i] === B[j])) { if (j >= m || (i < n && L[i + 1][j] >= L[i][j + 1])) i++; else j++; }
+      const wa = A.slice(i0, i), wb = B.slice(j0, j);
+      if (!wa.length || !wb.length || wa.length > 2 || wb.length > 2) continue;
+      if (wa.length === 1 && wb.length === 1 && !FUNC_W.test(wb[0]) && wb[0].length >= 4 && U.lev(wa[0], wb[0]) <= 2) { out.push({ wrong: wa[0], right: wb[0], rule: 'pisownia: ' + wb[0] }); continue; }
+      if (wa.concat(wb).some(w => FUNC_W.test(w))) {
+        const nx = i < n && j < m && A[i] === B[j] ? ' ' + A[i] : '';
+        out.push({ wrong: wa.join(' ') + nx, right: wb.join(' ') + nx, rule: '' });
+      }
+    }
+    return out.slice(0, 2);
+  }
+  function stubCount(c, src) {
+    const S0 = stubs(), k = c.wrong + '>' + c.right;
+    const x = S0[k] || (S0[k] = { wrong: c.wrong, right: c.right, rule: c.rule || '', n: 0, days: [], src: [], state: 'watch' });
+    x.n++; x.at = Date.now(); if (!x.rule && c.rule) x.rule = c.rule;
+    if (src && src.en && !x.src.some(s => s.en === src.en)) { x.src.push(src); if (x.src.length > 6) x.src.shift(); }
+    return { k, x };
+  }
+  /* po odpowiedzi w tłumaczeniu — zwraca tekst do oceny, gdy błąd stał się (albo jest) uparty */
+  function stubDetect(it, extra) {
+    if (!extra || !extra.ans || it.stub) return '';
+    const ref = extra.better && U.norm(extra.better) !== U.norm(extra.ans) ? extra.better : fullSentence(it);
+    let msg = '';
+    stubDiff(extra.ans, ref).forEach(c => {
+      const { k, x } = stubCount(c, { pl: it.pl || '', en: fullSentence(it) });
+      const pair = '<s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>';
+      if (x.state === 'active') { x.days = []; msg = 'Uparty błąd: ' + pair + ' (' + x.n + '. raz) — liczę dni od nowa.'; }
+      else if (x.n >= STUB_N) { x.state = 'active'; x.days = []; x.since = Date.now(); delete x.doneAt; msg = 'To już <b>' + x.n + '. raz</b>: ' + pair + '. Zakładam kartę <b>„Uparty błąd”</b> — przez kilka dni dostaniesz krótkie zdania z tym zwrotem.'; stubPrepare(k); }
+    });
+    Store.save();
+    return msg;
+  }
+  /* karta upartego błędu: dobra odpowiedź w nowy dzień = +1, błąd = od nowa; 4 dni = opanowany */
+  function stubProgress(it, kind, correct) {
+    const x = stubs()[it.stub]; if (!x) return '';
+    const dk = U.dayKey(Date.now()); x.lastDay = dk;
+    if (correct && kind === 'ok' && !S.hint && !S.unsure) {
+      if (x.days.indexOf(dk) < 0) x.days.push(dk);
+      if (x.days.length >= STUB_DAYS) { x.state = 'done'; x.doneAt = Date.now(); Store.save(); return 'Uparty błąd <b>' + esc(x.right) + '</b> opanowany ✓ — ' + STUB_DAYS + ' dni bez błędu.'; }
+      Store.save(); return 'Uparty błąd: dobrze — ' + x.days.length + '/' + STUB_DAYS + ' dni bez błędu.';
+    }
+    x.days = []; Store.save();
+    return 'Uparty błąd: jeszcze nie — liczę od nowa (0/' + STUB_DAYS + ').' + (x.rule ? ' <b>Zasada:</b> ' + esc(x.rule) : '');
+  }
+  /* zdania do ćwiczeń i nazwa zasady od AI; bez AI — zdania, w których błąd się zdarzył */
+  const STUB_BUSY = {};
+  function stubPrepare(k) {
+    const x = stubs()[k]; if (!x || STUB_BUSY[k] || (x.sents && x.sents.length >= 4) || !AI.enabled()) return;
+    STUB_BUSY[k] = true;
+    AI.stubDrill(x.wrong, x.right, x.src.map(s => s.en)).then(r => {
+      if (r.rule) x.rule = r.rule;
+      if (r.items.length) x.sents = r.items;
+      Store.save();
+    }).catch(() => { }).then(() => { delete STUB_BUSY[k]; });
+  }
+  function stubItem(rest) {
+    const j = rest.lastIndexOf(':'), k = rest.slice(0, j), x = stubs()[k]; if (!x) return null;
+    const list = (x.sents && x.sents.length ? x.sents : x.src).filter(s => s.en), s = list[+rest.slice(j + 1) % Math.max(1, list.length)];
+    if (!s) return null;
+    return { type: 'translate', id: 'stb:' + rest, w: { answers: [''], pl: '', s: '_' + s.en }, lvl: levels().grammar || 0, pl: s.pl || null, simple: true, stub: k, stubRight: x.right };
+  }
+  /* dzisiejsze karty (po jednej na każdy aktywny uparty błąd, jeśli dziś jeszcze nie było) */
+  function stubQueue() {
+    const dk = U.dayKey(Date.now()), S0 = stubs();
+    return Object.keys(S0).filter(k => S0[k].state === 'active' && S0[k].lastDay !== dk).slice(0, 4).map(k => {
+      const x = S0[k]; stubPrepare(k);
+      const n = (x.sents && x.sents.length ? x.sents : x.src).length || 1;
+      return { id: 'stb:' + k + ':' + ((x.n + x.days.length + new Date().getDate()) % n), isNew: false };
+    }).filter(q => itemFor(q.id));
+  }
+  /* jednorazowo: policz uparte błędy z dotychczasowego dziennika (tłumaczenia „odpowiedź → poprawnie”) */
+  function stubBackfill() {
+    if (D().stubBf) return;
+    D().stubBf = 1;
+    (D().mistakes || []).forEach(mk => {
+      if (mk.cat !== 'Tłumaczenie z polskiego' || !mk.d || mk.d.indexOf(' → ') < 0) return;
+      const p = mk.d.lastIndexOf(' → '), ans = mk.d.slice(0, p), ref = mk.d.slice(p + 3);
+      stubDiff(ans, ref).forEach(c => stubCount(c, { pl: (D().plCache || {})[mk.id] || '', en: ref }));
+    });
+    const S0 = stubs();
+    Object.keys(S0).forEach(k => { if (S0[k].n >= STUB_N && S0[k].state === 'watch') { S0[k].state = 'active'; S0[k].days = []; S0[k].since = Date.now(); } });
+    Store.save();
+    Object.keys(S0).forEach(k => { if (S0[k].state === 'active') stubPrepare(k); });
+  }
+  function stubListHtml() {
+    const S0 = stubs(), ks = Object.keys(S0).filter(k => S0[k].state !== 'watch').sort((a, b) => (S0[a].state === 'done') - (S0[b].state === 'done') || S0[b].n - S0[a].n);
+    if (!ks.length) return '';
+    const dots = x => '<span class="ub-dots">' + [0, 1, 2, 3].map(i => '<i' + (i < (x.state === 'done' ? STUB_DAYS : x.days.length) ? ' class="ok"' : '') + '></i>').join('') + '</span>';
+    const act = ks.filter(k => S0[k].state === 'active');
+    return '<section class="ub-box"><div class="row between"><h2>Twoje uparte błędy</h2><span class="small-note">znikają po ' + STUB_DAYS + ' dniach bez błędu</span></div>' +
+      ks.slice(0, 12).map(k => { const x = S0[k];
+        return '<div class="ub-row"><span><s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b></span><small>' + esc(x.rule || '') + '</small>' + dots(x) + (x.state === 'done' ? '<span class="ub-ok">opanowany ✓</span>' : '<small>' + x.n + ' razy</small>') + '</div>'; }).join('') +
+      (act.length ? '<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn small" id="ubGo">Ćwicz teraz (' + act.length + ')</button></div>' : '') + '</section>';
+  }
+
   function logMistake(it, m, extra) {
     extra = extra || {};
     if (it.simple) return;
@@ -3839,13 +3956,13 @@
     const rng = (d, label) => '<button class="btn' + (mzRange === d ? ' on' : '') + '" data-mzr="' + d + '">' + label + '</button>';
     let body = '';
     if (mzTab === 'pat') {
-      body = !cur.length
+      body = stubListHtml() + (!cur.length
         ? '<section class="note flatbox"><div class="tx"><b>' + ((D().mistakes || []).length ? 'Brak błędów w tym okresie' : 'Jeszcze pusto') + '</b><span>Błędy z sesji i gier są tu grupowane we wzorce, np. „Mylisz słowa: borrow ↔ lend” albo „Gramatyka: since / for”.</span></div></section>'
         : (spec.length ? '<div class="mz-grp">Konkretne wzorce</div><section class="mz-box">' + spec.map(rowHtml).join('') + '</section>' : '') +
           (area.length ? '<div class="mz-grp">Obszary</div><section class="mz-box">' + area.map(rowHtml).join('') + '</section>' : '') +
           '<section class="list-card raised"><div class="row between"><h2 style="font-size:20px">Wskazówki od AI</h2>' +
           (AI.enabled() ? '<button class="btn small" id="aiTips">' + (tips ? 'Odśwież' : 'Poproś AI o analizę') + ' ' + K('A') + '</button>' : '<span class="small-note">wymaga klucza API w ustawieniach</span>') + '</div>' +
-          (tips ? '<div id="tipsBox" class="tips">' + qaFmt(tips.text) + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div></div>' : '<div id="tipsBox"></div>') + '</section>';
+          (tips ? '<div id="tipsBox" class="tips">' + qaFmt(tips.text) + '<div class="small-note" style="margin-top:8px">z dnia ' + new Date(tips.at).toLocaleDateString('pl-PL') + '</div></div>' : '<div id="tipsBox"></div>') + '</section>');
     } else if (mzTab === 'hard') body = hardListHtml() || '<p class="small-note">Nic nie jest oznaczone jako trudne. Oznaczysz przyciskiem „Trudne” (T) po odpowiedzi.</p>';
     else if (mzTab === 'ex') body = explainsHtml() || '<p class="small-note">Brak zapisanych wyjaśnień. Powstają przyciskiem „Wyjaśnij” (E) po odpowiedzi.</p>';
     else if (mzTab === 'chat') body = aiChatsHtml() || '<p class="small-note">Brak rozmów. Przycisk „AI” jest w prawym dolnym rogu ekranu (Alt+Q).</p>';
@@ -3861,6 +3978,7 @@
     $('#back').onclick = () => go('home');
     bindFixes();
     if ($('#mzAll')) $('#mzAll').onclick = () => startCustomSession(openIds, 'Otwarte błędy');
+    if ($('#ubGo')) $('#ubGo').onclick = () => { const S0 = stubs(); startCustomSession(Object.keys(S0).filter(k => S0[k].state === 'active').map(k => 'stb:' + k + ':' + Math.floor(Math.random() * 6)), 'Uparte błędy'); };
     $$('[data-qacont]').forEach(b => b.onclick = () => qaOpen(b.dataset.qacont));
     $$('[data-mztab]').forEach(b => b.onclick = () => { mzTab = b.dataset.mztab; renderMistakes(); });
     $$('[data-mzr]').forEach(b => b.onclick = () => { mzRange = +b.dataset.mzr; mzOpenCat = null; renderMistakes(); });
@@ -6163,6 +6281,8 @@
     const st = D().settings, steps = [], used = {};
     const per = 8, maxSteps = Math.max(3, Math.min(6, Math.round(st.goalMin / 3)));
     const add = x => { if (x && steps.length < maxSteps && !used[x.type]) { steps.push(x); used[x.type] = 1; } };
+    const sq = stubQueue();
+    if (sq.length) add({ type: 'stub', title: 'Uparte błędy', mode: 'srs', why: 'Błędy, które powtarzasz: ' + sq.map(q => itemFor(q.id).stubRight).join(', ') + ' — po jednym krótkim zdaniu.', queue: sq });
     const due = dueIds().slice(0, Math.min(15, reviewCap()));
     if (due.length) add({ type: 'due', title: 'Powtórki', mode: 'srs', why: due.length + ' do powtórki — to dziś najważniejsze dla pamięci.', queue: due.map(id => ({ id, isNew: false })) });
     const nW = newPool().slice(0, Math.min(5, newLeftToday())).map(id => ({ id, isNew: true, newKind: 'vocab' }));
@@ -7934,6 +8054,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) Store.save(); });
   if (D().profile.placementDone) go('home'); else go('welcome');
   syncStartup();
+  try { stubBackfill(); const pc = D().plCache || {}; Object.keys(pc).forEach(k => { if (/to było przyrody/.test(pc[k] || '')) pc[k] = pc[k].replace('to było przyrody', 'to była przyroda'); }); } catch (e) { }
   if (AI.enabled()) AI.test().catch(() => {}); // przy starcie: sprawdzenie AI — przełącznik zielony/czerwony
   setTimeout(qcOldAiWords, 6000);
   /* do testów i diagnozy w konsoli */
