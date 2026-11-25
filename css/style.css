@@ -1833,3 +1833,4 @@ html body { background: transparent; }
 .seg-row { display: flex; gap: 3px; align-items: center; }
 .seg-row i { flex: none; border-radius: 5px; box-shadow: inset 1.5px 1.5px 3px var(--sh-in-d), inset -1.5px -1.5px 3px var(--sh-l); }
 .seg-row i.on { box-shadow: none; }
+.seg-row i { display: block; } .seg-row i:not(.on) { background: transparent !important; } /* zgaszone kreseczki zawsze puste — bez koloru z reguł pasków (upd227) */
