@@ -1855,3 +1855,5 @@ html body { background: transparent; }
 .st-min .st-minchart { padding-top: 0; }
 .st-tabs { z-index: 3; }
 .st-tab.on::after { bottom: -4px; height: 6px; left: -1px; right: -1px; background: #EEEBE7; z-index: 4; }
+.st-tab.on { overflow: visible; margin-bottom: -2px; height: 42px; } .st-tab.on::after { bottom: -3px; height: 6px; } /* aktywna zakładka zakrywa kreskę modułu (upd231) */
+.st-tabs { padding-left: 36px; }
