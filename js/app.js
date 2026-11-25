@@ -897,19 +897,19 @@
       return { sk, name: nm, lv: lv[sk], p, c, dim, small: dim ? 'wyłączone' : top(lv[sk]) ? 'najwyższy poziom' : 'do ' + L[lv[sk] + 1] + ': ' + p + '%', tip: dim ? '' : promoTip(sk), per: L.map((x, i) => skLvPct(sk, i)) };
     };
     const tiles = [
-      { sk: 'vocab', name: 'Słownictwo', lv: lv.vocab, p: vm, c: '#C4BDB2', small: vm + '% słów ' + L[lv.vocab], tip: 'Znasz ' + vm + '% słów poziomu ' + L[lv.vocab] + ' z bazy programu.',
+      { sk: 'vocab', name: 'Słownictwo', lv: lv.vocab, p: vm, c: SK_COLORS.vocab, small: vm + '% słów ' + L[lv.vocab], tip: 'Znasz ' + vm + '% słów poziomu ' + L[lv.vocab] + ' z bazy programu.',
         per: (function () { const rows = vocabMap().rows; return rows.map(r => r.total ? Math.round((r.mast + r.known) / r.total * 100) : 0); })() },
-      skTile('grammar', 'Gramatyka', '#D3C3C3', !typeEnabled('order') && !typeEnabled('error')),
-      skTile('listening', 'Słuchanie', '#BFCBBC', !typeEnabled('dictation')),
-      skTile('speaking', 'Mówienie', '#C7C1D2', !typeEnabled('speak'))
+      skTile('grammar', 'Gramatyka', SK_COLORS.grammar, !typeEnabled('order') && !typeEnabled('error')),
+      skTile('listening', 'Słuchanie', SK_COLORS.listening, !typeEnabled('dictation')),
+      skTile('speaking', 'Mówienie', SK_COLORS.speaking, !typeEnabled('speak'))
     ].map(s => {
       let bands = '';
-      for (let i = 0; i < L.length; i++) {
-        const h = s.dim ? 0 : s.per[i] || 0; // każdy poziom wypełnia się osobno
-        bands += '<div class="band' + (i === s.lv ? ' cur' : '') + '"><i style="height:' + h + '%;background:' + s.c + '"></i><span>' + L[i] + (h ? ' · ' + h + '%' : '') + '</span></div>';
+      for (let i = L.length - 1; i >= 0; i--) {
+        const h = s.dim ? 0 : s.per[i] || 0; // każdy poziom osobno: etykieta · cienki pasek · procent (upd229)
+        bands += '<div class="sk-r' + (i === s.lv ? ' cur' : '') + '"><b>' + L[i] + '</b><span class="sk-trk"><i style="width:' + h + '%;background:' + s.c + '"></i></span><span>' + (h ? h + '%' : '') + '</span></div>';
       }
       const tip = s.tip + (s.sk === 'vocab' ? '\nPasy: część słów każdego poziomu, które znasz.' : '\nPasy: na każdym poziomie pełny = ' + LV_N + ' odpowiedzi z trafnością min. ' + Math.round(PROMO_ACC * 100) + '%.');
-      return '<div class="skill inset v2' + (s.dim ? ' dim' : '') + '" title="' + esc(tip) + '"><div class="hd"><div class="name">' + s.name + '</div><b>' + L[s.lv] + '</b><small>' + s.small + '</small></div><div class="bands">' + bands + '</div></div>';
+      return '<div class="skill inset v2' + (s.dim ? ' dim' : '') + '" title="' + esc(tip) + '"><div class="hd"><div class="name">' + s.name + '</div><b>' + L[s.lv] + '</b><small>' + s.small + '</small></div><div class="sk-rows">' + bands + '</div></div>';
     }).join('');
 
     const y = now.getFullYear(), m = now.getMonth();
