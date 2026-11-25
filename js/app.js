@@ -4917,7 +4917,7 @@
     if (mode === 'week') { const m0 = mondayOf(today); for (let i = 3; i >= 0; i--) { const s = U.addDays(m0, -7 * i); out.push({ l: new Date(s).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }), m: aggDays(s, 7).sec / 60, cur: !i }); } }
     else { const d = new Date(today); for (let i = 3; i >= 0; i--) { const a = new Date(d.getFullYear(), d.getMonth() - i, 1), b = new Date(d.getFullYear(), d.getMonth() - i + 1, 1); out.push({ l: MONTHS[a.getMonth()].slice(0, 3).toLowerCase(), m: aggDays(a.getTime(), Math.round((b - a) / U.DAY)).sec / 60, cur: !i }); } }
     const mx = Math.max.apply(null, out.map(o => o.m).concat([1]));
-    return '<div class="st-lbl">' + (mode === 'week' ? 'Ostatnie 4 tygodnie' : 'Ostatnie 4 miesiące') + '</div><div class="st-fc st-l4">' + out.map(o => '<div title="' + o.l + ': ' + Math.round(o.m) + ' min"><small>' + Math.round(o.m) + '</small><i style="height:' + Math.round(o.m / mx * 56) + 'px;background:' + (o.cur ? 'linear-gradient(180deg,#7BA3D6,#43699C)' : '#B9B2A8') + '"></i><span>' + o.l + '</span></div>').join('') + '</div>';
+    return '<div class="st-fbox"><div class="st-lbl">' + (mode === 'week' ? 'Ostatnie 4 tygodnie' : 'Ostatnie 4 miesiące') + '</div><div class="st-fc st-l4">' + out.map(o => '<div title="' + o.l + ': ' + Math.round(o.m) + ' min"><small>' + Math.round(o.m) + '</small><i style="height:' + Math.round(o.m / mx * 56) + 'px;background:' + (o.cur ? 'linear-gradient(180deg,#7BA3D6,#43699C)' : '#B9B2A8') + '"></i><span>' + o.l + '</span></div>').join('') + '</div></div>';
   }
   function recordsKv() {
     const h = recordsFlat(); if (h.indexOf('rec2') < 0) return h;
@@ -4946,7 +4946,7 @@
       if (tab === 'min') {
         const legendHtml = '<div class="legend">' + (mode === 'all' ? '<span><i style="background:#5A84BC"></i>miesiąc</span>' : '<span><i style="background:#5A84BC"></i>' + sd.curName.toLowerCase() + '</span><span><i style="background:rgba(110,100,90,.2)"></i>' + sd.prevName.toLowerCase() + '</span>') + (sd.avgBars ? '<span><i class="avgi"></i>średnia tego dnia</span>' : '') + '<span><i class="dash"></i>cel ' + (mode === 'all' ? fmtDur(sd.goal * 60) : sd.goal + ' min') + '</span></div>';
         return ph(mode === 'all' ? 'Minuty w kolejnych miesiącach' : mode === 'week' ? 'Minuty dzień po dniu' : 'Minuty tydzień po tygodniu', legendHtml) +
-          '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side">' + minSideHtml(sd) + lastPeriodsHtml(mode) + '<div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div>';
+          '<div class="st-21"><div class="st-minchart">' + barsHtml(Object.assign({}, sd, { h: 300 })) + '</div><div class="st-side">' + minSideHtml(sd) + lastPeriodsHtml(mode) + '<div class="st-fbox"><div class="st-lbl">Powtórki w najbliższych dniach</div>' + forecastBars() + '</div></div></div>';
       }
       if (tab === 'sk') {
         const due = monthTestDue();

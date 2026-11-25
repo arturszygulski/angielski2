@@ -1834,3 +1834,6 @@ html body { background: transparent; }
 .seg-row i { flex: none; border-radius: 5px; box-shadow: inset 1.5px 1.5px 3px var(--sh-in-d), inset -1.5px -1.5px 3px var(--sh-l); }
 .seg-row i.on { box-shadow: none; }
 .seg-row i { display: block; } .seg-row i:not(.on) { background: transparent !important; } /* zgaszone kreseczki zawsze puste — bez koloru z reguł pasków (upd227) */
+/* Minuty: małe wykresy w płaskich ramkach z podpisem w środku (upd228) */
+.st-fbox { border: 1.5px solid #BDB6AD; border-radius: 16px; padding: 10px 12px 8px; margin-top: 8px; }
+.st-page .st-fbox .st-lbl { margin: 0 0 6px; }
