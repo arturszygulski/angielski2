@@ -2012,10 +2012,17 @@
       let m = U.norm(ans) === U.norm(full) ? 'exact' : 'wrong', expl = '', aiErr = '';
       const altO = D().altOrd = D().altOrd || {};
       if (m === 'wrong' && (altO[c.id] || []).indexOf(U.norm(ans)) >= 0) { m = 'ai-ok'; expl = 'Ta kolejność też jest poprawna (sprawdzone wcześniej).'; }
+      /* zamienione miejscami dwie nazwy własne / liczby (np. z Gdańska do Warszawy) — zdanie dalej poprawne */
+      if (m === 'wrong') {
+        const tok = x => x.replace(/[.,!?;:]+$/g, '').split(/\s+/), A = tok(full), B = tok(ans), dif = [];
+        if (A.length === B.length) A.forEach((w, k) => { if (w.toLowerCase() !== B[k].toLowerCase()) dif.push(k); });
+        const prop = w => /^[A-ZĄĆĘŁŃÓŚŹŻ0-9]/.test(w);
+        if (dif.length === 2 && dif[0] > 0 && A[dif[0]].toLowerCase() === B[dif[1]].toLowerCase() && A[dif[1]].toLowerCase() === B[dif[0]].toLowerCase() && prop(A[dif[0]]) && prop(A[dif[1]])) { m = 'ai-ok'; expl = 'Zamienione miejscami „' + A[dif[0]] + '” i „' + A[dif[1]] + '” — zdanie też jest poprawne, tylko znaczy co innego.'; }
+      }
       if (m === 'wrong' && AI.enabled()) {
         checking();
         try { const r = await AI.checkSentence(ORDER_TASK, full, ans); expl = r.explanation; if (r.acceptable) { m = 'ai-ok'; altO[c.id] = (altO[c.id] || []).concat([U.norm(ans)]); } }
-        catch (e) { aiErr = AI.humanError(e); }
+        catch (e) { aiErr = AI.humanError(e); m = 'ai-ok'; S.unsure = true; expl = 'Nie mogłem sprawdzić tej kolejności (AI niedostępne) — liczę jako „niepewne”, bez kary.'; }
         if (!guard()) return;
       }
       return applyOutcome(c, it, m, elapsed, { ans, expl, aiErr });
