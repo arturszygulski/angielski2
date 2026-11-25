@@ -157,9 +157,20 @@ window.AI = (function () {
   /* gdy model do wyjaśnień odmówi (400/404 — np. zła nazwa albo brak dostępu), zapytanie idzie jeszcze raz na szybkim modelu */
   let smartErr = '', lastModel = '', lastAt = 0;
   const fastModel = () => (Store.data.settings.model || 'claude-haiku-5-5').trim();
+  /* stan AI do przełącznika na stronie głównej: ostatnie zapytanie udane (zielony) albo błąd klucza / sieci (czerwony) */
+  const BAD = { 401: 'nieprawidłowy klucz API', 403: 'brak dostępu dla tego klucza', 402: 'brak środków na koncie' };
+  function health(res, err) {
+    const d = Store.data; let ch = false;
+    if (res && res.ok) { if (d.aiBad) { delete d.aiBad; ch = true; } }
+    else if (res && BAD[res.status]) { d.aiBad = { at: Date.now(), msg: BAD[res.status] }; ch = true; }
+    else if (res && res.status === 400) { /* zły model — obsługiwane osobno */ }
+    else if (err && err.name !== 'AbortError') { d.aiBad = { at: Date.now(), msg: 'brak połączenia z AI' }; ch = true; }
+    if (ch) { try { Store.save(); } catch (e) { } window.dispatchEvent(new Event('ai-health')); }
+  }
   async function aiFetch(url, opts) {
     let body; try { body = JSON.parse(opts.body); } catch (e) { return fetch(url, opts); }
-    const res = await fetch(url, opts);
+    let res; try { res = await fetch(url, opts); } catch (e) { health(null, e); throw e; }
+    health(res);
     if (res.ok) { lastModel = body.model; lastAt = Date.now(); }
     if (res.ok || !(res.status === 400 || res.status === 404) || body.model === fastModel()) return res;
     let msg = ''; try { const j = await res.clone().json(); msg = (j.error && j.error.message) || ''; } catch (e) { }
@@ -735,7 +746,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

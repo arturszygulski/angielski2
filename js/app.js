@@ -930,7 +930,7 @@
       '<header class="top">' + wodHtml() +
       '<div class="row top-r" style="gap:18px"><div class="sw-col">' +
       '<span id="syncChipBox">' + syncChipHtml() + '</span>' +
-      '<button class="sw ' + (AI.enabled() ? 'on' : 'off') + '" id="aiChip" title="' + (AI.enabled() ? 'AI włączone — ustawienia AI' : 'AI wyłączone — wpisz klucz API w ustawieniach') + '"><span class="tr"></span>AI</button></div>' +
+      '<span id="aiChipBox">' + aiChipHtml() + '</span></div>' +
       '<button class="btn round" id="settings" aria-label="Ustawienia (O)" title="Ustawienia (O)">' + IC.gear + '</button></div></header>' +
 
       '<section class="today2">' +
@@ -979,7 +979,9 @@
       '</div></div>';
 
     $('#settings').onclick = () => go('settings');
-    $('#aiChip').onclick = () => go('settings');
+    const bindAi = () => { const b = $('#aiChip'); if (b) b.onclick = () => go('settings'); };
+    bindAi();
+    window.onAiHealth = () => { const bx = document.getElementById('aiChipBox'); if (bx) { bx.innerHTML = aiChipHtml(); bindAi(); } };
     bindSyncChip();
     if ($('#toSync')) $('#toSync').onclick = () => go('settings', 'sync');
     if ($('#start')) $('#start').onclick = () => startSession(false);
@@ -2558,6 +2560,13 @@
     return '';
   }
   /* kropka stanu Dysku Google na stronie głównej: zielona = działa, czerwona = coś nie tak */
+  /* AI: zielony = działa, czerwony = nie działa (brak klucza albo ostatnie zapytanie zwróciło błąd klucza/sieci) */
+  function aiChipHtml() {
+    const bad = AI.bad(), ok = AI.enabled() && !bad;
+    const t = !AI.enabled() ? 'AI nie działa — brak klucza API. Kliknij, aby wpisać go w ustawieniach.' : bad ? 'AI nie działa — ' + bad.msg + ' (' + fmtTime(bad.at) + '). Kliknij, aby sprawdzić w ustawieniach.' : 'AI działa — ustawienia AI';
+    return '<button class="sw ' + (ok ? 'on' : 'off') + '" id="aiChip" title="' + esc(t) + '"><span class="tr"></span>AI</button>';
+  }
+  window.addEventListener('ai-health', () => { if (window.onAiHealth && document.getElementById('aiChipBox')) window.onAiHealth(); });
   function syncChipHtml() {
     const dot = c => '<span style="width:9px;height:9px;border-radius:50%;background:' + c + '"></span> ';
     const st = D().settings;

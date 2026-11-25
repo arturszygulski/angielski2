@@ -1815,3 +1815,5 @@ html body { background: transparent; }
 .t2-done-ic svg, .t2-guide.gp-done .t2-done-ic svg { width: 24px; height: 24px; stroke: #fff; }
 .t2-guide.gp-done .t2-done-ic { margin-bottom: 4px; }
 .t2-done #extra { background: #D3E5D8; color: #1F3B27; box-shadow: 4px 4px 10px rgba(50,90,60,.3), -3px -3px 8px rgba(255,255,255,.7); }
+/* Przełączniki AI i Dysk: zielony = działa, czerwony = nie działa (upd222) */
+.sw.off .tr { background: #C2584A; box-shadow: inset 2px 2px 4px rgba(110,30,20,.45); }
