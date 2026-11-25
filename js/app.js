@@ -2659,8 +2659,10 @@
     const h = await Sync.handle();
     if (!h) { D().settings.syncFolder = ''; Store.save(); return; }
     let p; try { p = await Sync.perm(h, false); } catch (e) { return; }
-    if (p !== 'granted') { syncState.needsPerm = true; if (screen === 'home') renderHome(); return; }
-    await checkRemote(h, false);
+    if (p !== 'granted') { syncState.needsPerm = true; syncState.ok = false; if (screen === 'home') renderHome(); return; }
+    const offered = await checkRemote(h, false);
+    if (!offered) await syncNow(false); // przy starcie: próbny zapis — przełącznik pokaże, czy Dysk naprawdę działa
+    refreshSyncUI();
   }
   function syncStatusHtml() {
     const d = D();
@@ -7932,6 +7934,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) Store.save(); });
   if (D().profile.placementDone) go('home'); else go('welcome');
   syncStartup();
+  if (AI.enabled()) AI.test().catch(() => {}); // przy starcie: sprawdzenie AI — przełącznik zielony/czerwony
   setTimeout(qcOldAiWords, 6000);
   /* do testów i diagnozy w konsoli */
   window.__app = { go, newSession, tenseItems, tenseIdsFor, newExtraPool, itemFor, fixInfo, saveFix, undoFix, qcOldAiWords, maybeTopUp, itemLabel, newPool };
