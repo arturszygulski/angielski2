@@ -834,7 +834,7 @@
     const gd = goalDays(), ks = Object.keys(d.days).sort().reverse(); let run = 0;
     for (let i = 0; i < 400; i++) { const x = d.days[U.dayKey(U.addDays(U.startOfDay(), -i))]; if (x && (x.sec || 0) >= goal * 60) run++; else if (i > 0) break; else break; }
     const ov = document.createElement('div'); ov.className = 'gd-ov';
-    ov.innerHTML = '<div class="gd-card"><div class="gd-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2>Cel dzienny zaliczony</h2>' +
+    ov.innerHTML = '<div class="gd-card"><div class="gdo-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2>Cel dzienny zaliczony</h2>' +
       '<p>Dziś ' + fmtHM(Math.floor(t.sec / 60)) + ' nauki' + (run >= 2 ? ' · ' + run + ' dni z rzędu z celem' : '') + '</p><button class="btn" id="gdOk">Dalej ' + K('Enter') + '</button></div>';
     document.body.appendChild(ov);
     try { Sound.play('fanfare'); } catch (e) { }
