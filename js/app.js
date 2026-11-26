@@ -170,14 +170,44 @@
   function scaleUpdate(it, kind, correct) {
     const wid = scaleKey(it); if (!wid) return null;
     const ws = D().wsc = D().wsc || {}, r = ws[wid] = ws[wid] || { lv: 0, day: '' }, today = U.dayKey();
-    if (r.day === today) return { lv: r.lv, d: 0, same: true };
+    if (r.day === today) return { lv: r.lv, d: 0, same: true, b: r.b || 0 };
     r.day = today;
+    const clean = correct && kind === 'ok' && !S.hint && !S.unsure;
+    /* koszyki 1–3 (tydzień, miesiąc, znam): jedno sprawdzenie w terminie; dobrze = dalej, źle = koszyk niżej (z tygodnia do nauki na 3/5) (upd239) */
+    if (r.b >= 1) {
+      let bm = '';
+      if (clean) { r.b = Math.min(3, r.b + 1); basketSchedule(wid, r); bm = r.b === 2 ? 'Tydzień zaliczony — koszyk „miesiąc”: wróci za 30 dni.' : 'Miesiąc zaliczony — <b>znasz to</b> ✓ Kontrola za pół roku.'; return { lv: r.lv, d: 1, b: r.b, bm }; }
+      if (!correct) {
+        if (r.b === 1) { r.b = 0; r.lv = 3; delete r.bd; bm = 'Z koszyka „tydzień” wraca do nauki na 3/5 — 2 dobre dni i znów idzie dalej.'; }
+        else { r.b--; basketSchedule(wid, r); bm = 'Wraca do koszyka „' + BASKET_NAME[r.b] + '” — sprawdzenie za ' + (r.b === 1 ? '7' : '30') + ' dni.'; }
+        return { lv: r.lv, d: -1, b: r.b, bm };
+      }
+      r.bd = U.addDays(U.startOfDay(), 3); basketSchedule(wid, r, true); // niepewnie / z podpowiedzią — bez zmiany koszyka, sprawdzenie za 3 dni
+      return { lv: r.lv, d: 0, b: r.b, bm: 'Niepewnie — koszyk bez zmian, sprawdzenie za 3 dni.' };
+    }
     let d = 0;
-    if (correct && kind === 'ok' && !S.hint && !S.unsure) { if (r.lv < 5) { r.lv++; d = 1; } }
+    if (clean) { if (r.lv < 5) { r.lv++; d = 1; } }
     else if (!correct && r.lv >= 2) { r.lv--; d = -1; }
-    if (r.lv === 5 && correct) scheduleCheck(wid);
-    if (d > 0 && r.lv === 5) { r.at5 = Date.now(); setTimeout(() => celebrate(wid), 350); }
-    return { lv: r.lv, d };
+    if (d > 0 && r.lv === 5) { r.at5 = Date.now(); r.b = 1; basketSchedule(wid, r); setTimeout(() => celebrate(wid), 350); return { lv: 5, d, b: 1, bm: '5/5 — przechodzi do koszyka „tydzień”: wróci za 7 dni na jedno sprawdzenie.' }; }
+    return { lv: r.lv, d, b: 0 };
+  }
+  const BASKET_NAME = ['nauka', 'tydzień', 'miesiąc', 'znam'], BASKET_DAYS = [0, 7, 30, 180];
+  function basketSchedule(key, r, keepBd) {
+    if (!keepBd) r.bd = U.addDays(U.startOfDay(), BASKET_DAYS[r.b]);
+    scaleFamily(key).forEach(id => { const k = D().cards[id]; if (k && k.state !== 'known') { k.due = r.bd; k.ivl = Math.max(1, Math.round((r.bd - U.startOfDay()) / U.DAY)); k.state = 'review'; } });
+  }
+  const basketOf = key => { const r = key && (D().wsc || {})[key]; return r && r.b ? r.b : 0; };
+  /* ścieżka koszyków przy kropkach: 1 · tydzień · miesiąc · znam */
+  function basketHtml(b) { return '<span class="bk-path">' + ['1', 'tydzień', 'miesiąc', 'znam'].map((n, i) => '<span class="' + (i < b ? 'on' : i === b ? 'cur' : '') + '">' + n + '</span>').join('') + '</span>'; }
+  /* jednorazowo: słowa/zdania z 5/5 do koszyka „tydzień” albo „miesiąc” (gdy 5/5 dawniej niż tydzień temu) */
+  function basketMigrate() {
+    if (D().bkV1) return;
+    const ws = D().wsc = D().wsc || {}, now = Date.now();
+    Object.keys(ws).forEach(k => { const r = ws[k]; if (r.lv !== 5 || r.b) return;
+      const at = r.at5 || now - 8 * U.DAY;
+      if (now - at > 7 * U.DAY) { r.b = 2; r.bd = Math.max(U.addDays(U.startOfDay(), 1), U.addDays(U.startOfDay(at), 37)); } else { r.b = 1; r.bd = U.addDays(U.startOfDay(at), 7); }
+      basketSchedule(k, r, true); });
+    D().bkV1 = 1; Store.save();
   }
   function celebrate(key) {
     Sound.play('combo');
@@ -187,7 +217,7 @@
       for (let i = 0; i < 46; i++) { const p = document.createElement('i'); p.style.left = (Math.random() * 100) + '%'; p.style.background = cols[i % cols.length]; p.style.animationDelay = (Math.random() * 0.35) + 's'; p.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px'); p.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg'); box.appendChild(p); }
       document.body.appendChild(box); setTimeout(() => box.remove(), 2200);
     }
-    toast('Brawo! ' + scaleName(key) + ' — 5/5, opanowane. Sprawdzian za ok. 2–3 miesiące.');
+    toast('Brawo! ' + scaleName(key) + ' — 5/5. Koszyk „tydzień”: sprawdzenie za 7 dni.');
   }
   /* jednorazowo: skala dla słów ćwiczonych wcześniej, wg dotychczasowych wyników (bez 5/5) */
   function scaleMigrate() {
@@ -1564,8 +1594,9 @@
         if (it.stub) { const x = stubs()[it.stub]; return x ? '<div class="wscale"><span class="ub-dots">' + [0, 1, 2, 3].map(i => '<i' + (i < (x.state === 'done' ? STUB_DAYS : x.days.length) ? ' class="ok"' : '') + '></i>').join('') + '</span><span class="small-note">' + (x.state === 'done' ? 'opanowany' : x.days.length + '/' + STUB_DAYS + ' dni bez błędu') + '</span></div>' : ''; }
         const wid = scaleKey(it); if (!wid) return '';
         const w2 = ph === 'feedback' && S.fb && S.fb.wsc;
-        const note = w2 ? (w2.same ? 'dziś już liczone' : w2.d > 0 ? (w2.lv === 5 ? 'opanowane!' : '+1') : w2.d < 0 ? '−1' : 'bez zmian') : '';
-        return '<div class="wscale">' + (w2 ? dotsHtml(w2.lv, w2.d) : wordDots(wid)) + '<span class="small-note">' + (w2 ? w2.lv : wordLv(wid)) + '/5' + (note ? ' · ' + note : '') + '</span></div>';
+        const b = w2 ? (w2.b || 0) : basketOf(wid);
+        const note = w2 ? (w2.same ? 'dziś już liczone' : w2.d > 0 ? '+1' : w2.d < 0 ? '−1' : 'bez zmian') : '';
+        return '<div class="wscale">' + (w2 ? dotsHtml(w2.lv, b ? 0 : w2.d) : wordDots(wid)) + (b ? basketHtml(b) : '<span class="small-note">' + (w2 ? w2.lv : wordLv(wid)) + '/5' + (note ? ' · ' + note : '') + '</span>') + '</div>';
       })() + '</div>' + body + lower + '</main></div>';
 
     if (ph === 'answer') unifyControls();
@@ -2286,6 +2317,7 @@
     if (fb.kind === 'bad' && fb.expl && fb.m !== 'ai-ok') smalls.push(ai(fb.expl));
     if (fb.kind === 'bad' && !fb.expl && fb.aiErr) smalls.push(esc(fb.aiErr));
     if (fb.kind === 'bad' || fb.kind === 'idk') smalls.push('Wróci jeszcze w tej sesji.');
+    if (fb.wsc && fb.wsc.bm) smalls.push('<span class="bk-msg">' + fb.wsc.bm + '</span>');
     if (fb.stepMsg && !it.stub) smalls.push('<span class="step-msg">' + esc(fb.stepMsg) + '</span>');
     if (fb.stubMsg) smalls.push('<span class="ub-msg">' + fb.stubMsg + '</span>');
     if (fb.kind === 'uns' && fb.isFirst) smalls.push('Wróci za 1–2 dni, żeby się utrwaliło.');
@@ -2914,14 +2946,15 @@
   const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   function fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   /* ---------- Mapa słownictwa: postęp w całej bazie słów ---------- */
-  const VM_COL = { mast: '#5E9670', known: '#7E98BE', learn: '#D3A35C' };
+  const VM_COL = { known: '#5D9A6E', mon: '#3F6597', week: '#5A84BC', learn: '#A2C0E2', mast: '#5A84BC' };
   function vocabMap() {
-    const c = D().cards, lv = WORDS.list.filter(w => !w.custom), rows = L.map(() => ({ mast: 0, known: 0, learn: 0, unseen: 0, total: 0 }));
+    const c = D().cards, lv = WORDS.list.filter(w => !w.custom), rows = L.map(() => ({ mast: 0, known: 0, learn: 0, unseen: 0, total: 0, week: 0, mon: 0 }));
     lv.forEach(w => {
-      const r = rows[w.lvl], k = c[w.id]; r.total++;
+      const r = rows[w.lvl], k = c[w.id], b = basketOf(w.id); r.total++;
       if (!k) r.unseen++;
-      else if (k.state === 'known') r.known++;
-      else if ((k.s || 0) >= 10 || k.mastered || wordLv(w.id) >= 5) r.mast++;
+      else if (k.state === 'known' || b >= 3) r.known++;
+      else if (b === 2) { r.mast++; r.mon++; }
+      else if (b === 1 || wordLv(w.id) >= 5) { r.mast++; r.week++; }
       else r.learn++;
     });
     const sum = f => rows.reduce((a, r) => a + r[f], 0);
@@ -2933,15 +2966,16 @@
   }
   function vmBar(r, h) {
     const seg = (f, col) => r[f] ? '<div style="width:' + (r[f] / r.total * 100).toFixed(2) + '%;background:' + col + '" title="' + r[f] + '"></div>' : '';
-    return '<div class="vm-bar inset"' + (h ? ' style="height:' + h + 'px"' : '') + '>' + seg('mast', VM_COL.mast) + seg('known', VM_COL.known) + seg('learn', VM_COL.learn) + '</div>';
+    return '<div class="vm-bar inset"' + (h ? ' style="height:' + h + 'px"' : '') + '>' + seg('known', VM_COL.known) + (r.mon != null ? seg('mon', VM_COL.mon) + seg('week', VM_COL.week) : seg('mast', VM_COL.mast)) + seg('learn', VM_COL.learn) + '</div>';
   }
   const fmtMonth = t => new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/^\d+\s+/, '');
   function vocabMapHtml(view) {
     const v = vocabMap(), t = v.tot, knowN = t.mast + t.known;
-    const legend = '<div class="legend"><span><i style="background:' + VM_COL.mast + '"></i>opanowane</span><span><i style="background:' + VM_COL.known + '"></i>znane („Umiem to”)</span><span><i style="background:' + VM_COL.learn + '"></i>w nauce</span><span><i class="vm-empty"></i>jeszcze nie było</span></div>';
-    const rows = v.rows.map((r, i) => '<div class="vm-row' + (i === v.cur ? ' cur' : '') + '"><b>' + L[i] + '</b>' + vmBar(r) + '<span class="small-note">' + (r.mast + r.known) + ' / ' + r.total + (r.learn ? ' · w nauce ' + r.learn : '') + '</span>' + (!view && sweepLeft(i) ? '<button class="btn small vm-sweep" data-sweep="' + i + '" title="Przesiej słowa ' + L[i] + ', które już znasz">Przegląd</button>' : view ? '' : '<span></span>') + '</div>').join('');
+    const legend = '<div class="legend"><span><i style="background:' + VM_COL.learn + '"></i>nauka</span><span><i style="background:' + VM_COL.week + '"></i>tydzień</span><span><i style="background:' + VM_COL.mon + '"></i>miesiąc</span><span><i style="background:' + VM_COL.known + '"></i>znam</span><span><i class="vm-empty"></i>jeszcze nie było</span></div>';
+    const rows = v.rows.map((r, i) => '<div class="vm-row' + (i === v.cur ? ' cur' : '') + '"><b>' + L[i] + '</b>' + vmBar(r) + '<span class="small-note" title="znam ' + r.known + ' · miesiąc ' + r.mon + ' · tydzień ' + r.week + ' · nauka ' + r.learn + ' · z ' + r.total + '">znasz ' + Math.round(r.known / Math.max(1, r.total) * 100) + '% · w drodze ' + Math.round((r.mast + r.learn) / Math.max(1, r.total) * 100) + '%</span>' + (!view && sweepLeft(i) ? '<button class="btn small vm-sweep" data-sweep="' + i + '" title="Przesiej słowa ' + L[i] + ', które już znasz">Przegląd</button>' : view ? '' : '<span></span>') + '</div>').join('');
     const pvw = WORDS.list.filter(w => isPV(w) && !w.custom), pr = { mast: 0, known: 0, learn: 0, total: pvw.length }, cc = D().cards;
-    pvw.forEach(w => { const k = cc[w.id]; if (!k) return; if (k.state === 'known') pr.known++; else if ((k.s || 0) >= 10 || k.mastered || wordLv(w.id) >= 5) pr.mast++; else pr.learn++; });
+    pr.week = 0; pr.mon = 0;
+    pvw.forEach(w => { const k = cc[w.id], b = basketOf(w.id); if (!k) return; if (k.state === 'known' || b >= 3) pr.known++; else if (b === 2) { pr.mast++; pr.mon++; } else if (b === 1 || wordLv(w.id) >= 5) { pr.mast++; pr.week++; } else pr.learn++; });
     const pvRow = pr.total ? '<div class="vm-row vm-pv"><b title="Phrasal verbs">PV</b>' + vmBar(pr) + '<span class="small-note"' + (pr.learn ? ' title="w nauce ' + pr.learn + '"' : '') + '>' + (pr.mast + pr.known) + ' / ' + pr.total + '</span>' +
       (view ? '' : '<span class="vm-btns"><button class="btn small vm-sweep" id="pvPlay" title="Gra: dobierz partykułę">Ćwicz</button>' + (sweepLeft('pv') ? '<button class="btn small vm-sweep" id="pvSweep" title="Przesiej phrasal verbs, które już znasz">Przegląd</button>' : '') + '</span>') + '</div>' : '';
     const eta = v.etaAll ? 'Przy obecnym tempie (ok. ' + (Math.round(v.pace * 10) / 10).toString().replace('.', ',') + ' nowych słów dziennie) poziom ' + L[v.cur] + ' przejdziesz do ok. ' + fmtMonth(v.etaCur) + ', całą bazę do ok. ' + fmtMonth(v.etaAll) + '.' : 'Szacunek końca pojawi się, gdy przez kilka dni będziesz uczyć się nowych słów.';
@@ -3576,7 +3610,7 @@
       ids = learnedWords().map(w => pre + w.id);
     }
     const av = avoid || [], cc = D().cards;
-    const fresh = ids.filter(id => av.indexOf(id) < 0 && !(cc[id] && cc[id].state === 'known'));
+    const fresh = ids.filter(id => av.indexOf(id) < 0 && !(cc[id] && cc[id].state === 'known') && !basketOf(scaleKey(itemFor(id))));
     const L2 = sentLevel(), fit = fresh.filter(id => { const d = itemDiff(itemFor(id)); return !d || d <= L2 + 1; });
     return U.shuffle(fit.length >= 6 ? fit : fresh.length ? fresh : ids.filter(id => av.indexOf(id) < 0)).slice(0, n).map(id => ({ id, isNew: false }));
   }
@@ -4325,6 +4359,24 @@
     }).join('');
     return '<div class="own-list">' + rows + '</div>' + (pages > 1 ? '<div class="bk-pg"><button class="btn raised" id="owPrev"' + (ownPage ? '' : ' disabled') + '>‹</button><span>strona ' + (ownPage + 1) + ' z ' + pages + '</span><button class="btn raised" id="owNext"' + (ownPage < pages - 1 ? '' : ' disabled') + '>›</button></div>' : '');
   }
+  function basketsHtml() {
+    const ws = D().wsc || {}, c = D().cards, now = U.startOfDay(), end = endOfToday();
+    const words = WORDS.list.filter(w => c[w.id]);
+    const grp = [[], [], [], []];
+    words.forEach(w => { const b = basketOf(w.id), k = c[w.id]; grp[k.state === 'known' ? 3 : b].push(w); });
+    const due = b => grp[b].filter(w => (ws[w.id] || {}).bd && ws[w.id].bd < end).length;
+    const soon = b => { const t = grp[b].map(w => (ws[w.id] || {}).bd).filter(Boolean).sort((a, x) => a - x)[0]; return t ? new Date(t).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) : '—'; };
+    const box = (b, h, sm, nx) => '<div class="bk-box bk' + b + '"><h3>' + h + '</h3><small>' + sm + '</small><div class="n">' + fmtNum(grp[b].length) + '</div><div class="nx">' + nx + '</div></div>';
+    const nUm = grp[3].filter(w => c[w.id].state === 'known').length;
+    const list = grp[1].concat(grp[2]).concat(grp[0].filter(w => wordLv(w.id) > 0)).sort((a, x) => (basketOf(x.id) - basketOf(a.id)) || wordLv(x.id) - wordLv(a.id)).slice(0, 60);
+    return '<section class="bk-wrap2"><div class="bk-grid">' +
+      box(0, '1 · Nauka', 'zbierasz 5 kropek (max 1 dziennie)', 'w nauce: ' + grp[0].length) +
+      box(1, '2 · Tydzień', 'sprawdzenie po 7 dniach', 'dziś wraca: ' + due(1) + ' · najbliższe: ' + soon(1)) +
+      box(2, '3 · Miesiąc', 'sprawdzenie po 30 dniach', 'dziś wraca: ' + due(2) + ' · najbliższe: ' + soon(2)) +
+      box(3, 'Znam ✓', 'kontrola raz na pół roku', nUm ? 'w tym ' + fmtNum(nUm) + ' z „Umiem to”' : '&nbsp;') + '</div>' +
+      '<div class="bk-list">' + list.map(w => { const b = basketOf(w.id), r = ws[w.id] || {};
+        return '<div class="bk-row"><b>' + esc(w.answers[0]) + '</b><span class="small-note">' + esc(w.pl) + '</span>' + wordDots(w.id) + '<small>' + (b ? BASKET_NAME[b] + (r.bd ? ' · wraca ' + new Date(r.bd).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) : '') : 'nauka · ' + wordLv(w.id) + '/5') + '</small></div>'; }).join('') + '</div></section>';
+  }
   function renderWords(tab) {
     if (!(Store.today().ty || {}).words) { bumpUse('words'); Store.save(); }
     S = null;
@@ -4333,7 +4385,7 @@
     if (wTab === 'dict') {
       app.innerHTML = '<div class="wrap bk-wrap">' +
         '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
-        '<div class="seg inset" role="tablist"><button class="btn on" role="tab" aria-selected="true">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button></div></header>' +
+        '<div class="seg inset" role="tablist"><button class="btn on" role="tab" aria-selected="true">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button><button class="btn" role="tab" aria-selected="false" data-wtab="bk">Koszyki</button></div></header>' +
         bookTop() + '<div id="bkBox">' + bookHtml() + '</div></div>';
       $('#back').onclick = () => go('home');
       $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
@@ -4347,10 +4399,20 @@
       };
       return;
     }
+    if (wTab === 'bk') {
+      app.innerHTML = '<div class="wrap bk-wrap">' +
+        '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
+        '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button><button class="btn on" role="tab" aria-selected="true">Koszyki</button></div></header>' +
+        basketsHtml() + '</div>';
+      $('#back').onclick = () => go('home');
+      $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
+      keyHandler = e => { if (e.key === 'Escape') { e.preventDefault(); go('home'); } };
+      return;
+    }
     if (wTab === 'rev') {
       app.innerHTML = '<div class="wrap bk-wrap">' +
         '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
-        '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn on" role="tab" aria-selected="true">Przegląd</button></div></header>' +
+        '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="own">Moje własne (' + nOwn + ')</button><button class="btn on" role="tab" aria-selected="true">Przegląd</button><button class="btn" role="tab" aria-selected="false" data-wtab="bk">Koszyki</button></div></header>' +
         '<section class="st-f vm">' + vocabMapHtml() + '</section></div>';
       $('#back').onclick = () => go('home');
       $$('[data-wtab]').forEach(b => b.onclick = () => renderWords(b.dataset.wtab));
@@ -4366,7 +4428,7 @@
     app.innerHTML =
       '<div class="wrap bk-wrap">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Wróć ' + K('Esc') + '</button><div class="ex-title"><b style="font-size:26px">Moje słówka</b></div>' +
-      '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn on" role="tab" aria-selected="true">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button></div></header>' +
+      '<div class="seg inset" role="tablist"><button class="btn" role="tab" aria-selected="false" data-wtab="dict">Mój słownik (' + fmtNum(bkWords().length) + ')</button><button class="btn on" role="tab" aria-selected="true">Moje własne (' + nOwn + ')</button><button class="btn" role="tab" aria-selected="false" data-wtab="rev">Przegląd</button><button class="btn" role="tab" aria-selected="false" data-wtab="bk">Koszyki</button></div></header>' +
       '<div class="own-col">' +
       '<section class="set-card raised"><h2>Dodaj słowo</h2>' +
       '<div class="field"><label for="cw">Po angielsku</label><div class="ctl"><input id="cw" class="txt" autocomplete="off" spellcheck="false" placeholder="np. take for granted"></div></div>' +
@@ -8093,6 +8155,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) Store.save(); });
   if (D().profile.placementDone) go('home'); else go('welcome');
   syncStartup();
+  try { basketMigrate(); } catch (e) { console.warn(e); }
   try { stubBackfill(); const pc = D().plCache || {}; Object.keys(pc).forEach(k => { if (/to było przyrody/.test(pc[k] || '')) pc[k] = pc[k].replace('to było przyrody', 'to była przyroda'); }); } catch (e) { }
   if (AI.enabled()) AI.test().catch(() => {}); // przy starcie: sprawdzenie AI — przełącznik zielony/czerwony
   setTimeout(qcOldAiWords, 6000);

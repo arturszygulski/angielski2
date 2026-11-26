@@ -1893,3 +1893,20 @@ html body { background: transparent; }
 .gd-st.redo:hover .gd-dot, .gd-st.redo:focus-visible .gd-dot { box-shadow: 4px 4px 9px var(--sh-d), -3px -3px 8px var(--sh-l); transform: translateY(-1px); }
 .gd-st.redo:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .gd-st.redo { outline: none; }
+/* Koszyki: nauka → tydzień → miesiąc → znam (upd239) */
+.bk-path { display: inline-flex; gap: 4px; margin-left: 8px; }
+.bk-path span { font: 700 11px var(--head); letter-spacing: .03em; padding: 3px 8px; border-radius: 8px; color: var(--ink-3); box-shadow: inset 1px 1px 2px var(--sh-in-d), inset -1px -1px 2px var(--sh-l); }
+.bk-path span.on { background: #5A84BC; color: #fff; box-shadow: none; }
+.bk-path span.cur { background: #D0DFF0; color: #2E4E78; box-shadow: none; }
+.bk-path span:last-child.on, .bk-path span:last-child.cur { background: #5D9A6E; color: #fff; }
+.bk-msg { display: block; margin-top: 4px; background: rgba(90,132,188,.14); color: #2E4E78; border-radius: 10px; padding: 7px 12px; }
+.bk-wrap2 { border: 1.5px solid #BDB6AD; border-radius: 28px; padding: 22px 26px; background: linear-gradient(160deg, #EEEBE7 0%, #E2DED8 45%, #D5D0C9 100%); }
+.bk-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.bk-box { border: 1.5px solid #BDB6AD; border-radius: 20px; padding: 16px 18px; }
+.bk-box h3 { margin: 0; font: 700 16px var(--head); } .bk-box small { color: var(--ink-3); font-size: 12.5px; display: block; margin-top: 2px; }
+.bk-box .n { font: 700 38px var(--head); margin: 8px 0 4px; } .bk-box .nx { font-size: 13px; color: var(--ink-2); }
+.bk-box.bk0 .n { color: #7FA5D3; } .bk-box.bk1 .n { color: #5A84BC; } .bk-box.bk2 .n { color: #3F6597; } .bk-box.bk3 .n { color: #5D9A6E; }
+.bk-list { margin-top: 16px; }
+.bk-row { display: grid; grid-template-columns: 200px 1fr 120px 150px; gap: 14px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #D2CCC4; font-size: 15px; }
+.bk-row b { font-family: var(--head); } .bk-row small { color: var(--ink-3); font-size: 12.5px; text-align: right; }
+@media (max-width: 900px) { .bk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bk-row { grid-template-columns: 1fr 100px; } .bk-row .small-note { display: none; } }
