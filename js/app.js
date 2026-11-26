@@ -6164,7 +6164,10 @@
     renderListenLoading();
     try {
       const avoid = (D().audio || []).slice(-12).map(x => x.title);
-      const data = await AI.makeListening(L[lvl], t.prompt, avoid, lvl <= 1);
+      /* ten sam temat w ostatnich 14 dniach — inny podtemat i inne fakty, żeby nie odpowiadać z pamięci (upd240) */
+      const same = (D().audio || []).filter(x => x.topic === t.name && Date.now() - x.at < 14 * U.DAY).slice(-4);
+      const tp = same.length ? t.prompt + '. WAŻNE: Artur słuchał już audycji na ten temat (' + same.map(x => '„' + x.title + '”' + (x.qs ? ' — pytania: ' + x.qs.join(' / ') : '')).join('; ') + '). Wybierz zupełnie inny podtemat, inne fakty, inne nazwy i liczby; pytania nie mogą dotyczyć tych samych informacji.' : t.prompt;
+      const data = await AI.makeListening(L[lvl], tp, avoid, lvl <= 1);
       if (LS !== myLS) return;
       data.questions.forEach(q => {
         const opts = q.options.map((o, i) => ({ o, ok: i === q.answer }));
@@ -6285,7 +6288,7 @@
     t.sk = t.sk || {}; const ska = t.sk.listening || (t.sk.listening = [0, 0]); ska[0] += score; ska[1] += n;
     qs.forEach((q, k) => pushHist('listening', X.picks[k] === q.answer));
     D().audio = D().audio || [];
-    D().audio.push({ at: Date.now(), title: X.data.title, topic: X.topic, lvl: X.lvl, score, n, plays: X.plays });
+    D().audio.push({ at: Date.now(), title: X.data.title, topic: X.topic, lvl: X.lvl, score, n, plays: X.plays, qs: qs.map(q => String(q.q || '').slice(0, 90)) });
     if (D().audio.length > 200) D().audio.splice(0, D().audio.length - 200);
     D().typesPlayed = D().typesPlayed || {}; D().typesPlayed.listen = 1;
     // awans słuchania tak jak po sesji
