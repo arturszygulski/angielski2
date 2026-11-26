@@ -1910,3 +1910,4 @@ html body { background: transparent; }
 .bk-row { display: grid; grid-template-columns: 200px 1fr 120px 150px; gap: 14px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #D2CCC4; font-size: 15px; }
 .bk-row b { font-family: var(--head); } .bk-row small { color: var(--ink-3); font-size: 12.5px; text-align: right; }
 @media (max-width: 900px) { .bk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bk-row { grid-template-columns: 1fr 100px; } .bk-row .small-note { display: none; } }
+.gcirc.gok { background: linear-gradient(180deg, #7BA3D6, #43699C) !important; color: #fff; box-shadow: none; } /* kółko minut po zaliczeniu celu — niebieskie jak dzisiejsza data (upd244) */
