@@ -1883,3 +1883,6 @@ html body { background: transparent; }
 .gd-card .btn { margin-top: 22px; background: #6FA57E; color: #fff; box-shadow: 4px 4px 10px rgba(30,65,40,.4), -3px -3px 8px rgba(170,215,180,.55); }
 .gd-card .btn .kbd { color: #E4F1E7 !important; border-color: #E4F1E7; }
 .gcirc.gok { background: linear-gradient(160deg, #8EBE9B, #4F8A60); color: #fff; box-shadow: none; }
+/* Wciśnięcie przycisku: bez cieni w środku — przycisk „siada” (cień znika, lekko się zmniejsza i przyciemnia) (upd235) */
+.btn { transition: box-shadow .12s, transform .08s, filter .12s; }
+.btn:active:not([disabled]), .note.bs-note.bs-on:active, .nav-tile:active { box-shadow: none !important; transform: scale(.97); filter: brightness(.96); }
