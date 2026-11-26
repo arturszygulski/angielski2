@@ -1887,3 +1887,9 @@ html body { background: transparent; }
 .btn { transition: box-shadow .12s, transform .08s, filter .12s; }
 .btn:active:not([disabled]), .note.bs-note.bs-on:active, .nav-tile:active { box-shadow: none !important; transform: scale(.97); filter: brightness(.96); }
 .gd-st .gd-back { margin-top: 6px; } /* upd236 */
+/* Krok po kroku: zrobione/pominięte kroki na osi klikalne — po najechaniu kropka staje się wypukła (upd237) */
+.gd-st.redo { cursor: pointer; }
+.gd-st.redo .gd-dot { transition: box-shadow .15s, transform .15s; }
+.gd-st.redo:hover .gd-dot, .gd-st.redo:focus-visible .gd-dot { box-shadow: 4px 4px 9px var(--sh-d), -3px -3px 8px var(--sh-l); transform: translateY(-1px); }
+.gd-st.redo:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.gd-st.redo { outline: none; }
