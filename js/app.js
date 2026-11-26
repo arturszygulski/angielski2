@@ -826,6 +826,24 @@
     if (fresh.length) Store.save();
     return fresh;
   }
+  /* cel dzienny zaliczony: raz dziennie, przy pierwszym wejściu na stronę główną po przekroczeniu celu — zielone okienko + fanfara (upd234) */
+  function goalShow() {
+    const d = D(), t = Store.today(), dk = U.dayKey(Date.now()), goal = d.settings.goalMin;
+    if (d.goalShown === dk || (t.sec || 0) < goal * 60 || document.querySelector('.mi-ov, .gd-ov, .overlay')) return;
+    d.goalShown = dk; Store.save();
+    const gd = goalDays(), ks = Object.keys(d.days).sort().reverse(); let run = 0;
+    for (let i = 0; i < 400; i++) { const x = d.days[U.dayKey(U.addDays(U.startOfDay(), -i))]; if (x && (x.sec || 0) >= goal * 60) run++; else if (i > 0) break; else break; }
+    const ov = document.createElement('div'); ov.className = 'gd-ov';
+    ov.innerHTML = '<div class="gd-card"><div class="gd-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2>Cel dzienny zaliczony</h2>' +
+      '<p>Dziś ' + fmtHM(Math.floor(t.sec / 60)) + ' nauki' + (run >= 2 ? ' · ' + run + ' dni z rzędu z celem' : '') + '</p><button class="btn" id="gdOk">Dalej ' + K('Enter') + '</button></div>';
+    document.body.appendChild(ov);
+    try { Sound.play('fanfare'); } catch (e) { }
+    const close = () => { document.removeEventListener('keydown', kh, true); ov.remove(); };
+    const kh = e => { if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); close(); } else e.stopPropagation(); };
+    document.addEventListener('keydown', kh, true);
+    ov.onclick = e => { if (e.target === ov) close(); };
+    ov.querySelector('#gdOk').onclick = close;
+  }
   function milesShow(list) {
     if (!list || !list.length || document.querySelector('.mi-ov')) return;
     const { k, s } = list[0], M = MILES[k], now = milesNow()[k];
@@ -869,7 +887,7 @@
     guideLoad(); document.documentElement.dataset.scr = 'home';
     if (maybeWeeklyReport()) return;
     const d = D(), t = Store.today(), st = d.settings;
-    { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); }
+    { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); else goalShow(); }
     Store.save();
     const goalSec = st.goalMin * 60;
     const pct = Math.min(100, Math.round(t.sec / goalSec * 100));
@@ -949,7 +967,7 @@
           '<button class="btn t2-quick" id="quick">Szybka sesja · ' + st.blockMin + ' min ' + K('S') + '</button>') +
       '</div></div>' +
       '</div>' +
-      '<div class="t2-goal"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div><div class="gcirc inset" title="Dzisiaj ' + fmtHM(Math.floor(t.sec / 60)) + ' nauki">' + fmtClock(Math.floor(t.sec / 60)) + '</div></div>' +
+      '<div class="t2-goal"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div><div class="gcirc' + (t.sec >= st.goalMin * 60 ? ' gok' : ' inset') + '" title="Dzisiaj ' + fmtHM(Math.floor(t.sec / 60)) + ' nauki">' + fmtClock(Math.floor(t.sec / 60)) + '</div></div>' +
       '</section>' +
       '<nav class="nav-tiles" aria-label="Więcej"><span class="nav-sep" aria-hidden="true"></span>' +
       navTile('texts', IC.doc, 'Moje teksty', 'czytaj i tłumacz z AI', 'K') +

@@ -839,9 +839,21 @@ window.Sound = (function () {
     idk:   [[440, 0, .4]],
     block: [[523.25, 0, .7], [659.25, .06, .7], [783.99, .12, .9]]
   };
+  /* krótka fanfara trąbek: piłokształtny ton przez filtr, ta-da-daaa (upd234) */
+  function fanfare(c, base) {
+    const notes = [[392, 0, .16], [523.25, .17, .16], [659.25, .34, .16], [783.99, .51, .75], [659.25, .51, .75], [523.25, .51, .75]];
+    notes.forEach(([f, st, d]) => {
+      const o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(), t0 = c.currentTime + st;
+      o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 1800; lp.Q.value = 1;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(base * 0.55, t0 + 0.03);
+      g.gain.setValueAtTime(base * 0.5, t0 + d * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      o.connect(lp); lp.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + d + 0.05);
+    });
+  }
   function play(name) {
     if (!on()) return;
     const c = getCtx(); if (!c) return;
+    if (name === 'fanfare') { fanfare(c, 0.11 * (st().volume == null ? 50 : st().volume) / 100); return; }
     const base = 0.11 * (st().volume == null ? 50 : st().volume) / 100;
     const soft = name === 'bad' || name === 'idk';
     (P[name] || []).forEach(([f, s, d]) => {
