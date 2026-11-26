@@ -1857,3 +1857,13 @@ html body { background: transparent; }
 .st-tab.on::after { bottom: -4px; height: 6px; left: -1px; right: -1px; background: #EEEBE7; z-index: 4; }
 .st-tab.on { overflow: visible; margin-bottom: -2px; height: 42px; } .st-tab.on::after { bottom: -3px; height: 6px; } /* aktywna zakładka zakrywa kreskę modułu (upd231) */
 .st-tabs { padding-left: 36px; }
+/* Pasek dni bez wejścia dookoła ikon: strona główna i Graj (upd233) */
+.idle-arc { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; overflow: visible; }
+.nav-tile .ic { position: relative; overflow: visible; }
+.nav-tile.has-idle .ic { margin: 0 6px 0 4px; }
+.game.g2 { align-items: center; justify-content: center; text-align: center; padding: 22px 16px !important; }
+.pm-wide .game.g2 b { padding: 0 !important; font-size: 19px; line-height: 1.2; }
+.game.g2 .gi { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); box-shadow: inset 2px 2px 4px var(--sh-in-d), inset -2px -2px 4px var(--sh-l); }
+.game.g2 .gk { position: absolute; right: 16px; bottom: 14px; }
+.game.g2 .pr-tag { margin-top: 6px; }
+.game.g2 { padding-top: 40px !important; }

@@ -948,13 +948,7 @@
         : '<button class="btn big primary t2-go" id="start">Zacznij sesję ' + K('Enter') + '</button>' +
           '<button class="btn t2-quick" id="quick">Szybka sesja · ' + st.blockMin + ' min ' + K('S') + '</button>') +
       '</div></div>' +
-      (function () {
-        const sl = staleList().slice(0, 2);
-        if (!sl.length) return '';
-        const ago = x => x.d == null ? 'dawno albo wcale' : 'ostatnio ' + x.d + ' dni temu';
-        return '<div class="t2-stale" title="' + esc(sl.map(x => USE_NAME[x.k] + ' — ' + ago(x)).join(' · ')) + '"><span>Dawno nie było:</span>' +
-          sl.map((x, i) => '<button class="lnk" data-stale="' + x.k + '"' + (i === 0 ? ' title="klawisz N"' : '') + '>' + esc(USE_NAME[x.k]) + '</button>').join('') + '</div>';
-      })() + '</div>' +
+      '</div>' +
       '<div class="t2-goal"><span>Cel dzienny <b>' + st.goalMin + ' min</b></span><div class="bar thin inset gbar" title="Dziś ' + Math.floor(t.sec / 60) + ' z ' + st.goalMin + ' min (' + pct + '%)"><div style="width:' + pct + '%"></div></div><div class="gcirc inset" title="Dzisiaj ' + fmtHM(Math.floor(t.sec / 60)) + ' nauki">' + fmtClock(Math.floor(t.sec / 60)) + '</div></div>' +
       '</section>' +
       '<nav class="nav-tiles" aria-label="Więcej"><span class="nav-sep" aria-hidden="true"></span>' +
@@ -3000,8 +2994,22 @@
   function weekKey(t) { return U.dayKey(mondayOf(t == null ? Date.now() : t)); }
   function fmtHM(m) { return m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '') : m + ' min'; }
   function fmtClock(m) { return m >= 60 ? Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') : String(m); }
+  /* pasek dookoła ikony: każdy dzień bez wejścia = 1/12 okręgu; 1–3 zielony, 4–6 żółty, 7–9 pomarańczowy, 10–12 czerwony (upd233) */
+  const GAME_KEYS = ['race', 'cloze', 'order', 'error', 'dictation', 'speak', 'translate', 'particle', 'yg', 'pron'];
+  function idleDays(keys) {
+    let best = null; (Array.isArray(keys) ? keys : [keys]).forEach(k => { const d = daysSinceUse(k); if (d != null && (best == null || d < best)) best = d; });
+    return best == null ? 12 : Math.min(12, best);
+  }
+  function idleArc(n, size) {
+    const r = size / 2 - 2, C = 2 * Math.PI * r, col = n <= 3 ? '#6FAE7E' : n <= 6 ? '#E2C25A' : n <= 9 ? '#E0904A' : '#D0564A', h = size / 2;
+    return '<svg class="idle-arc" width="' + size + '" height="' + size + '" viewBox="' + (-h) + ' ' + (-h) + ' ' + size + ' ' + size + '" aria-hidden="true"><circle r="' + r + '" fill="none" stroke="rgba(120,110,100,.14)" stroke-width="3"/>' +
+      (n ? '<circle r="' + r + '" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round" stroke-dasharray="' + (C * n / 12).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90)"/>' : '') + '</svg>';
+  }
+  const idleTxt = n => n === 0 ? 'dziś było' : n >= 12 ? '12 dni albo dłużej bez' : n === 1 ? 'wczoraj ostatnio' : n + ' dni bez';
+  const NAV_IDLE = { texts: 'texts', play: GAME_KEYS, tenses: 'tense', words: 'words', talk: 'talk', listen: 'listen' };
   function navTile(nav, icon, title, sub, key, cls) {
-    return '<button class="btn nav-tile raised' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '" title="' + esc(sub) + '"><span class="ic inset">' + icon + '</span><span class="tx"><b>' + title + '</b><small>' + sub + '</small></span>' + K(key) + '</button>';
+    const ik = NAV_IDLE[nav], n = ik ? idleDays(ik) : null;
+    return '<button class="btn nav-tile raised' + (cls ? ' ' + cls : '') + (ik ? ' has-idle' : '') + '" data-nav="' + nav + '" title="' + esc(sub + (ik ? ' · ' + idleTxt(n) : '')) + '"><span class="ic inset">' + icon + (ik ? idleArc(n, 64) : '') + '</span><span class="tx"><b>' + title + '</b><small>' + sub + '</small></span>' + K(key) + '</button>';
   }
   /* polska typografia: krótkie słowa (z, w, i, do…) nie zostają na końcu linii */
   function nbspPl(s) { return String(s).replace(/(^|[\s(])(z|w|i|a|o|u|do|na|po|we|ze|od|bez)\s+/gi, '$1$2\u00a0'); }
@@ -3142,6 +3150,12 @@
     if (ws.length < 8) { const lv = levels().vocab; ws = ws.concat(WORDS.list.filter(w => w.lvl === lv && !c[w.id] && ws.indexOf(w) < 0)); }
     return ws;
   }
+  const GAME_IC = (function () { const sv = d => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; return {
+    race: sv('<path d="M12 8v5l3 2"/><circle cx="12" cy="13" r="8"/><path d="M9 2h6"/>'), cloze: sv('<rect x="3" y="9" width="18" height="6" rx="2"/><path d="M8 12h3"/>'),
+    order: sv('<rect x="3" y="4" width="8" height="6" rx="1.5"/><rect x="13" y="4" width="8" height="6" rx="1.5"/><rect x="7" y="14" width="10" height="6" rx="1.5"/>'), error: sv('<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>'),
+    dictation: sv('<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>'), speak: sv('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
+    translate: sv('<path d="M4 5h8M8 3v2M6 5c0 4 3 7 6 8M10 5c0 3-2 6-6 8"/><path d="M13 21l4-9 4 9M14.5 18h5"/>'), particle: sv('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
+    yg: sv('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>'), pron: sv('<path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/>') }; })();
   function renderPlayMenu() {
     S = null;
     /* „polecane” = dwie gry najrzadziej używane w ostatnich 14 dniach */
@@ -3159,9 +3173,10 @@
       })() +
       '<section class="games">' + PLAY_GAMES.map((g, i) => {
         const note = gameNote(g.id);
-        return '<button class="btn game raised' + (note ? ' off' : '') + '" data-game-go="' + g.id + '"' + (note ? ' aria-disabled="true"' : '') + '>' +
-          '<span class="num-key">' + ((i + 1) % 10) + '</span><b>' + nbspPl(g.title) + '</b>' + (g.id === 'pron' && pronMine().length ? '<span class="rec-tag pr-tag">' + pronMine().length + ' ' + (pronMine().length === 1 ? 'twoja para' : pronMine().length < 5 ? 'twoje pary' : 'twoich par') + '</span>' : !note && recG.indexOf(g.id) >= 0 ? '<span class="rec-tag">polecane</span>' : '') + '<small>' + nbspPl(note || g.desc) + '</small>' +
-          (g.id === 'race' ? '<small class="pink">' + raceSec() + ' s' + (raceBestFor(raceSec()) ? ' · rekord: ' + raceBestFor(raceSec()) : '') + '</small>' : '') + '</button>';
+        const n = note ? null : idleDays(g.id), tip = (note || g.desc) + (g.id === 'race' ? ' · ' + raceSec() + ' s' + (raceBestFor(raceSec()) ? ' · rekord: ' + raceBestFor(raceSec()) : '') : '') + (n != null ? ' · ' + idleTxt(n) : '');
+        return '<button class="btn game raised g2' + (note ? ' off' : '') + '" data-game-go="' + g.id + '" title="' + esc(tip) + '"' + (note ? ' aria-disabled="true"' : '') + '>' +
+          '<span class="gi">' + GAME_IC[g.id] + (n != null ? idleArc(n, 48) : '') + '</span><b>' + nbspPl(g.title) + '</b>' + (g.id === 'pron' && pronMine().length ? '<span class="rec-tag pr-tag">' + pronMine().length + ' ' + (pronMine().length === 1 ? 'twoja para' : pronMine().length < 5 ? 'twoje pary' : 'twoich par') + '</span>' : '') +
+          '<span class="kbd gk">' + ((i + 1) % 10) + '</span></button>';
       }).join('') + '</section>' +
       '<p class="small-note" style="text-align:center">Wybierz klawiszem ' + K('1') + '–' + K('0') + ' albo kliknij. XP, combo i minuty liczą się normalnie.</p>' +
       (function () { const n = sweepLeft(0); return n ? '<section class="note raised"><div class="tx"><b>Przegląd A1</b><span>szybko przejrzyj łatwe słowa — znane oznaczysz, nieznane pójdą do nauki · zostało ' + n + ' z ' + WORDS.list.filter(w => w.lvl === 0 && !w.custom).length + '</span></div><button class="btn primary" id="sweepGo">Przeglądaj ' + K('P') + '</button></section>' : ''; })() +
@@ -4293,6 +4308,7 @@
     return '<div class="own-list">' + rows + '</div>' + (pages > 1 ? '<div class="bk-pg"><button class="btn raised" id="owPrev"' + (ownPage ? '' : ' disabled') + '>‹</button><span>strona ' + (ownPage + 1) + ' z ' + pages + '</span><button class="btn raised" id="owNext"' + (ownPage < pages - 1 ? '' : ' disabled') + '>›</button></div>' : '');
   }
   function renderWords(tab) {
+    if (!(Store.today().ty || {}).words) { bumpUse('words'); Store.save(); }
     S = null;
     if (tab) wTab = tab;
     const nOwn = Object.keys(D().custom || {}).length;
