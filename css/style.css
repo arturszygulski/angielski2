@@ -1886,3 +1886,4 @@ html body { background: transparent; }
 /* Wciśnięcie przycisku: bez cieni w środku — przycisk „siada” (cień znika, lekko się zmniejsza i przyciemnia) (upd235) */
 .btn { transition: box-shadow .12s, transform .08s, filter .12s; }
 .btn:active:not([disabled]), .note.bs-note.bs-on:active, .nav-tile:active { box-shadow: none !important; transform: scale(.97); filter: brightness(.96); }
+.gd-st .gd-back { margin-top: 6px; } /* upd236 */

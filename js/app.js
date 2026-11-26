@@ -6423,7 +6423,7 @@
     const res = x => x.res ? (x.res.total ? x.res.correct + '/' + x.res.total + ' dobrze' : 'pominięte') + (x.res.xp ? ' · +' + x.res.xp + ' XP' : '') : '';
     const RE = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 4v5h-5"></path></svg>';
     const gIc = x => ({ due: RE, new: IC.book, hard: IC.flame, mistakes: IC.list, listen: IC.headphones, speak: IC.mic, dictation: IC.headphones })[x.type] || (x.mode === 'listen' ? IC.headphones : IC.gamepad);
-    const steps = '<section class="gd-steps">' + g.steps.map((x, k) => '<div class="gd-st' + (k === g.i ? ' cur' : '') + (k < g.i ? ' done' : '') + '"><span class="gd-dot">' + (k < g.i ? '✓' : k + 1) + '</span><b>' + esc(x.title) + '</b>' + (k < g.i && res(x) ? '<small>' + esc(res(x)) + '</small>' : '') + '</div>').join('') + '</section>';
+    const steps = '<section class="gd-steps">' + g.steps.map((x, k) => '<div class="gd-st' + (k === g.i ? ' cur' : '') + (k < g.i ? ' done' : '') + '"><span class="gd-dot">' + (k < g.i ? '✓' : k + 1) + '</span><b>' + esc(x.title) + '</b>' + (k < g.i && x.res && x.res.skip ? '<button class="btn small gd-back" data-gback="' + k + '" title="Wróć do tego kroku — zrobisz go teraz">Zrób jednak</button>' : k < g.i && res(x) ? '<small>' + esc(res(x)) + '</small>' : '') + '</div>').join('') + '</section>';
     const meta = cur && cur.queue && cur.queue.length ? '<div class="gd-meta">' + cur.queue.length + ' ' + plKart(cur.queue.length) + '</div>' : '';
     app.innerHTML =
       '<div class="wrap narrow gd-wrap">' +
@@ -6441,6 +6441,8 @@
     if ($('#gHome')) $('#gHome').onclick = () => go('home');
     if ($('#gGo')) $('#gGo').onclick = runGuideStep;
     if ($('#gSkip')) $('#gSkip').onclick = () => { cur.res = { total: 0, correct: 0, xp: 0, skip: true }; g.i++; guideSave(); renderGuide(); };
+    /* pominięty przez pomyłkę krok: wraca jako następny (upd236) */
+    $$('[data-gback]').forEach(b => b.onclick = () => { const k = +b.dataset.gback, x = g.steps.splice(k, 1)[0]; delete x.res; g.i--; g.steps.splice(g.i, 0, x); guideSave(); renderGuide(); });
     keyHandler = e => {
       if (e.repeat) return;
       if (e.key === 'Escape') { e.preventDefault(); $('#gEnd').click(); return; }
