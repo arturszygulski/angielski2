@@ -155,7 +155,9 @@ window.AI = (function () {
     return (s.model || 'claude-haiku-5-5').trim();
   }
   /* gdy model do wyjaśnień odmówi (400/404 — np. zła nazwa albo brak dostępu), zapytanie idzie jeszcze raz na szybkim modelu */
-  let smartErr = '', lastModel = '', lastAt = 0;
+  let smartErr = '', lastModel = '', lastAt = 0, lastSmartAt = 0;
+  /* etykieta „AI · model” dotyczy wyjaśnień: zapytania w tle (szybki model, np. przygotowanie kolejnych zdań) nie nadpisują jej (upd243) */
+  function noteModel(model, smartReq) { const now = Date.now(); if (smartReq) { lastModel = model; lastAt = now; lastSmartAt = now; } else if (now - lastSmartAt > 120000) { lastModel = model; lastAt = now; } }
   const fastModel = () => (Store.data.settings.model || 'claude-haiku-5-5').trim();
   /* stan AI do przełącznika na stronie głównej: ostatnie zapytanie udane (zielony) albo błąd klucza / sieci (czerwony) */
   const BAD = { 401: 'nieprawidłowy klucz API', 403: 'brak dostępu dla tego klucza', 402: 'brak środków na koncie' };
@@ -168,16 +170,17 @@ window.AI = (function () {
     if (ch) { try { Store.save(); } catch (e) { } window.dispatchEvent(new Event('ai-health')); }
   }
   async function aiFetch(url, opts) {
+    const smartReq = curSmart;
     let body; try { body = JSON.parse(opts.body); } catch (e) { return fetch(url, opts); }
     let res; try { res = await fetch(url, opts); } catch (e) { health(null, e); throw e; }
     health(res);
-    if (res.ok) { lastModel = body.model; lastAt = Date.now(); }
+    if (res.ok) noteModel(body.model, smartReq);
     if (res.ok || !(res.status === 400 || res.status === 404) || body.model === fastModel()) return res;
     let msg = ''; try { const j = await res.clone().json(); msg = (j.error && j.error.message) || ''; } catch (e) { }
     smartErr = body.model + ' → ' + res.status + (msg ? ': ' + msg : '');
     console.warn('Model do wyjaśnień nie zadziałał, używam szybkiego:', smartErr);
     const r2 = await fetch(url, Object.assign({}, opts, { body: JSON.stringify(Object.assign(body, { model: fastModel() })) }));
-    if (r2.ok) { lastModel = body.model; lastAt = Date.now(); }
+    if (r2.ok) noteModel(body.model, smartReq);
     return r2;
   }
   /* model wybierany synchronicznie przy starcie zapytania — flaga od razu wraca, więc równoległe szybkie sprawdzenia zostają na Haiku */
