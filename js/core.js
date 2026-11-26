@@ -269,9 +269,11 @@ window.AI = (function () {
       'Oczekiwana odpowiedź: "' + item.answers[0] + '"\n' +
       'Odpowiedź Artura: "' + answer + '"\n\n' +
       'Oceń, czy odpowiedź Artura jest gramatycznie poprawna i naturalna w tym zdaniu ORAZ zgodna ze znaczeniem podpowiedzi (bliski synonim jest w porządku; literówka, która tworzy inne słowo, nie). ' +
+      'Uznaj (acceptable=true) każde słowo, którego rodzimy użytkownik angielskiego naturalnie użyłby w tym zdaniu w tym samym sensie — nawet jeśli oczekiwana odpowiedź jest częstsza (np. „There is no proof that…” = „There is no evidence that…”). Odrzucaj tylko, gdy zdanie staje się błędne, wyraźnie nienaturalne albo zmienia znaczenie. ' +
+      'Jeśli uznajesz, w explanation krótko napisz, czym się różnią oba słowa (np. proof = rozstrzygający dowód, evidence = dowody, przesłanki). ' +
       'Napisz po polsku 1–2 krótkie zdania: jeśli źle — dlaczego i czym różni się od oczekiwanej odpowiedzi; jeśli dobrze — krótko potwierdź.\n' +
       'Zwróć dokładnie: {"acceptable": true albo false, "explanation": "..."}';
-    const j = await callJSON(system, user + fmtJ('explanation'), 500, 20000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
+    const j = await callJSON(system, user + fmtJ('explanation'), 500, 25000, { type: 'object', required: ['acceptable', 'explanation'], properties: { acceptable: { type: 'boolean' }, explanation: STR } });
     return { acceptable: !!j.acceptable, explanation: String(j.explanation || '') };
   }
 
@@ -757,7 +759,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), checkAnswer, checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), checkAnswer: smart(checkAnswer), checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */
