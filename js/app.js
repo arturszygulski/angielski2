@@ -2946,7 +2946,7 @@
   const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   function fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   /* ---------- Mapa słownictwa: postęp w całej bazie słów ---------- */
-  const VM_COL = { known: '#5D9A6E', mon: '#3F6597', week: '#5A84BC', learn: '#A2C0E2', mast: '#5A84BC' };
+  const VM_COL = { known: '#8CC79A', mon: '#3F6597', week: '#5A84BC', learn: '#A2C0E2', mast: '#5A84BC' };
   function vocabMap() {
     const c = D().cards, lv = WORDS.list.filter(w => !w.custom), rows = L.map(() => ({ mast: 0, known: 0, learn: 0, unseen: 0, total: 0, week: 0, mon: 0 }));
     lv.forEach(w => {
