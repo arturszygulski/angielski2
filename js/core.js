@@ -520,6 +520,16 @@ window.AI = (function () {
     const j = await callJSON(system, user, 900, 30000, { type: 'object', required: ['rule', 'items'], properties: { rule: STR, items: { type: 'array', items: { type: 'object', required: ['pl', 'en'], properties: { pl: STR, en: STR } } } } });
     return { rule: String(j.rule || '').trim(), items: (j.items || []).filter(x => x && x.pl && x.en).slice(0, 6).map(x => ({ pl: String(x.pl).trim(), en: String(x.en).trim() })) };
   }
+  /* nowe zdania do tłumaczenia z danym słowem — żeby nie uczyć się jednego zdania na pamięć (upd259) */
+  async function trVariants(word, pl, levelName, avoid) {
+    const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka. Odpowiadasz wyłącznie przez narzędzie.';
+    const user = 'Słowo/zwrot: "' + word + '"' + (pl ? ' (znaczenie: ' + pl + ')' : '') + '. Poziom: ' + levelName + '.\n' +
+      'Ułóż 4 krótkie, naturalne, codzienne zdania (6–12 słów), każde w innej sytuacji (dom, praca, podróż, technika, zdrowie…), w różnych czasach i formach (twierdzenie, pytanie, przeczenie), ZAWSZE z tym słowem w tym samym znaczeniu. ' +
+      'pl — naturalne polskie zdanie (tak, jak mówi Polak, nie kalka), en — poprawne, naturalne tłumaczenie z "' + word + '" (dopuszczalna odmiana: czas, liczba mnoga).' +
+      (avoid && avoid.length ? '\nNie powtarzaj tych zdań: ' + avoid.map(x => '"' + x + '"').join('; ') : '');
+    const j = await callJSON(system, user, 900, 30000, { type: 'object', required: ['items'], properties: { items: { type: 'array', items: { type: 'object', required: ['pl', 'en'], properties: { pl: STR, en: STR } } } } });
+    return (j.items || []).filter(x => x && x.pl && x.en).slice(0, 4).map(x => ({ pl: String(x.pl).trim(), en: String(x.en).trim() }));
+  }
   /* „Trudne” z opisem: Artur mówi, co dokładnie sprawia kłopot → zasada + 5 zdań PL→EN pod ten problem (upd256) */
   async function hardDrill(c) {
     const system = 'Jesteś cierpliwym, konkretnym nauczycielem angielskiego dla dorosłego Polaka (poziom ' + c.level + '). Mówisz do Artura w 2. osobie, rodzaj męski. Odpowiadasz wyłącznie przez narzędzie.';
@@ -779,7 +789,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), hardDrill: smart(hardDrill), checkAnswer: smart(checkAnswer), checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), hardDrill: smart(hardDrill), trVariants, checkAnswer: smart(checkAnswer), checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

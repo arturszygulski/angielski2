@@ -104,6 +104,7 @@
     }
     const w = WORDS.byId[rest];
     if (type === 'particle' && w && !isPV(w)) return null;
+    if (w && type === 'translate') { const tv = (D().trVar || {})[w.id], v = tv && tv.list[tv.i]; if (v) return { type, id, w: Object.assign({}, w, { s: '_' + v.en, answers: [''] }), vw: w.answers[0], vIdx: tv.i, lvl: w.lvl, pl: v.pl }; }
     return w ? { type, id, w, lvl: w.lvl, pl: type === 'translate' ? (D().plCache || {})[id] : null } : null;
   }
   const PV_RE = /^[a-z]+( (up|down|out|off|on|in|over|back|away|around|round|into|with|for|after|through|along|across|by|forward|apart|ahead|to|of|about|together|aside))+$/;
@@ -171,8 +172,17 @@
     const wid = scaleKey(it); if (!wid) return null;
     const ws = D().wsc = D().wsc || {}, r = ws[wid] = ws[wid] || { lv: 0, day: '' }, today = U.dayKey();
     if (r.day === today) return { lv: r.lv, d: 0, same: true, b: r.b || 0 };
-    r.day = today;
     const clean = correct && kind === 'ok' && !S.hint && !S.unsure;
+    /* tłumaczenie jako obowiązkowy etap słowa (upd259): sprawdzenia koszyków i ostatnia kropka tylko za tłumaczenie z polskiego */
+    if (trGate(wid) && it.type !== 'translate') {
+      if (r.b >= 1) return { lv: r.lv, d: 0, b: r.b };
+      if (clean && r.lv === 4) {
+        const tid = 'tr:' + wid, inQ = S && S.queue && S.queue.slice(S.pos + 1).some(q => q.id === tid);
+        if (S && S.queue && !inQ && !S.finishing && itemFor(tid)) S.queue.splice(Math.min(S.queue.length, S.pos + 3), 0, { id: tid, isNew: !D().cards[tid], newKind: 'extra' });
+        return { lv: 4, d: 0, b: 0, bm: 'Ostatnią kropkę dostaniesz za <b>tłumaczenie zdania z polskiego</b> z tym słowem — ' + (S && S.queue && itemFor(tid) ? 'za chwilę w tej sesji.' : 'pojawi się w sesji.') };
+      }
+    }
+    r.day = today;
     /* koszyki 1–3 (tydzień, miesiąc, znam): jedno sprawdzenie w terminie; dobrze = dalej, źle = koszyk niżej (z tygodnia do nauki na 3/5) (upd239) */
     if (r.b >= 1) {
       let bm = '';
@@ -194,7 +204,36 @@
   const BASKET_NAME = ['nauka', 'tydzień', 'miesiąc', 'znam'], BASKET_DAYS = [0, 7, 30, 180];
   function basketSchedule(key, r, keepBd) {
     if (!keepBd) r.bd = U.addDays(U.startOfDay(), BASKET_DAYS[r.b]);
-    scaleFamily(key).forEach(id => { const k = D().cards[id]; if (k && k.state !== 'known') { k.due = r.bd; k.ivl = Math.max(1, Math.round((r.bd - U.startOfDay()) / U.DAY)); k.state = 'review'; } });
+    const tg = trGate(key);
+    scaleFamily(key).forEach(id => { const k = D().cards[id]; if (k && k.state !== 'known') { const due = tg && id.indexOf('tr:') !== 0 ? U.addDays(r.bd, 7) : r.bd; k.due = due; k.ivl = Math.max(1, Math.round((due - U.startOfDay()) / U.DAY)); k.state = 'review'; } });
+  }
+  /* po tłumaczeniu słowa: licznik nowych, następny wariant zdania; zapas nowych zdań od AI (upd259) */
+  const TRV_BUSY = {};
+  function trAfter(it, c) {
+    const wid = it.w.id, t = Store.today();
+    if (c.isNew) t.newTr = (t.newTr || 0) + 1;
+    const tv = (D().trVar = D().trVar || {})[wid] || (D().trVar[wid] = { list: [], i: 0 });
+    if (it.vIdx != null && tv.i === it.vIdx) tv.i++;
+    if (tv.list.length - tv.i < 1 && AI.enabled() && !TRV_BUSY[wid]) {
+      TRV_BUSY[wid] = 1; const w = WORDS.byId[wid];
+      AI.trVariants(w.answers[0], w.pl, L[w.lvl] || 'A2', tv.list.map(x => x.en).concat([w.s.replace('_', w.answers[0])]).slice(-8))
+        .then(items => { if (items.length) { tv.list = tv.list.slice(tv.i).concat(items); tv.i = 0; Store.save(); } })
+        .catch(() => { }).then(() => { delete TRV_BUSY[wid]; });
+    }
+  }
+  /* słowo, dla którego tłumaczenie jest bramką (słowo z bazy, tłumaczenia włączone i AI dostępne) */
+  function trGate(key) { return !!(key && WORDS.byId[key] && typeEnabled('translate')); }
+  /* tłumaczenia do sesji: sprawdzenia koszyków na dziś, słowa czekające na 5. kropkę, nowe tłumaczenia słów po 2 dobrych odpowiedziach (upd259) */
+  const TR_NEW_DAY = 4;
+  function trQueue(max) {
+    if (!typeEnabled('translate')) return [];
+    const c = D().cards, ws = D().wsc || {}, end = endOfToday(), today = U.dayKey(), out = [], seen = {};
+    const add = (wid, isNew) => { const id = 'tr:' + wid; if (seen[id] || !itemFor(id)) return; const k = c[id]; if (k && k.state === 'known') return; seen[id] = 1; out.push({ id, isNew, newKind: isNew ? 'extra' : undefined }); };
+    Object.keys(ws).forEach(k => { const r = ws[k]; if (WORDS.byId[k] && r.b >= 1 && r.bd && r.bd < end && r.day !== today) add(k, !c['tr:' + k]); });
+    Object.keys(ws).forEach(k => { const r = ws[k]; if (WORDS.byId[k] && !r.b && r.lv === 4 && r.day !== today) { const t = c['tr:' + k]; if (!t || t.due < end + 3 * U.DAY) add(k, !t); } });
+    let nNew = Math.max(0, TR_NEW_DAY - (Store.today().newTr || 0));
+    WORDS.list.forEach(w => { if (nNew <= 0) return; const x = c[w.id]; if (x && x.state !== 'known' && (x.reps || 0) >= 2 && !c['tr:' + w.id] && !seen['tr:' + w.id]) { add(w.id, true); nNew--; } });
+    return out.slice(0, max || 8);
   }
   const basketOf = key => { const r = key && (D().wsc || {})[key]; return r && r.b ? r.b : 0; };
   /* ścieżka koszyków przy kropkach: 1 · tydzień · miesiąc · znam */
@@ -425,7 +464,7 @@
   function newExtraPool() {
     const c = D().cards, lists = { order: [], dictation: [], speak: [], error: [], translate: [], particle: [], tense: [] };
     const learned = WORDS.list.filter(w => c[w.id] && c[w.id].state !== 'known' && (c[w.id].reps || 0) >= 2 && wordLv(w.id) < 5);
-    ['order', 'dictation', 'speak', 'translate', 'particle'].filter(typeEnabled).forEach(tp => {
+    ['order', 'dictation', 'speak', 'particle'].filter(typeEnabled).forEach(tp => { // tłumaczenia słów — osobno, trQueue (upd259)
       learned.forEach(w => { if (tp === 'particle' && !isPV(w)) return; const id = PREFIX_OF[tp] + w.id; if (!c[id]) lists[tp].push(id); });
     });
     if (typeEnabled('error')) {
@@ -1159,7 +1198,7 @@
     if (quick && !due.length) { nNew = 2; nX = 1; }
     const fresh = newPool().slice(0, nNew).map(id => ({ id, isNew: true, newKind: 'vocab' }));
     const freshX = newExtraPool().slice(0, nX).map(id => ({ id, isNew: true, newKind: 'extra' }));
-    if (!due.length && !fresh.length && !freshX.length && !(quick ? [] : stubQueue()).length) {
+    if (!due.length && !fresh.length && !freshX.length && !(quick ? [] : stubQueue()).length && !(quick ? [] : trQueue(1)).length) {
       toast(newPool().length ? 'Na dziś wszystko zrobione!' : 'Przerobiłeś całą bazę słówek — więcej w kolejnych etapach.');
       return;
     }
@@ -1175,6 +1214,7 @@
       if (n < freshAll.length) queue.push(freshAll[n++]);
     }
     if (!quick) { const sq = stubQueue(); sq.forEach((q, i) => queue.splice(Math.min(queue.length, 2 + i * 4), 0, q)); }
+    if (!quick) { const have = new Set(queue.map(q => q.id)); trQueue(8).filter(q => !have.has(q.id)).forEach((q, i) => queue.splice(Math.min(queue.length, 3 + i * 3), 0, q)); }
     S = newSession({ quick: !!quick, queue });
     const learned = WORDS.list.filter(w => D().cards[w.id] && !isKnownWord(w) && (D().cards[w.id].reps || 0) >= 1 && wordLv(w.id) < 5);
     /* rozgrzewka: wyścig, chyba że był już wczoraj i dziś — wtedy na początek 5 zadań najrzadziej ćwiczonego rodzaju */
@@ -2137,7 +2177,7 @@
     if (it.type === 'translate') {
       if (S.listening) Recog.stop();
       let m = U.norm(ans) === U.norm(full) ? 'exact' : 'wrong', expl = '', aiErr = '', better = '', wordOk = null, side = [];
-      const lw = !it.stub && !it.fromText && it.w && it.w.answers && it.w.answers[0] ? it.w.answers[0] : '';
+      const lw = it.vw || (!it.stub && !it.fromText && it.w && it.w.answers && it.w.answers[0] ? it.w.answers[0] : '');
       if (m === 'wrong') {
         if (AI.enabled()) {
           checking();
@@ -2257,6 +2297,7 @@
       const skn = TYPES[it.type].skill; t.sk = t.sk || {}; const ska = t.sk[skn] || (t.sk[skn] = [0, 0]); ska[1]++; if (correct) ska[0]++;
     }
     if (g <= 2 && !S.struggled.includes(c.id)) S.struggled.push(c.id);
+    if (isFirst && it.type === 'translate' && !it.stub && !it.fromText && it.w && WORDS.byId[it.w.id]) trAfter(it, c);
 
     let xp = 0;
     if (correct) {
@@ -6537,6 +6578,7 @@
     if (sq.length) add({ type: 'stub', title: 'Uparte błędy', mode: 'srs', why: 'Błędy, które powtarzasz: ' + sq.map(q => itemFor(q.id).stubRight).join(', ') + ' — po jednym krótkim zdaniu.', queue: sq });
     const due = dueIds().slice(0, Math.min(15, reviewCap()));
     if (due.length) add({ type: 'due', title: 'Powtórki', mode: 'srs', why: due.length + ' do powtórki — to dziś najważniejsze dla pamięci.', queue: due.map(id => ({ id, isNew: false })) });
+    { const dset = new Set(due), tq = trQueue(8).filter(q => !dset.has(q.id)); if (tq.length) add({ type: 'trw', title: 'Tłumaczenia', mode: 'srs', why: 'Słowa w zdaniach z polskiego — bez tego słowo nie dojdzie do 5/5 ani do „znam”.', queue: tq }); }
     const nW = newPool().slice(0, Math.min(5, newLeftToday())).map(id => ({ id, isNew: true, newKind: 'vocab' }));
     const nX = newExtraPool().slice(0, Math.min(3, newExtraLeftToday())).map(id => ({ id, isNew: true, newKind: 'extra' }));
     if (nW.length + nX.length) add({ type: 'new', title: 'Nowe słowa', mode: 'srs', why: 'Porcja nowych słów i ćwiczeń na dziś.', queue: U.shuffle(nW.concat(nX)) });
@@ -6638,7 +6680,7 @@
     const mins = Math.max(0, Math.round((Store.today().sec - g.sec0) / 60));
     const res = x => x.res ? (x.res.total ? x.res.correct + '/' + x.res.total + ' dobrze' : 'pominięte') + (x.res.xp ? ' · +' + x.res.xp + ' XP' : '') : '';
     const RE = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 4v5h-5"></path></svg>';
-    const gIc = x => ({ due: RE, new: IC.book, hard: IC.flame, mistakes: IC.list, listen: IC.headphones, speak: IC.mic, dictation: IC.headphones })[x.type] || (x.mode === 'listen' ? IC.headphones : IC.gamepad);
+    const gIc = x => ({ due: RE, trw: GAME_IC.translate, new: IC.book, hard: IC.flame, mistakes: IC.list, listen: IC.headphones, speak: IC.mic, dictation: IC.headphones })[x.type] || (x.mode === 'listen' ? IC.headphones : IC.gamepad);
     const steps = '<section class="gd-steps">' + g.steps.map((x, k) => '<div class="gd-st' + (k === g.i ? ' cur' : '') + (k < g.i ? ' done redo' : '') + '"' + (k < g.i ? ' data-gback="' + k + '" role="button" tabindex="0" title="Kliknij, aby ' + (x.res && x.res.skip ? 'zrobić ten krok teraz' : 'zrobić ten krok jeszcze raz') + '"' : '') + '><span class="gd-dot">' + (k < g.i ? '✓' : k + 1) + '</span><b>' + esc(x.title) + '</b>' + (k < g.i && res(x) ? '<small>' + esc(res(x)) + '</small>' : '') + '</div>').join('') + '</section>';
     const meta = cur && cur.queue && cur.queue.length ? '<div class="gd-meta">' + cur.queue.length + ' ' + plKart(cur.queue.length) + '</div>' : '';
     app.innerHTML =
