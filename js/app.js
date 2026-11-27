@@ -5537,9 +5537,9 @@
     } else if (TR.view === 'sent' || TR.view === 'fb') {
       const si = tr.list[tr.pos], sn = T.sents[si], toks = tokenize(sn.t), set = trUnknownSet(T), hardSet = new Set((tr.intro && tr.intro.hard) || []);
       const okN = Object.values(tr.done).filter(d => d.v === 'ok').length, wN = tr.words || 0;
-      const right = '<span class="small-note">dobrze ' + okN + ' · nowe słowa ' + wN + '</span>';
+      const right = '<button class="btn small" id="trWords" title="Wszystko, co dodałeś do nauki z tego tekstu">Słowa z tego tekstu <b class="pink">' + textWordList(T).length + '</b> ' + K('W') + '</button>';
       const [pa, pb] = trPartRange(T, tr.part || 0), inList = new Set(tr.list);
-      let prog = ''; for (let i = pa; i < pb; i++) prog += '<i class="' + (i === si ? 'c' : tr.done[i] ? 'd' : !inList.has(i) ? 'e' : (hardSet.has(i) || trSentUnknown(T, i, set)) ? 'h' : '') + '"></i>';
+      let prog = ''; for (let i = pa; i < pb; i++) prog += '<i class="' + (i === si ? 'c' : tr.done[i] ? 'd' : !inList.has(i) ? 'e' : (hardSet.has(i) || trSentUnknown(T, i, set)) ? 'h' : '') + '"' + (inList.has(i) && i !== si ? ' data-trgo="' + i + '" title="zdanie ' + (i - pa + 1) + (tr.done[i] ? ' · przetłumaczone' : '') + '"' : '') + '></i>';
       const isHard = hardSet.has(si) || trSentUnknown(T, si, set) > 0;
       const sub = 'zdanie ' + (si - pa + 1) + ' z ' + (pb - pa) + (isHard ? ' · trudne' : '') + (trParts(T) > 1 ? ' · część ' + ((tr.part || 0) + 1) + '/' + trParts(T) : '');
       const dup = TR.view === 'sent' && (() => { const k = trNorm(sn.t); const j = Object.keys(tr.done).map(Number).find(x => x !== si && tr.done[x].v === 'ok' && trNorm(T.sents[x].t) === k); return j == null ? null : tr.done[j]; })();
@@ -5568,7 +5568,13 @@
         const vMap = { ok: ['ok', IC.check, 'Dobrze'], almost: ['unsure', IC.alert, 'Prawie'], wrong: ['bad', IC.alert, 'Nie całkiem'], self: ['unsure', IC.check, 'Tłumaczenie'] };
         const v = vMap[f.verdict] || vMap.self;
         const KIC = { grammar: '⏱', word: '📈', usage: '🔗' };
-        html += '<section class="tr-f tr-card"><div class="tr-sent tr-small" lang="en">' + sentHtml(false) + '</div>' +
+        const mkSet = {}; Object.values(T.marks || {}).forEach(m => { if (m.s === si) for (let q = m.a; q <= m.b; q++) mkSet[q] = 1; });
+        const fbSent = (() => { let out = '', last = 0; toks.forEach((tk, k) => { out += esc(sn.t.slice(last, tk.a)); const sel = TR.wsel && k >= TR.wsel.a && k <= TR.wsel.b; out += '<span class="tr-w tr-pk' + (mkSet[k] ? ' mk' : '') + (sel ? ' sel' : '') + '" data-trw="' + k + '">' + esc(tk.w) + '</span>'; last = tk.b; }); return out + esc(sn.t.slice(last)); })();
+        const wp = TR.wpop;
+        const popHtml = wp ? '<div class="tr-wpop"><b lang="en">' + esc(wp.phrase) + '</b>' + (wp.busy ? ' <span class="spinner"></span>' : wp.err ? ' <span class="status bad">' + esc(wp.err) + '</span>' : wp.r ? ' — ' + esc(wp.r.pl) + '<div class="small-note">' + qaFmt(wp.r.explanation || '') + '</div>' : '') +
+          '<div class="row" style="gap:8px;margin-top:8px">' + (wp.r ? '<button class="btn small primary" id="trWAdd">Do nauki ' + K('D') + '</button>' : '') + '<button class="btn small" id="trWClose">Zamknij</button></div></div>' : '';
+        html += '<section class="tr-f tr-card"><div class="tr-sent tr-small" lang="en">' + fbSent + '</div>' + popHtml +
+          '<div class="small-note" style="text-align:center;margin:-4px 0 4px">Kliknij słowo (Shift — kilka słów), żeby dodać je do nauki</div>' +
           '<div class="fb ' + v[0] + '" role="status">' + v[1] + '<span><b>' + v[2] + (f.verdict === 'self' ? '' : ' — ') + '</b>' + (f.verdict === 'self' ? '' : qaFmt(f.headline)) + '</span></div>' +
           (f.verdict === 'self' && d.self == null ? '<div class="tr-self" title="Twoja samoocena — „Tak” liczy się jako dobre zdanie w podsumowaniu tekstu">Czy w głowie przetłumaczyłeś to tak samo jak niżej? <button class="btn small" data-trself="1">Tak ' + K('1') + '</button><button class="btn small" data-trself="0">Nie całkiem ' + K('2') + '</button></div>' : '') +
           '<div class="tr-cmp">' + (TR.lastAns ? '<span>Twoje</span><div>' + esc(TR.lastAns) + '</div>' : '') + '<span>' + (TR.lastAns ? 'Lepiej' : 'Tłumaczenie') + '</span><div class="tr-better">' + esc(f.better) + '</div></div>' +
@@ -5672,7 +5678,7 @@
       const f = await AI.trJudge({ level: L[levels().vocab], summary: (tr.intro && tr.intro.summary) || T.title, prev: si > 0 ? T.sents[si - 1].t : '', next: T.sents[si + 1] ? T.sents[si + 1].t : '', sentence: sn.t, translation: ans, think, red, yellow });
       f.m = AI.lastModel(); if (inHead) f.verdict = 'self';
       (f.words || []).forEach(w => { if (w.kind === 'red') { trAddWord(T, si, w); w.added = true; } });
-      tr.done[si] = { v: f.verdict, ans, think, better: f.better, learn: f.learn || [], at: Date.now(), back: false };
+      tr.done[si] = { v: f.verdict, ans, think, better: f.better, learn: f.learn || [], at: Date.now(), back: false, fb: f };
       TR.fb = f; TR.lastAns = ans; TR.view = 'fb'; TR.qa = []; TR.ask = false;
       const set = trUnknownSet(T), rest = tr.list.slice(tr.pos + 1), [pa, pb] = trPartRange(T, tr.part || 0), after = []; for (let i = si + 1; i < pb; i++) after.push(i);
       TR.banner = tr.mode === 'all' && rest.length >= 3 && !tr.bannerSeen && after.every(i => trSentUnknown(T, i, set) === 0);
@@ -5682,8 +5688,63 @@
   }
   function trNext(T) {
     const tr = trData(T);
-    tr.pos++; TR.marks = {}; TR.ans = ''; TR.think = ''; TR.fb = null; TR.err = ''; TR.banner = false; TR.view = tr.pos >= tr.list.length ? 'done' : 'sent';
+    tr.pos++; while (tr.pos < tr.list.length && tr.done[tr.list[tr.pos]] && TR.view === 'fb' && TR.jumped) tr.pos++; // po powrocie wstecz: dalej = następne nieprzetłumaczone (upd279)
+    TR.jumped = false; TR.wsel = null; TR.wpop = null;
+    TR.marks = {}; TR.ans = ''; TR.think = ''; TR.fb = null; TR.err = ''; TR.banner = false; TR.view = tr.pos >= tr.list.length ? 'done' : 'sent';
     Store.save(); renderTrx();
+  }
+  /* powrót do dowolnego zdania; zdanie przetłumaczone pokazuje zapisaną ocenę (upd279) */
+  function trGoto(T, si, step) {
+    const tr = trData(T); const p = tr.list.indexOf(si); if (p < 0) return;
+    tr.pos = p; const d = tr.done[si];
+    Object.assign(TR, { marks: {}, ans: '', think: '', err: '', banner: false, qa: [], ask: false, wsel: null, wpop: null, jumped: true });
+    if (d) { if (!d.fb) d.fb = { verdict: d.v, headline: '', better: d.better, comment: '', learn: d.learn || [], words: [] }; TR.fb = d.fb; TR.lastAns = d.ans; TR.view = 'fb'; }
+    else { TR.fb = null; TR.view = 'sent'; }
+    Store.save(); renderTrx();
+  }
+  /* zaznaczanie słów w przetłumaczonym zdaniu → znaczenie od AI → Do nauki (upd279) */
+  async function trWordPick(T, k, ext) {
+    const tr = trData(T), si = tr.list[tr.pos];
+    TR.wsel = ext && TR.wsel ? { a: Math.min(TR.wsel.a, k), b: Math.max(TR.wsel.b, k) } : { a: k, b: k };
+    const toks = tokenize(T.sents[si].t), ph = T.sents[si].t.slice(toks[TR.wsel.a].a, toks[TR.wsel.b].b), key = 'trw:' + si + ':' + TR.wsel.a + '-' + TR.wsel.b;
+    T.cache = T.cache || {};
+    TR.wpop = { phrase: ph, key, r: T.cache[key] || null, busy: !T.cache[key] }; renderTrx();
+    if (T.cache[key]) return;
+    try { const r = await AI.explainPhrase(ph, T.sents[si].t, contextOf(T, si)); T.cache[key] = r; Store.save(); if (TR.wpop && TR.wpop.key === key) { TR.wpop.r = r; TR.wpop.busy = false; } }
+    catch (e) { if (TR.wpop && TR.wpop.key === key) { TR.wpop.busy = false; TR.wpop.err = AI.humanError(e); } }
+    if (screen === 'trx') renderTrx();
+  }
+  function trWordAdd(T) {
+    const w = TR.wpop; if (!w || !w.r) return;
+    const tr = trData(T), si = tr.list[tr.pos];
+    trAddWord(T, si, { surface: w.phrase, phrase: w.r.base || w.phrase, pl: w.r.pl });
+    progress(); Store.save(); toast('„' + w.phrase + '” — do nauki.'); TR.wsel = null; TR.wpop = null; renderTrx();
+  }
+  /* lista słów i zwrotów dodanych z tego tekstu (upd279) */
+  function textWordList(T) {
+    const out = [];
+    Object.keys(T.marks || {}).forEach(mk => { const m = T.marks[mk]; out.push({ mk, kind: 'w', phrase: m.phrase, pl: m.pl, s: m.s, at: m.at || 0, id: m.id }); });
+    const sentSet = new Set((T.sents || []).map(x => x.t)), S0 = stubs();
+    Object.keys(S0).forEach(q => { const x = S0[q]; if (x.state === 'watch' || !x.mine) return; if ((x.src || []).some(z => sentSet.has(z.en))) { const s0 = T.sents.findIndex(sn => (x.src || []).some(z => z.en === sn.t)); out.push({ kind: 'l', key: q, phrase: x.right, pl: (x.rule || '').replace(/\*\*/g, ''), s: s0, at: x.since || 0, x }); } });
+    return out.sort((a, b) => b.at - a.at);
+  }
+  function textWordsModal(T, onGo) {
+    const list = textWordList(T);
+    const row = (e, i) => { const when = e.at ? new Date(e.at).toLocaleDateString('pl-PL') : '';
+      const dots = e.kind === 'w' ? wordDots(e.id, true) : '<span class="ub-dots">' + [0, 1, 2, 3].map(j => '<i' + (j < (e.x.state === 'done' ? STUB_DAYS : e.x.days.length) ? ' class="ok"' : '') + '></i>').join('') + '</span>';
+      return '<div class="tw-row"><button class="tw-go" data-twgo="' + i + '"' + (onGo ? '' : ' disabled') + '><b lang="en">' + esc(e.phrase) + '</b><span class="tw-tag">zd. ' + (e.s + 1) + (e.kind === 'l' ? ' · Moje błędy' : '') + '</span><small>' + esc(String(e.pl || '').slice(0, 90)) + (when ? ' · ' + when : '') + '</small></button>' + dots +
+        '<button class="btn small tw-x" data-twx="' + i + '" title="' + (e.kind === 'w' ? 'Usuń z nauki — słowo zostanie jako znane' : 'Usuń lekcję z Moich błędów') + '" aria-label="Usuń">✕</button></div>'; };
+    const close = modal('<div class="tw-mod"><h2>Słowa z tego tekstu (' + list.length + ')</h2><p class="small-note" style="margin:0 0 8px">' + esc(T.title) + (onGo ? ' · kliknij, żeby przejść do zdania' : '') + '</p>' +
+      (list.length ? '<div class="tw-list">' + list.map(row).join('') + '</div>' : '<p>Nic jeszcze nie dodałeś z tego tekstu.</p>') +
+      '<div class="row center" style="margin-top:12px"><button class="btn" id="twClose" data-esc>Zamknij ' + K('Esc') + '</button></div></div>', (ov, cl) => {
+        ov.querySelector('#twClose').onclick = cl;
+        ov.querySelectorAll('[data-twgo]').forEach(b => b.onclick = () => { const e = list[+b.dataset.twgo]; cl(); if (onGo) onGo(e.s); });
+        ov.querySelectorAll('[data-twx]').forEach(b => b.onclick = () => { const e = list[+b.dataset.twx];
+          if (e.kind === 'w') { delete T.marks[e.mk]; if (e.id) { const fam = [e.id].concat(knownFamily(e.id).filter(x => x !== e.id)); fam.forEach(x => { D().cards[x] = Object.assign({ reps: 0, lapses: 0, added: Date.now() }, D().cards[x] || {}, { state: 'known', knownAt: Date.now() }); }); } }
+          else { delete stubs()[e.key]; }
+          progress(); Store.save(); cl(); textWordsModal(T, onGo); if (screen === 'trx') renderTrx(); });
+      });
+    return close;
   }
   /* „Warto zapamiętać” → lekcja w Moje błędy → Do nauki (upd278) */
   function trLearnAdd(T, li) {
@@ -5727,6 +5788,11 @@
     on('#trHead', () => trCheck(T, true));
     on('#trDupNext', () => { const si = tr.list[tr.pos], k = trNorm(T.sents[si].t), j = Object.keys(tr.done).map(Number).find(x => tr.done[x].v === 'ok' && trNorm(T.sents[x].t) === k); if (j != null) tr.done[si] = Object.assign({}, tr.done[j], { at: Date.now(), back: true }); trNext(T); });
     $$('[data-trlearn]').forEach(b => b.onclick = () => trLearnAdd(T, +b.dataset.trlearn));
+    $$('[data-trgo]').forEach(b => b.onclick = () => trGoto(T, +b.dataset.trgo));
+    $$('[data-trw]').forEach(b => b.onclick = e => trWordPick(T, +b.dataset.trw, e.shiftKey));
+    on('#trWAdd', () => trWordAdd(T));
+    on('#trWClose', () => { TR.wsel = null; TR.wpop = null; renderTrx(); });
+    on('#trWords', () => textWordsModal(T, si => trGoto(T, si)));
     $$('[data-trself]').forEach(b => b.onclick = () => { const d = tr.done[tr.list[tr.pos]]; d.self = b.dataset.trself === '1'; Store.save(); renderTrx(); });
     $$('[data-trwa]').forEach(b => b.onclick = () => { const w = TR.fb.words[+b.dataset.trwa]; trAddWord(T, tr.list[tr.pos], w); w.added = true; progress(); Store.save(); renderTrx(); });
     $$('[data-trwk]').forEach(b => b.onclick = () => { TR.fb.words[+b.dataset.trwk].known = true; renderTrx(); });
@@ -5778,6 +5844,13 @@
     keyHandler = e => {
       if (e.key === 'Escape') { e.preventDefault(); if (TR.mic) { Recog.stop(); return; } leave(); return; }
       const inField = typingInField();
+      if ((TR.view === 'sent' || TR.view === 'fb') && !TR.busy) { // nawigacja po zdaniach i słowa z tekstu (upd279)
+        const trd = trData(T);
+        if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { const np = trd.pos + (e.key === 'ArrowLeft' ? -1 : 1); if (np >= 0 && np < trd.list.length) { e.preventDefault(); trGoto(T, trd.list[np]); } return; }
+        if (!inField && plainKey(e, 'KeyW') && $('#trWords')) { e.preventDefault(); $('#trWords').click(); return; }
+        if (TR.view === 'fb' && !inField && plainKey(e, 'KeyD') && TR.wpop && TR.wpop.r) { e.preventDefault(); trWordAdd(T); return; }
+        if (TR.view === 'fb' && e.key === 'Escape' && TR.wpop) { e.preventDefault(); TR.wsel = null; TR.wpop = null; renderTrx(); return; }
+      }
       if (TR.view === 'intro' && !inField) { if (e.key === '1' && $('[data-trmode="hard"]')) { e.preventDefault(); startMode('hard'); } if (e.key === '2' && $('[data-trmode="all"]')) { e.preventDefault(); startMode('all'); } return; }
       if (TR.view === 'sent') {
         if (TR.dup && e.key === 'Enter') { e.preventDefault(); $('#trDupNext').click(); return; }
@@ -5849,6 +5922,7 @@
         '<div class="tbtns">' + (ai ? '<button class="btn small primary" data-ttr="' + T.id + '">' + trLabel + ' ' + K('T') + '</button>' : '') +
         (back ? '<button class="btn small" data-tback="' + T.id + '" title="Wczoraj tłumaczone zdania — napisz je z powrotem po angielsku">Tłumaczenie wsteczne (' + back + ')</button>' : '') +
         '<button class="btn small" data-tread="' + T.id + '">Czytaj ' + K('C') + '</button>' +
+        (textWordList(T).length ? '<button class="btn small" data-twl="' + T.id + '">Słowa z tekstu (' + textWordList(T).length + ')</button>' : '') +
         '<button class="btn small tdel" data-tdel="' + T.id + '" title="Usuń tekst" aria-label="Usuń tekst">' + BIN + '</button></div></div>';
     };
     app.innerHTML =
@@ -5874,6 +5948,7 @@
     $$('[data-tedit]').forEach(b => b.onclick = () => { TXO.edit = b.dataset.tedit; renderTexts(); });
     if ($('#tAddToggle')) $('#tAddToggle').onclick = () => { TXO.add = !TXO.add; renderTexts(); if (TXO.add && $('#tBody')) $('#tBody').focus(); };
     if (TXO.add) bindTextAdd(ai);
+    $$('[data-twl]').forEach(b => b.onclick = () => { const T = D().texts[b.dataset.twl]; if (!T) return; const tr = T.tr; textWordsModal(T, tr && tr.list && tr.list.length ? si => { startTrx(T.id); if (tr.list.indexOf(si) >= 0) trGoto(T, si); } : null); });
     $$('[data-tread]').forEach(b => b.onclick = () => go('reader', b.dataset.tread));
     $$('[data-ttr]').forEach(b => b.onclick = () => startTrx(b.dataset.ttr));
     $$('[data-tback]').forEach(b => b.onclick = () => startTrx(b.dataset.tback, 'back'));
