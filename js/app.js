@@ -4690,7 +4690,7 @@
     let delta = '';
     if (has && p != null) {
       const diff = k.pts ? Math.round(v - p) : pctDelta(v, p);
-      if (diff == null) delta = '<span class="delta up">nowość</span>';
+      if (diff == null) delta = '<span class="delta up" title="w poprzednim okresie było 0">▲ +' + val + '</span>';
       else delta = '<span class="delta ' + (diff >= 0 ? 'up' : 'down') + '">' + (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff) + (k.pts ? ' pkt' : '%') + '</span>';
     }
     const prevTxt = p == null ? '—' : k.key === 'acc' ? Math.round(p) + '%' : k.key === 'min' ? fmtDur(p * 60) : fmtNum(p) + k.unit;
@@ -4886,7 +4886,7 @@
     let delta = '';
     if (has && p != null) {
       const diff = k.pts ? Math.round(v - p) : pctDelta(v, p);
-      if (diff == null) delta = '<em class="up">nowość</em>';
+      if (diff == null) delta = '<em class="up" title="w poprzednim okresie było 0">▲ +' + val + '</em>';
       else if (diff === 0) delta = '<em class="eq">=</em>';
       else delta = '<em class="' + (diff > 0 ? 'up' : 'dn') + '">' + (diff > 0 ? '▲ ' : '▼ ') + Math.abs(diff) + (k.pts ? ' pkt' : '%') + '</em>';
     }
@@ -6729,17 +6729,17 @@
       if (bestMin > 0) insight += minC > bestMin ? ' To Twój najlepszy tydzień!' : ' To ' + Math.round(minC / bestMin * 100) + '% Twojego rekordu (' + Math.round(bestMin) + ' min, od ' + new Date(R.best.s).toLocaleDateString('pl-PL', { day: 'numeric', month: 'numeric' }) + ').';
       else insight += ' To Twój pierwszy pełny tydzień — kolejne będą miały z czym się porównać.';
     }
-    const delta = (c, p, pts) => {
+    const delta = (c, p, pts, unit) => {
       if (c == null || p == null) return '';
       const d = pts ? Math.round(c - p) : pctDelta(c, p);
-      if (d == null) return '<span class="delta up">nowość</span>';
+      if (d == null) return '<span class="delta up" title="tydzień wcześniej było 0">▲ +' + fmtNum(Math.round(c)) + (unit || '') + '</span>';
       return '<span class="delta ' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + (pts ? ' pkt' : '%') + '</span>';
     };
     const kpi = (label, val, d, sub) => '<div class="kpi raised"><div class="small-note" style="font-size:15px">' + label + '</div><div class="row" style="gap:10px;align-items:baseline"><span class="kpi-val">' + val + '</span>' + d + '</div><div class="small-note" style="font-size:13px">' + sub + '</div></div>';
     const bestBar = bestMin > 0 && minC > 0
       ? '<div class="bar thin inset" title="Ten tydzień na tle rekordu"><div style="width:' + Math.min(100, minC / Math.max(bestMin, minC) * 100) + '%"></div></div><div class="small-note" style="font-size:12px">' + (minC > bestMin ? 'nowy rekord tygodnia' : 'rekord: ' + Math.round(bestMin) + ' min') + '</div>' : '';
     const kpis =
-      '<div class="kpi raised"><div class="small-note" style="font-size:15px">Minuty nauki</div><div class="row" style="gap:10px;align-items:baseline"><span class="kpi-val">' + Math.round(minC) + ' min</span>' + delta(minC, minP) + '</div><div class="small-note" style="font-size:13px">tydzień wcześniej: ' + Math.round(minP) + ' min</div>' + bestBar + '</div>' +
+      '<div class="kpi raised"><div class="small-note" style="font-size:15px">Minuty nauki</div><div class="row" style="gap:10px;align-items:baseline"><span class="kpi-val">' + Math.round(minC) + ' min</span>' + delta(minC, minP, false, ' min') + '</div><div class="small-note" style="font-size:13px">tydzień wcześniej: ' + Math.round(minP) + ' min</div>' + bestBar + '</div>' +
       kpi('Dni nauki', R.a.days + '/7', delta(R.a.days, R.p.days, true).replace(' pkt', ''), 'tydzień wcześniej: ' + R.p.days + '/7') +
       kpi('Trafność', accC == null ? '—' : Math.round(accC) + '%', delta(accC, accP, true), 'tydzień wcześniej: ' + (accP == null ? '—' : Math.round(accP) + '%')) +
       kpi('Nowe słowa', fmtNum(R.a.newCount), delta(R.a.newCount, R.p.newCount), 'powtórek: ' + fmtNum(R.reviews) + ' · XP: ' + fmtNum(R.a.xp));
