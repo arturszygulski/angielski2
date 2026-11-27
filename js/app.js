@@ -7274,10 +7274,10 @@
         '<button class="btn tz-cta" id="tGo">Ćwicz ten czas ' + K('Enter') + '</button></div></section>';
     } else {
       const A = TS_BY[P.a], B = TS_BY[P.b];
-      main = '<section class="note raised"><div class="tx"><b>Jak odróżnić?</b><span><ul class="twhen" style="margin:6px 0 0">' + P.how.map(h => '<li>' + esc(h) + '</li>').join('') + '</ul></span></div></section>' +
-        '<section class="panel raised"><h2>Para przykładów</h2><div class="col" style="gap:10px">' + P.pairs.map(x => '<div class="tex inset"><button class="btn small" data-say="' + esc(x[0]) + '" aria-label="Odsłuchaj">' + IC.speaker + '</button><div><div lang="en"><b>' + esc(x[0]) + '</b></div><div class="small-note">' + esc(x[1]) + '</div></div></div>').join('') + '</div></section>' +
-        '<section class="lower">' + [A, B].map(TT => '<div class="panel raised grow"><h2>' + esc(TT.name) + '</h2>' + tenseTimelineSvg(TT) + summary(TT) + '</div>').join('') + '</section>' +
-        '<button class="btn tz-cta wide" id="tGo">Ćwicz oba czasy ' + K('Enter') + '</button>';
+      main = '<div class="pz-top"><section class="pz-b"><h2>Jak odróżnić?</h2><ul class="twhen">' + P.how.map(h => '<li>' + esc(h) + '</li>').join('') + '</ul></section>' +
+        '<section class="pz-b"><h2>Para przykładów</h2><div class="col" style="gap:0">' + P.pairs.map(x => '<div class="tex inset"><button class="btn small" data-say="' + esc(x[0]) + '" aria-label="Odsłuchaj">' + IC.speaker + '</button><div><div lang="en"><b>' + esc(x[0]) + '</b></div><div class="small-note">' + esc(x[1]) + '</div></div></div>').join('') + '</div></section>' +
+        '<button class="btn pz-go" id="tGo"><span>Ćwicz<br>oba czasy</span>' + K('Enter') + '</button></div>' +
+        '<section class="pz-low">' + [A, B].map(TT => '<div class="panel raised grow"><h2>' + esc(TT.name) + '</h2>' + tenseTimelineSvg(TT) + summary(TT) + '</div>').join('') + '</section>';
     }
     const name = T ? T.name : P.name;
     app.innerHTML =
@@ -7291,6 +7291,9 @@
     if (T) CMP_FROM = null;
     $('#tGo').onclick = () => startTenseSession(tids, T ? 'Czasy: ' + T.name : P.name);
     $$('[data-say]').forEach(b => b.onclick = () => Speech.speak(b.dataset.say));
+    if (P) { // wyrównanie „Budowy” i „Słów-sygnałów” w obu kolumnach porównania (upd273)
+      ['.pz-low .twhen', '.pz-low .tform'].forEach(sel => { const el = $$(sel); const h = Math.max(0, ...el.map(x => x.offsetHeight)); el.forEach(x => { x.style.minHeight = h + 'px'; }); });
+    }
     if ($('#tMore')) $('#tMore').onclick = async () => {
       const btn = $('#tMore'), msg = $('#tMoreMsg'); btn.disabled = true;
       msg.innerHTML = '<div class="checking"><span class="spinner"></span>AI pisze nowe zdania…</div>';
