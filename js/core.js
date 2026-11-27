@@ -872,15 +872,19 @@ window.Sound = (function () {
     block: [[523.25, 0, .7], [659.25, .06, .7], [783.99, .12, .9]]
   };
   /* krótka fanfara trąbek: piłokształtny ton przez filtr, ta-da-daaa (upd234) */
+  /* cel dzienny: ciepła marimba — arpeggio G–C–E–G i miękki akord, z lekkim pogłosem (upd260, zamiast fanfary) */
   function fanfare(c, base) {
-    const notes = [[392, 0, .16], [523.25, .17, .16], [659.25, .34, .16], [783.99, .51, .75], [659.25, .51, .75], [523.25, .51, .75]];
-    notes.forEach(([f, st, d]) => {
-      const o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(), t0 = c.currentTime + st;
-      o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 1800; lp.Q.value = 1;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(base * 0.55, t0 + 0.03);
-      g.gain.setValueAtTime(base * 0.5, t0 + d * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-      o.connect(lp); lp.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + d + 0.05);
+    const out = c.createGain(); out.gain.value = 1; out.connect(c.destination);
+    [[0.031, .35], [0.047, .28], [0.073, .22], [0.11, .15], [0.17, .1]].forEach(([dl, gg]) => { const d = c.createDelay(0.5), g = c.createGain(); d.delayTime.value = dl; g.gain.value = gg * 0.6; out.connect(d); d.connect(g); g.connect(c.destination); });
+    const N = m => 440 * Math.pow(2, (m - 69) / 12);
+    const hit = (f, st, dec, amp) => [[1, 1, 1], [4, .25, .15], [10, .06, .05]].forEach(([mul, a, dm]) => {
+      const o = c.createOscillator(), g = c.createGain(), t0 = c.currentTime + st, tau = dec * dm;
+      o.type = 'sine'; o.frequency.value = f * mul;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(base * amp * a, t0 + 0.003); g.gain.setTargetAtTime(0.0001, t0 + 0.003, tau);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + tau * 7 + 0.05);
     });
+    [67, 72, 76, 79].forEach((m, k) => hit(N(m), k * 0.11, 0.35, 1.1));
+    [72, 76, 79, 84].forEach(m => hit(N(m), 0.5, 0.5, 0.65));
   }
   function play(name) {
     if (!on()) return;
