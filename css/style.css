@@ -1990,3 +1990,6 @@ html body { background: transparent; }
 .fs-row s { opacity: .7; } .fs-row i { opacity: .8; }
 .fs-side .btn.small { align-self: flex-start; margin-top: 6px; font-size: 13px; }
 @media (max-width: 760px) { .fb-split { grid-template-columns: 1fr; } }
+/* Statystyki: znacznik zmiany zawsze pod liczbą, jednakowo we wszystkich kafelkach (upd261) */
+.st-kp .sk b { flex-direction: column; align-items: flex-start; justify-content: flex-start; }
+.st-kp:has(.sk b em) .sk b { min-height: 64px; }
