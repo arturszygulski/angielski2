@@ -594,7 +594,7 @@
     const busy = S.listening || S.phase === 'checking' || audioOn() || S.simpBusy;
     if (recentInput(screen === 'yg' ? IDLE_SEC_VIDEO : IDLE_SEC) || busy) { S.activeSec++; addSec('ex'); }
     if (screen === 'race' && S.race) {
-      const paused = typingNow() || S.race.phase === 'show';
+      const paused = typingNow() || S.race.phase === 'show' || S.race.phase === 'checking';
       if (!paused) S.race.left--;
       const el = document.getElementById('rclock'); if (el) { el.textContent = U.mmss(Math.max(0, S.race.left)); el.classList.toggle('paused', paused); }
       if (S.race.left <= 0) endRace();
@@ -1230,6 +1230,7 @@
       })() +
       (R.phase === 'show'
         ? (R.res === 'ok' ? '<div class="fb ok" role="status" style="max-width:560px">' + IC.check + '<span><b>Dobrze!</b> ' + esc(w.answers[0]) + '</span></div>'
+          : R.res === 'alt' ? '<div class="fb ok" role="status" style="max-width:560px">' + IC.check + '<span><b>Też dobrze!</b> ' + esc(R.ans) + ' — w tym zdaniu wzorcowo: <b>' + esc(w.answers[0]) + '</b></span></div>'
           : R.res === 'typo' ? '<div class="fb uns" role="status" style="max-width:560px">' + IC.check + '<span><b>Prawie — literówka.</b> Ty: <s>' + esc(R.ans) + '</s> → <b>' + esc(w.answers[0]) + '</b></span></div>'
           : '<div class="fb bad" role="status" style="max-width:560px">' + IC.alert + '<span>' + (R.ans ? 'Ty: <s>' + esc(R.ans) + '</s> → ' : '') + 'Poprawnie: <b>' + esc(w.answers[0]) + '</b></span></div>')
         : '') +
@@ -1268,18 +1269,30 @@
       progress(); Store.save(); if (screen === 'race') renderRace();
     } });
   }
-  function raceSubmit(ans) {
+  async function raceSubmit(ans) {
     const R = S.race; if (!R || R.phase !== 'q') return;
     const w = R.list[R.idx % R.list.length];
-    const mm = ans.trim() ? matchAnswer(w.answers, ans) : 'idk';
-    const sc = scaleUpdate({ type: 'cloze', w }, mm === 'exact' ? 'ok' : mm === 'typo' ? 'typo' : 'bad', mm !== 'wrong' && mm !== 'idk');
+    let mm = ans.trim() ? matchAnswer(w.answers, ans) : 'idk';
+    /* synonim (np. proof zamiast evidence) — jak w innych ćwiczeniach: zapamiętany albo sprawdzony przez AI; czas stoi (upd258) */
+    if (mm === 'wrong') {
+      const a = ans.trim().toLowerCase();
+      if (altOkList(w).indexOf(a) >= 0) mm = 'ai-ok';
+      else if (AI.enabled()) {
+        R.phase = 'checking'; const inp = $('#ans'); if (inp) inp.disabled = true;
+        try { const r = await AI.checkAnswer(w, a); if (r.acceptable) { mm = 'ai-ok'; const ao = D().altOk = D().altOk || {}; ao[w.id] = (ao[w.id] || []).concat([a]); } } catch (e) { }
+        if (!S || S.race !== R || R.phase !== 'checking') return;
+        R.phase = 'q';
+      }
+    }
+    if (mm === 'ai-ok') mm = 'alt';
+    const sc = scaleUpdate({ type: 'cloze', w }, mm === 'exact' || mm === 'alt' ? 'ok' : mm === 'typo' ? 'typo' : 'bad', mm !== 'wrong' && mm !== 'idk');
     if (sc) { R.wsc = Object.assign({ id: w.id }, sc); Store.save(); }
     R.ans = ans.trim();
-    if (mm !== 'wrong' && mm !== 'idk') { R.hits++; R.res = mm === 'exact' ? 'ok' : 'typo'; Sound.play('ok'); }
+    if (mm !== 'wrong' && mm !== 'idk') { R.hits++; R.res = mm === 'exact' ? 'ok' : mm === 'alt' ? 'alt' : 'typo'; Sound.play('ok'); }
     else { if (!R.misses.includes(w.id)) R.misses.push(w.id); R.res = 'bad'; Sound.play(ans.trim() ? 'bad' : 'idk'); }
     R.phase = 'show'; renderRace();
     /* dobra odpowiedź (także z literówką) — krótki błysk i dalej; zatrzymanie tylko przy błędzie */
-    if (R.res !== 'bad') { const idx = R.idx; setTimeout(() => { if (S && S.race === R && screen === 'race' && R.phase === 'show' && R.idx === idx) raceNext(); }, R.res === 'ok' ? 700 : 1300); }
+    if (R.res !== 'bad') { const idx = R.idx; setTimeout(() => { if (S && S.race === R && screen === 'race' && R.phase === 'show' && R.idx === idx) raceNext(); }, R.res === 'ok' ? 700 : R.res === 'alt' ? 1800 : 1300); }
   }
   /* czas stoi, gdy widać wynik; po błędzie Enter = następne słowo */
   function raceNext() {
