@@ -5379,7 +5379,12 @@
       if (/^\d+$/.test(l)) return;                                  // numery napisów .srt
       if (/-->/.test(l)) return;                                    // znaczniki czasu .srt/.vtt
       if (/^\(?\d{1,2}:\d{2}(:\d{2})?\)?$/.test(l)) return;         // YouTube: „0:01”
+      // YouTube (polski interfejs): „5 sekund”, „1 minuta, 5 sekund”, „2 godziny, 3 minuty i 4 sekundy”; ang.: „1 minute, 5 seconds” (upd276)
+      if (/^(\d+\s*(sekund[ay]?|sekundy|minut[ay]?|minuty|godzin[ay]?|godziny|seconds?|minutes?|hours?)[,\s]*(i|and)?\s*)+$/i.test(l)) return;
+      if (/^(rozdział|chapter)\s*\d*\s*[:.]?\s*$/i.test(l)) return;
       l = l.replace(/^\(?\d{1,2}:\d{2}(:\d{2})?\)?\s+/, '');        // YouTube: „0:01 tekst”
+      l = l.replace(/\s+\(?\d{1,2}:\d{2}(:\d{2})?\)?$/, '');        // znacznik na końcu linii
+      l = l.replace(/^(\d+\s*(sekund[ay]?|sekundy|minut[ay]?|minuty|godzin[ay]?|godziny|seconds?|minutes?|hours?)[,\s]*(i|and)?\s*)+(?=[A-Za-z])/i, ''); // „5 sekund Hello” w jednej linii
       l = l.replace(/<[^>]+>/g, '').replace(/\[(music|muzyka|applause|laughter|brawa|śmiech|silence)\]/gi, '').trim();
       if (!l) return;
       if (out.length && out[out.length - 1] === l) return;          // powtórzenia z auto-napisów
