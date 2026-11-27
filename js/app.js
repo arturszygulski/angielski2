@@ -2810,14 +2810,19 @@
     const st = document.getElementById('syncStatus'); if (st) st.innerHTML = syncStatusHtml();
     const ch = document.getElementById('syncChipBox'); if (ch) { ch.innerHTML = syncChipHtml(); bindSyncChip(); }
   }
+  /* zapis z limitem czasu — Dysk Google potrafi „zawiesić” zapis bez błędu (upd264) */
+  const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('Dysk nie odpowiada od ' + Math.round(ms / 1000) + ' s — sprawdź, czy Dysk Google działa na komputerze')), ms))]);
   async function syncNow(ask) {
     if (!Sync.supported) return false;
-    const h = await Sync.handle(); if (!h) return false;
+    if (syncState.busy) return false;
+    const h = await Sync.handle();
+    if (!h) { syncState.ok = false; syncState.noHandle = true; syncState.status = 'Ta przeglądarka nie ma dostępu do folderu „' + (D().settings.syncFolder || '') + '” — kliknij „Zmień folder” i wskaż go jeszcze raz.'; refreshSyncUI(); return false; }
+    syncState.noHandle = false;
     syncState.busy = true; refreshSyncUI();
     try {
       const p = await Sync.perm(h, ask);
       if (p !== 'granted') { syncState.ok = false; syncState.status = 'Brak zgody na zapis w folderze kopii.'; syncState.needsPerm = true; return false; }
-      await Sync.write(h);
+      await withTimeout(Sync.write(h), 25000);
       syncState.ok = true; syncState.needsPerm = false; syncState.status = 'Zapisano na Dysku Google · ' + fmtTime(Date.now());
       return true;
     } catch (e) {
@@ -2881,7 +2886,7 @@
   async function syncStartup() {
     if (!Sync.supported || !D().settings.syncFolder) return;
     const h = await Sync.handle();
-    if (!h) { D().settings.syncFolder = ''; Store.save(); return; }
+    if (!h) { syncState.ok = false; syncState.noHandle = true; syncState.status = 'Ta przeglądarka nie ma dostępu do folderu kopii — wskaż go jeszcze raz w Ustawieniach („Zmień folder”).'; refreshSyncUI(); if (screen === 'home') renderHome(); return; }
     let p; try { p = await Sync.perm(h, false); } catch (e) { return; }
     if (p !== 'granted') { syncState.needsPerm = true; syncState.ok = false; if (screen === 'home') renderHome(); return; }
     const offered = await checkRemote(h, false);
@@ -2893,6 +2898,7 @@
     if (!Sync.supported) return '<span class="status bad">Ta przeglądarka tego nie obsługuje — użyj Chrome albo Edge.</span>';
     if (!d.settings.syncFolder) return 'Folder: <b>nie wybrano</b>';
     return 'Folder: <b>' + esc(d.settings.syncFolder) + '</b> · ostatni zapis: <b>' + (d.lastSync ? fmtTime(d.lastSync) : 'jeszcze nie było') + '</b>' +
+      (syncState.busy ? '<br><span class="status">Zapisuję…</span>' : syncState.ok && syncState.status ? '<br><span class="status ok">' + esc(syncState.status) + '</span>' : '') +
       (syncState.status && !syncState.ok ? '<br><span class="status bad">' + esc(syncState.status) + '</span>' : '') +
       (syncState.needsPerm ? '<br><span class="status bad">Przeglądarka potrzebuje Twojej zgody — kliknij „Zapisz teraz”.</span>' : '');
   }
@@ -2992,7 +2998,7 @@
     const on = (sel, fn) => { const el = $(sel); if (el) el.onclick = fn; };
     on('#back', () => go(d.profile.placementDone ? 'home' : 'welcome'));
     on('#syncPick', () => pickSyncFolder(false));
-    on('#syncNow', async () => { const ok = await syncNow(true); toast(ok ? 'Zapisano na Dysku Google.' : 'Nie udało się zapisać — szczegóły w ustawieniach.'); });
+    on('#syncNow', async () => { if (!(await Sync.handle())) { toast('Wskaż folder kopii jeszcze raz — ta przeglądarka nie ma do niego dostępu.', 6000); return pickSyncFolder(); } const ok = await syncNow(true); toast(ok ? 'Zapisano na Dysku Google.' : 'Nie udało się zapisać: ' + (syncState.status || 'nieznany błąd'), 9000); if (screen === 'settings') renderSettings(); });
     on('#syncLoad', async () => { const h = await Sync.handle(); if (!h) return; if (await Sync.perm(h, true) === 'granted') checkRemote(h, true); });
     on('#syncOff', async () => { await Sync.forget(); syncState.status = ''; syncState.needsPerm = false; renderSettings(); toast('Odłączono folder kopii. Pliki na Dysku zostały.'); });
     $('#key').oninput = e => { st.apiKey = e.target.value.trim(); save(); };
