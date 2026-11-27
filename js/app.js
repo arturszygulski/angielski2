@@ -1760,6 +1760,7 @@
     on('#reMic', retrySpeak);
     on('#topicBtn', () => openTopic(it));
     on('#hardBtn', () => hardAsk(c));
+    on('#sideP', () => sideProblem(c));
     const keepAnswer = () => { if (inp && !inp.disabled) S.answer = inp.value; };
     const toggleUnsure = () => { keepAnswer(); S.unsure = !S.unsure; renderExercise(); };
     if (ph === 'answer') {
@@ -1858,6 +1859,7 @@
         if ((plainKey(e, 'KeyM') || altKey(e, 'KeyM')) && $('#reMic')) { e.preventDefault(); retrySpeak(); return; }
         if (plainKey(e, 'KeyR') && !S.ygOpen && AI.enabled() && !it.topic && !S.topicId) { e.preventDefault(); openTopic(it); return; }
         if (plainKey(e, 'KeyT') && $('#hardBtn')) { e.preventDefault(); hardAsk(c); return; }
+        if (plainKey(e, 'KeyP') && $('#sideP')) { e.preventDefault(); sideProblem(c); return; }
         if (plainKey(e, 'KeyH') && $('#hkBtn')) { e.preventDefault(); $('#hkBtn').click(); return; }
         if ((altKey(e, 'KeyU') || plainKey(e, 'KeyU') || (e.key === 'Enter' && e.altKey)) && $('#known')) { e.preventDefault(); markKnown(); return; }
         if (plainKey(e, 'KeyE') && $('#exBtn') && S.exToggle) { e.preventDefault(); S.exToggle(); return; }
@@ -2121,19 +2123,20 @@
     if (it.ts) return submitTense(it, c, asUnsure, elapsed, guard, checking);
     if (it.type === 'translate') {
       if (S.listening) Recog.stop();
-      let m = U.norm(ans) === U.norm(full) ? 'exact' : 'wrong', expl = '', aiErr = '', better = '';
+      let m = U.norm(ans) === U.norm(full) ? 'exact' : 'wrong', expl = '', aiErr = '', better = '', wordOk = null, side = [];
+      const lw = !it.stub && !it.fromText && it.w && it.w.answers && it.w.answers[0] ? it.w.answers[0] : '';
       if (m === 'wrong') {
         if (AI.enabled()) {
           checking();
           try {
-            const r = await AI.judgeTranslation(it.pl, full, ans.trim(), '', !!S.spoken);
-            expl = r.explanation; better = r.better;
+            const r = await AI.judgeTranslation(it.pl, full, ans.trim(), '', !!S.spoken, lw);
+            expl = r.explanation; better = r.better; wordOk = r.wordOk; side = r.side || [];
             m = r.verdict === 'natural' ? 'ai-ok' : r.verdict === 'understandable' ? 'typo' : 'wrong';
           } catch (e) { aiErr = AI.humanError(e); m = listenScore(full, ans) >= 0.8 ? 'typo' : 'wrong'; }
           if (!guard()) return;
         } else m = listenScore(full, ans) >= 0.8 ? 'typo' : 'wrong';
       }
-      return applyOutcome(c, it, m, elapsed, { ans, expl, aiErr, better });
+      return applyOutcome(c, it, m, elapsed, { ans, expl, aiErr, better, wordOk: lw && wordOk && side.length && m !== 'ai-ok' ? lw : '', side: m !== 'ai-ok' ? side : [] });
     }
 
     if (it.type === 'dictation') {
@@ -2195,7 +2198,7 @@
     else { g = 3; kind = 'ok'; }
 
     const isFirst = !(c.id in S.first);
-    if (isFirst && it.type === 'translate' && !it.stub && (m === 'typo' || !correct) && m !== 'idk') { const sm = stubDetect(it, extra); if (sm) extra = Object.assign({}, extra, { stubMsg: sm }); }
+    if (isFirst && it.type === 'translate' && !it.stub && (m === 'typo' || !correct) && m !== 'idk') { const sm = extra.side && extra.side.length ? stubDetectSide(it, extra.side) : stubDetect(it, extra); if (sm) extra = Object.assign({}, extra, { stubMsg: sm }); }
     if (isFirst && it.stub) extra = Object.assign({}, extra, { stubMsg: stubProgress(it, kind, correct) });
     if (isFirst) { S.snap = S.snap || {}; const pc0 = D().cards[c.id]; const wk0 = scaleKey(it), ws0 = wk0 && (D().wsc || {})[wk0]; S.snap[c.id] = { card: pc0 ? JSON.parse(JSON.stringify(pc0)) : null, mlen: (D().mistakes || []).length, wk: wk0, wsc: ws0 ? JSON.parse(JSON.stringify(ws0)) : null }; }
     S.stepMsg = '';
@@ -2253,7 +2256,7 @@
       S.combo = 0;
       if (!S.finishing) S.queue.splice(Math.min(S.queue.length, S.pos + 4), 0, { id: c.id, isNew: false, relearn: true });
     }
-    const wsc = isFirst ? scaleUpdate(it, kind, correct) : null;
+    const wsc = isFirst ? (extra.wordOk ? scaleUpdate(it, 'ok', true) : scaleUpdate(it, kind, correct)) : null; // słowo dobre, błędy poza nim nie zabierają kropek (upd257)
     if (wsc) extra = Object.assign({}, extra, { wsc }, wsc.d > 0 && wsc.lv === 5 ? { stepMsg: '' } : {});
     progress(); Store.save();
     const fill = it.type === 'cloze' && m === 'ai-ok' ? (extra.ans || '').trim() : (it.type === 'cloze' || it.type === 'choice') ? it.w.answers[0] : '';
@@ -2341,6 +2344,9 @@
       if (fb.expl && fb.kind !== 'bad') smalls.push(ai(fb.expl));
       if (fb.kind === 'typo' && !fb.expl && fb.aiErr) smalls.push(esc(fb.aiErr) + ' Oceniam po podobieństwie do wzoru.');
       if (fb.m === 'ai-ok' || fb.kind === 'typo') smalls.push('Wzorcowo: ' + esc(fullSentence(it)));
+      if (fb.wordOk && fb.side && fb.side.length) smalls.push('<span class="fb-split"><span class="fs-ok"><b>✓ Słowo „' + esc(fb.wordOk) + '” — dobrze</b>Liczę do słowa — kropka i koszyk jak przy dobrej odpowiedzi.</span>' +
+        '<span class="fs-side"><b>Do poprawy poza słowem</b>' + fb.side.map(x => '<span class="fs-row"><s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>' + (x.why ? ' <i>— ' + esc(x.why) + '</i>' : '') + '</span>').join('') +
+        (AI.enabled() ? '<button class="btn small" id="sideP">Ćwicz „' + esc(fb.side[0].right) + '” — mój problem ' + K('P') + '</button>' : '') + '</span></span>');
     } else if (it.type === 'speak') {
       if (fb.kind === 'bad') main = fb.hasTarget ? 'Słowo było dobre, ale zdanie niepełne.' : 'Nie usłyszałem słowa <b>' + esc(it.w.answers[0]) + '</b>.';
       else if (fb.kind === 'typo') { main = esc(it.w.answers[0]) + xp; smalls.push('Słowo dobre, ale nie całe zdanie się zgadza — przekreślone usłyszałem inaczej, zaznaczonych brakuje. Powiedz jeszcze raz (M), aż się zgodzi.'); }
@@ -2355,7 +2361,8 @@
     if (fb.stubMsg) smalls.push('<span class="ub-msg">' + fb.stubMsg + '</span>');
     if (fb.kind === 'uns' && fb.isFirst) smalls.push('Wróci za 1–2 dni, żeby się utrwaliło.');
     if (fb.slow) smalls.push((fb.hinted ? 'Z podpowiedzią' : 'Długo to trwało') + ' — wróci trochę wcześniej.');
-    if ((it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') && fb.kind === 'typo') smalls.push('Liczę jako trafienie, ale wróci trochę wcześniej.');
+    if (fb.wordOk && fb.side && fb.side.length) smalls.push('Błędy poza słowem nie zabierają mu kropek — śledzę je osobno (3 razy ten sam = karta „Uparty błąd”).');
+    else if ((it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') && fb.kind === 'typo') smalls.push('Liczę jako trafienie, ale wróci trochę wcześniej.');
     return '<div class="fb ' + cls + '" role="status">' + icon + '<span><b>' + title + '</b> ' + main + smalls.map(s => '<small>' + s + '</small>').join('') + '</span></div>';
   }
   function m(fb) { return fb.m; }
@@ -2400,13 +2407,19 @@
   }
   /* „Trudne” z opisem problemu (upd256): co dokładnie trudne → AI: zasada + 5 zdań pod ten problem; problem śledzony jak uparty błąd */
   const HARD_CATS = ['nie pamiętam słowa', 'przyimek (to / at / in…)', 'szyk zdania', 'czas', 'wymowa'];
-  function hardAsk(c) {
+  function sideProblem(c) {
+    const sd = S && S.fb && S.fb.side; if (!sd || !sd.length) return;
+    hardAsk(c, { cats: [/^(in|at|on|to|for|of|from|with|by|into|onto|about)$/.test(stubTok(sd[0].right).join(' ')) || /^(in|at|on|to|for|of|from|with|by)\b/.test(sd[0].right) ? 1 : -1].filter(i => i >= 0),
+      note: 'Słowo z lekcji umiem, ale pomyliłem: ' + sd.map(x => x.wrong + ' → ' + x.right + (x.why ? ' (' + x.why + ')' : '')).join('; ') + '. Ćwiczenia pod: ' + sd[0].right + '.' });
+  }
+  function hardAsk(c, preset) {
     if (!S || S.phase !== 'feedback') return;
     const card = D().cards[c.id];
-    if (card && card.hard) return toggleHard(c);
+    if (card && card.hard && !preset) return toggleHard(c);
     const it = curView(c); let sent = ''; try { sent = fullSentence(it); } catch (e) { }
     const word = it.w && it.w.answers ? it.w.answers[0] : '';
     const sel = {}, ai = AI.enabled();
+    if (preset) (preset.cats || []).forEach(i => { sel[i] = true; });
     let busy = false, res = null, kh;
     const ask = () => '<div class="hd-mod"><h2>Co jest trudne?</h2>' + (sent ? '<p class="hd-sent" lang="en">' + esc(sent) + '</p>' : '') +
       '<div class="hd-lbl">Wybierz — można kilka</div><div class="hd-chips">' + HARD_CATS.map((x, i) => '<button class="btn hd-chip' + (sel[i] ? ' sel' : '') + '" data-hc="' + i + '">' + esc(x) + ' ' + K(String(i + 1)) + '</button>').join('') + '</div>' +
@@ -2427,7 +2440,7 @@
     async function go2() {
       if (busy) return; busy = true;
       const cats = Object.keys(sel).filter(k => sel[k]).map(k => HARD_CATS[k]), nt = note();
-      mark(); show(wait());
+      if (!preset) mark(); show(wait());
       try {
         const r = await AI.hardDrill({ level: L[levels().grammar], task: TYPES[it.type] ? TYPES[it.type].title : it.type, sentence: sent, pl: it.pl || '', word, cats, note: nt });
         if (!r.items.length) throw new Error('AI nie przygotowało zdań.');
@@ -2470,6 +2483,7 @@
     };
     document.addEventListener('keydown', kh, true);
     bind();
+    if (preset) { const i = box.querySelector('#hdNote'); if (i) i.value = preset.note || ''; if (ai) go2(); }
   }
   function hardIds() { const cc = D().cards; return Object.keys(cc).filter(id => cc[id].hard && itemFor(id) && typeEnabled(itemFor(id).type)); }
   function next() {
@@ -3945,6 +3959,20 @@
     const ref = extra.better && U.norm(extra.better) !== U.norm(extra.ans) ? extra.better : fullSentence(it);
     let msg = '';
     stubDiff(extra.ans, ref).forEach(c => {
+      const { k, x } = stubCount(c, { pl: it.pl || '', en: fullSentence(it) });
+      const pair = '<s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>';
+      if (x.state === 'active') { x.days = []; msg = 'Uparty błąd: ' + pair + ' (' + x.n + '. raz) — liczę dni od nowa.'; }
+      else if (x.n >= STUB_N) { x.state = 'active'; x.days = []; x.since = Date.now(); delete x.doneAt; msg = 'To już <b>' + x.n + '. raz</b>: ' + pair + '. Zakładam kartę <b>„Uparty błąd”</b> — przez kilka dni dostaniesz krótkie zdania z tym zwrotem.'; stubPrepare(k); }
+    });
+    Store.save();
+    return msg;
+  }
+  /* błędy poza słowem z oceny AI (upd257) — liczone jak uparte błędy */
+  function stubDetectSide(it, side) {
+    let msg = '';
+    side.forEach(sd => {
+      const c = { wrong: stubTok(sd.wrong).join(' '), right: stubTok(sd.right).join(' '), rule: sd.why || '' };
+      if (!c.wrong || !c.right || c.wrong === c.right) return;
       const { k, x } = stubCount(c, { pl: it.pl || '', en: fullSentence(it) });
       const pair = '<s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>';
       if (x.state === 'active') { x.days = []; msg = 'Uparty błąd: ' + pair + ' (' + x.n + '. raz) — liczę dni od nowa.'; }

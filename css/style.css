@@ -1981,3 +1981,12 @@ html body { background: transparent; }
 .hd-ex:last-child { border-bottom: none; }
 .hd-ex small { margin-left: auto; color: var(--ink-3); font-size: 12.5px; }
 .hd-n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 12px var(--head); }
+/* Tłumaczenie: słowo z lekcji osobno od błędów poza nim (upd257) */
+.fb-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 2px; }
+.fb-split > span { display: flex; flex-direction: column; gap: 4px; border-radius: 16px; padding: 10px 14px; font-size: 14.5px; line-height: 1.45; }
+.fb-split b:first-child { font-family: var(--head); font-size: 15.5px; }
+.fs-ok { background: var(--ok-bg); color: var(--ok-ink); }
+.fs-side { background: rgba(255,255,255,.35); }
+.fs-row s { opacity: .7; } .fs-row i { opacity: .8; }
+.fs-side .btn.small { align-self: flex-start; margin-top: 6px; font-size: 13px; }
+@media (max-width: 760px) { .fb-split { grid-template-columns: 1fr; } }

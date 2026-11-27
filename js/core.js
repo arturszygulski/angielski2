@@ -483,7 +483,7 @@ window.AI = (function () {
     t = t.replace(/,(?=\S)/g, ', ');
     return t ? t[0].toUpperCase() + t.slice(1) : t;
   }
-  async function judgeTranslation(pl, reference, answer, focus, spoken) {
+  async function judgeTranslation(pl, reference, answer, focus, spoken, word) {
     answer = tidyEn(answer);
     const system = 'Jesteś życzliwym nauczycielem angielskiego dla dorosłego Polaka. Liczy się to, czy Anglik zrozumie Artura. Odpowiadasz wyłącznie jednym obiektem JSON, bez żadnego innego tekstu.';
     const user =
@@ -500,11 +500,16 @@ window.AI = (function () {
       '- Słowo o innym znaczeniu niż w polskim zdaniu (np. „lesson” = lekcja zamiast „subject” = przedmiot) to błąd — nazwij go wprost i wyjaśnij różnicę.\n' +
       '- Częste, naturalne warianty używane przez rodzimych użytkowników (np. „Can I get…” zamiast „Can I have…”, „I am” zamiast „I\'m”) to "natural". "understandable" daj tylko za prawdziwy błąd gramatyczny, złe słowo albo wyraźnie nienaturalne sformułowanie — nie za wybór stylu.\n' +
       (spoken ? '- Artur PODYKTOWAŁ odpowiedź do mikrofonu — rozpoznawanie mowy mogło dodać, zgubić albo przekręcić krótkie słowo (np. „on”, „the”, „a”). Jeśli różnica wygląda na błąd rozpoznania, zaznacz to delikatnie („możliwe, że mikrofon usłyszał…”).\n' : '') +
-      'Zwróć dokładnie: {"verdict": "natural" | "understandable" | "wrong", "better": "poprawiona, naturalna wersja zdania Artura (jak najbliżej jego słów)", "explanation": "2–4 krótkie zdania po polsku: co poprawić, a przy pomylonym słowie/zwrocie — co znaczy i kiedy się go używa; albo potwierdzenie"}';
-    const j = await callJSON(system, user + fmtJ('explanation'), 800, 30000, { type: 'object', required: ['verdict', 'better', 'explanation'], properties: { verdict: { type: 'string', enum: ['natural', 'understandable', 'wrong'] }, better: STR, explanation: STR } });
+      'Zwróć dokładnie: {"verdict": "natural" | "understandable" | "wrong", "better": "poprawiona, naturalna wersja zdania Artura (jak najbliżej jego słów)", "explanation": "2–4 krótkie zdania po polsku: co poprawić, a przy pomylonym słowie/zwrocie — co znaczy i kiedy się go używa; albo potwierdzenie"' +
+      (word ? ', "word_ok": true/false, "side": [{"wrong": "…", "right": "…", "why": "…"}]}' : '}') +
+      (word ? '\n\nTo ćwiczenie ze SŁOWEM Z LEKCJI: "' + word + '". Oceń je OSOBNO:\n- word_ok = true, jeśli Artur użył "' + word + '" (albo równie dobrego odpowiednika w tym sensie) poprawnie — dobre słowo/zwrot, dobra forma; false, jeśli go brak, jest pomylony albo w złej formie.\n- side = błędy POZA tym słowem (np. przyimek po nim albo w innej części zdania, brak "the", pisownia innego słowa, szyk): każdy jako wrong (dokładnie fragment Artura, 1–3 słowa), right (poprawny fragment), why (do 10 słów po polsku, sedno zasady). Maks. 3, najważniejsze najpierw. Bez błędów — pusta lista. Nie wpisuj tu błędów samego słowa z lekcji.' : '');
+    const props = { verdict: { type: 'string', enum: ['natural', 'understandable', 'wrong'] }, better: STR, explanation: STR };
+    if (word) { props.word_ok = { type: 'boolean' }; props.side = { type: 'array', items: { type: 'object', required: ['wrong', 'right', 'why'], properties: { wrong: STR, right: STR, why: STR } } }; }
+    const j = await callJSON(system, user + fmtJ('explanation'), 900, 30000, { type: 'object', required: word ? ['verdict', 'better', 'explanation', 'word_ok', 'side'] : ['verdict', 'better', 'explanation'], properties: props });
     let v = ['natural', 'understandable', 'wrong'].includes(j.verdict) ? j.verdict : 'wrong';
     if (/\.\.\.|…|\?\?/.test(answer)) v = 'wrong'; // urwana odpowiedź nigdy nie jest trafieniem
-    return { verdict: v, better: String(j.better || ''), explanation: String(j.explanation || '') };
+    const side = word && Array.isArray(j.side) ? j.side.filter(x => x && x.wrong && x.right && U.norm(x.wrong) !== U.norm(x.right)).slice(0, 3).map(x => ({ wrong: String(x.wrong).trim(), right: String(x.right).trim(), why: String(x.why || '').trim() })) : [];
+    return { verdict: v, better: String(j.better || ''), explanation: String(j.explanation || ''), wordOk: word ? j.word_ok === true : null, side };
   }
   /* uparty błąd: krótka zasada + 6 zdań PL→EN z poprawnym zwrotem (upd224) */
   async function stubDrill(wrong, right, examples) {
