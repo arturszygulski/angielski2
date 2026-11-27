@@ -1393,7 +1393,7 @@
     const TP = TYPES[it.type], ph = S.phase, st = D().settings;
     const blockSec = st.blockMin * 60, used = S.activeSec - S.blockStart;
     const dfy = itemDiff(it);
-    const tag = TP.tag + (it.stub ? ' · <span class="ub-tag">UPARTY BŁĄD</span> · ' + esc(it.stubRight.toUpperCase()) : it.simple ? ' · PROSTSZA WERSJA' : ' · ' + L[it.lvl]) + (dfy && !it.simple ? ' · ZDANIE ' + diffLabel(dfy) : '') + (it.stepLabel ? ' · ' + it.stepLabel : '') + (c.isNew ? ' · NOWE' : '') + (c.relearn ? ' · JESZCZE RAZ' : '');
+    const tag = TP.tag + (it.stub ? ' · <span class="ub-tag">' + ((stubs()[it.stub] || {}).mine ? 'TWÓJ PROBLEM' : 'UPARTY BŁĄD') + '</span> · ' + esc(it.stubRight.toUpperCase()) : it.simple ? ' · PROSTSZA WERSJA' : ' · ' + L[it.lvl]) + (dfy && !it.simple ? ' · ZDANIE ' + diffLabel(dfy) : '') + (it.stepLabel ? ' · ' + it.stepLabel : '') + (c.isNew ? ' · NOWE' : '') + (c.relearn ? ' · JESZCZE RAZ' : '');
     if (it.type === 'order' && !S.tiles) {
       S.tiles = makeTiles(fullSentence(it));
       if (it.prefill && !S.order.length) { const T3 = S.tiles, kk = Math.max(1, Math.floor(T3.n / 3)); for (let j = 0; j < kk; j++) { const ix = T3.tiles.findIndex((x, q) => x.t === T3.correct[j] && S.order.indexOf(q) < 0); if (ix >= 0) S.order.push(ix); } }
@@ -1759,7 +1759,7 @@
     on('#speak', speakFn);
     on('#reMic', retrySpeak);
     on('#topicBtn', () => openTopic(it));
-    on('#hardBtn', () => toggleHard(c));
+    on('#hardBtn', () => hardAsk(c));
     const keepAnswer = () => { if (inp && !inp.disabled) S.answer = inp.value; };
     const toggleUnsure = () => { keepAnswer(); S.unsure = !S.unsure; renderExercise(); };
     if (ph === 'answer') {
@@ -1857,7 +1857,7 @@
         if (altKey(e, 'KeyS') || plainKey(e, 'KeyS')) { e.preventDefault(); speakFn(); return; }
         if ((plainKey(e, 'KeyM') || altKey(e, 'KeyM')) && $('#reMic')) { e.preventDefault(); retrySpeak(); return; }
         if (plainKey(e, 'KeyR') && !S.ygOpen && AI.enabled() && !it.topic && !S.topicId) { e.preventDefault(); openTopic(it); return; }
-        if (plainKey(e, 'KeyT') && $('#hardBtn')) { e.preventDefault(); toggleHard(c); return; }
+        if (plainKey(e, 'KeyT') && $('#hardBtn')) { e.preventDefault(); hardAsk(c); return; }
         if (plainKey(e, 'KeyH') && $('#hkBtn')) { e.preventDefault(); $('#hkBtn').click(); return; }
         if ((altKey(e, 'KeyU') || plainKey(e, 'KeyU') || (e.key === 'Enter' && e.altKey)) && $('#known')) { e.preventDefault(); markKnown(); return; }
         if (plainKey(e, 'KeyE') && $('#exBtn') && S.exToggle) { e.preventDefault(); S.exToggle(); return; }
@@ -2397,6 +2397,79 @@
     if (!S.struggled.includes(c.id)) S.struggled.push(c.id);
     Store.save(); toast('Oznaczone jako trudne — będzie wracać częściej.'); renderExercise();
     const wid = hookWordId(curView(c)); if (wid && HOOK_TYPES[curView(c).type] && !hookGet(wid) && AI.enabled()) hookFetch(wid);
+  }
+  /* „Trudne” z opisem problemu (upd256): co dokładnie trudne → AI: zasada + 5 zdań pod ten problem; problem śledzony jak uparty błąd */
+  const HARD_CATS = ['nie pamiętam słowa', 'przyimek (to / at / in…)', 'szyk zdania', 'czas', 'wymowa'];
+  function hardAsk(c) {
+    if (!S || S.phase !== 'feedback') return;
+    const card = D().cards[c.id];
+    if (card && card.hard) return toggleHard(c);
+    const it = curView(c); let sent = ''; try { sent = fullSentence(it); } catch (e) { }
+    const word = it.w && it.w.answers ? it.w.answers[0] : '';
+    const sel = {}, ai = AI.enabled();
+    let busy = false, res = null, kh;
+    const ask = () => '<div class="hd-mod"><h2>Co jest trudne?</h2>' + (sent ? '<p class="hd-sent" lang="en">' + esc(sent) + '</p>' : '') +
+      '<div class="hd-lbl">Wybierz — można kilka</div><div class="hd-chips">' + HARD_CATS.map((x, i) => '<button class="btn hd-chip' + (sel[i] ? ' sel' : '') + '" data-hc="' + i + '">' + esc(x) + ' ' + K(String(i + 1)) + '</button>').join('') + '</div>' +
+      '<div class="hd-lbl">Albo napisz swoimi słowami (nieobowiązkowe)</div><div class="hd-in inset"><input id="hdNote" type="text" autocomplete="off" placeholder="np. sam bym nie wiedział, że przed „my party” trzeba dać „to”">' + (Recog.supported() ? '<button class="btn mic-sm" id="hdMic" aria-label="Powiedz (Alt+M)">' + IC.micSm + '</button>' : '') + '</div>' +
+      (ai ? '' : '<p class="small-note">Ćwiczenia pod problem przygotowuje AI — włącz je w Ustawieniach. Teraz mogę tylko oznaczyć.</p>') +
+      '<div class="row hd-act"><button class="btn" id="hdMark">Tylko oznacz ' + K('Esc') + '</button>' + (ai ? '<button class="btn primary" id="hdGo">Przygotuj ćwiczenia ' + K('Enter') + '</button>' : '') + '</div></div>';
+    const wait = () => '<div class="hd-mod"><h2>Przygotowuję ćwiczenia…</h2><p class="small-note">AI szuka sedna problemu i układa zdania pod Ciebie.</p><div class="row hd-act"><button class="btn" id="hdLater">Zamknij ' + K('Esc') + '</button></div></div>';
+    const done = () => '<div class="hd-mod"><h2>Twój problem: „' + esc(res.title) + '”</h2><div class="hd-why">' + qaFmt(res.why) + '</div>' +
+      '<div class="hd-lbl">' + res.items.length + ' ćwiczeń — najpierw z pamięci</div><div class="hd-list">' + res.items.map((x, i) => '<div class="hd-ex"><span class="hd-n inset">' + (i + 1) + '</span>' + esc(x.pl) + '<small>przetłumacz</small></div>').join('') + '</div>' +
+      '<div class="row hd-act"><button class="btn" id="hdLater">Później ' + K('Esc') + '</button><button class="btn primary" id="hdNow">Ćwicz teraz ' + K('Enter') + '</button></div></div>';
+    const errV = msg => '<div class="hd-mod"><h2>Nie udało się</h2><p>' + esc(msg) + '</p><p class="small-note">Zdanie jest oznaczone jako trudne i będzie wracać częściej.</p><div class="row hd-act"><button class="btn primary" id="hdLater">OK ' + K('Enter') + '</button></div></div>';
+    const close0 = modal(ask(), () => { });
+    const ov = document.querySelector('.overlay:last-of-type'), box = ov.querySelector('.modal');
+    const close = () => { document.removeEventListener('keydown', kh, true); Recog.stop(); close0(); };
+    const show = h => { box.innerHTML = h; bind(); };
+    const note = () => { const i = box.querySelector('#hdNote'); return i ? i.value.trim() : ''; };
+    function mark() { const x = D().cards[c.id]; if (!(x && x.hard)) toggleHard(c); }
+    async function go2() {
+      if (busy) return; busy = true;
+      const cats = Object.keys(sel).filter(k => sel[k]).map(k => HARD_CATS[k]), nt = note();
+      mark(); show(wait());
+      try {
+        const r = await AI.hardDrill({ level: L[levels().grammar], task: TYPES[it.type] ? TYPES[it.type].title : it.type, sentence: sent, pl: it.pl || '', word, cats, note: nt });
+        if (!r.items.length) throw new Error('AI nie przygotowało zdań.');
+        const S0 = stubs(), k = 'hd:' + (r.title || sent).toLowerCase().slice(0, 40);
+        const x = S0[k] || (S0[k] = { wrong: '', right: r.title || 'mój problem', n: 0, days: [], src: [] });
+        Object.assign(x, { mine: 1, rule: r.why, sents: r.items, state: 'active', days: [], since: Date.now(), note: nt, cats, at: Date.now() }); x.n++; delete x.doneAt; delete x.lastDay;
+        if (sent && !x.src.some(q => q.en === sent)) x.src.push({ pl: it.pl || '', en: sent });
+        Store.save(); res = Object.assign({ k }, r);
+        if (document.body.contains(ov)) show(done());
+      } catch (e) { if (document.body.contains(ov)) show(errV(AI.humanError ? AI.humanError(e) : String(e.message || e))); }
+      busy = false;
+    }
+    function now() {
+      if (!res || !S) return close();
+      const q = res.items.map((_, i) => ({ id: 'stb:' + res.k + ':' + i, isNew: false })).filter(z => itemFor(z.id));
+      S.queue.splice(S.pos + 1, 0, ...q); if (S.guideMax) S.guideMax += q.length;
+      close(); toast('Dodane ' + q.length + ' ćwiczeń — zaczną się zaraz po tym zdaniu.');
+    }
+    function mic() {
+      if (!Recog.supported()) return;
+      const b = box.querySelector('#hdMic'); if (b) b.classList.add('on', 'primary');
+      Recog.listen({ silenceMs: 2500, lang: 'pl-PL',
+        onInterim: t => { const i = box.querySelector('#hdNote'); if (i) i.value = t; },
+        onResult: a => { const i = box.querySelector('#hdNote'); if (i) i.value = a[0] || ''; const bb = box.querySelector('#hdMic'); if (bb) bb.classList.remove('on', 'primary'); },
+        onError: () => { const bb = box.querySelector('#hdMic'); if (bb) bb.classList.remove('on', 'primary'); } });
+    }
+    function bind() {
+      const o = (sel2, f) => { const e = box.querySelector(sel2); if (e) e.onclick = f; };
+      box.querySelectorAll('[data-hc]').forEach(b => b.onclick = () => { const i = +b.dataset.hc; sel[i] = !sel[i]; b.classList.toggle('sel', !!sel[i]); });
+      o('#hdMark', () => { close(); mark(); }); o('#hdGo', go2); o('#hdLater', close); o('#hdNow', now); o('#hdMic', mic);
+      const f = box.querySelector('#hdNote'); if (f) f.focus(); else { const p = box.querySelector('.btn.primary'); if (p) p.focus(); }
+    }
+    kh = e => {
+      const inF = e.target && e.target.id === 'hdNote';
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); const b = box.querySelector('#hdMark, #hdLater'); if (b) b.click(); return; }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); const b = box.querySelector('#hdGo, #hdNow') || box.querySelector('#hdLater'); if (b) b.click(); else if (!ai && box.querySelector('#hdMark')) box.querySelector('#hdMark').click(); return; }
+      if (e.altKey && e.code === 'KeyM') { e.preventDefault(); e.stopPropagation(); mic(); return; }
+      if ((!inF || !e.target.value) && /^Digit[1-5]$/.test(e.code) && !e.altKey && !e.ctrlKey) { e.preventDefault(); e.stopPropagation(); const b = box.querySelector('[data-hc="' + (+e.code.slice(5) - 1) + '"]'); if (b) b.click(); return; }
+      e.stopPropagation();
+    };
+    document.addEventListener('keydown', kh, true);
+    bind();
   }
   function hardIds() { const cc = D().cards; return Object.keys(cc).filter(id => cc[id].hard && itemFor(id) && typeEnabled(itemFor(id).type)); }
   function next() {
@@ -3882,15 +3955,15 @@
   }
   /* karta upartego błędu: dobra odpowiedź w nowy dzień = +1, błąd = od nowa; 4 dni = opanowany */
   function stubProgress(it, kind, correct) {
-    const x = stubs()[it.stub]; if (!x) return '';
+    const x = stubs()[it.stub]; if (!x) return ''; const LB = x.mine ? 'Twój problem' : 'Uparty błąd';
     const dk = U.dayKey(Date.now()); x.lastDay = dk;
     if (correct && kind === 'ok' && !S.hint && !S.unsure) {
       if (x.days.indexOf(dk) < 0) x.days.push(dk);
-      if (x.days.length >= STUB_DAYS) { x.state = 'done'; x.doneAt = Date.now(); Store.save(); return 'Uparty błąd <b>' + esc(x.right) + '</b> opanowany ✓ — ' + STUB_DAYS + ' dni bez błędu.'; }
-      Store.save(); return 'Uparty błąd: dobrze — ' + x.days.length + '/' + STUB_DAYS + ' dni bez błędu.';
+      if (x.days.length >= STUB_DAYS) { x.state = 'done'; x.doneAt = Date.now(); Store.save(); return LB + ' <b>' + esc(x.right) + '</b> opanowany ✓ — ' + STUB_DAYS + ' dni bez błędu.'; }
+      Store.save(); return LB + ': dobrze — ' + x.days.length + '/' + STUB_DAYS + ' dni bez błędu.';
     }
     x.days = []; Store.save();
-    return 'Uparty błąd: jeszcze nie — liczę od nowa (0/' + STUB_DAYS + ').' + (x.rule ? ' <b>Zasada:</b> ' + esc(x.rule) : '');
+    return LB + ': jeszcze nie — liczę od nowa (0/' + STUB_DAYS + ').' + (x.rule ? ' <b>Zasada:</b> ' + (x.mine ? qaFmt(x.rule) : esc(x.rule)) : '');
   }
   /* zdania do ćwiczeń i nazwa zasady od AI; bez AI — zdania, w których błąd się zdarzył */
   const STUB_BUSY = {};
@@ -3939,7 +4012,7 @@
     const act = ks.filter(k => S0[k].state === 'active');
     return '<section class="ub-box"><div class="row between"><h2>Twoje uparte błędy</h2><span class="small-note">znikają po ' + STUB_DAYS + ' dniach bez błędu</span></div>' +
       ks.slice(0, 12).map(k => { const x = S0[k];
-        return '<div class="ub-row"><span><s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b></span><small>' + esc(x.rule || '') + '</small>' + dots(x) + (x.state === 'done' ? '<span class="ub-ok">opanowany ✓</span>' : '<small>' + x.n + ' razy</small>') + '</div>'; }).join('') +
+        return '<div class="ub-row"><span>' + (x.mine ? '<b>' + esc(x.right) + '</b>' : '<s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>') + '</span><small>' + (x.mine ? qaFmt(x.rule || '') : esc(x.rule || '')) + '</small>' + dots(x) + (x.state === 'done' ? '<span class="ub-ok">opanowany ✓</span>' : '<small>' + (x.mine ? 'Twój problem' : x.n + ' razy') + '</small>') + '</div>'; }).join('') +
       (act.length ? '<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn small" id="ubGo">Ćwicz teraz (' + act.length + ')</button></div>' : '') + '</section>';
   }
 

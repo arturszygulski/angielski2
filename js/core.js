@@ -515,6 +515,18 @@ window.AI = (function () {
     const j = await callJSON(system, user, 900, 30000, { type: 'object', required: ['rule', 'items'], properties: { rule: STR, items: { type: 'array', items: { type: 'object', required: ['pl', 'en'], properties: { pl: STR, en: STR } } } } });
     return { rule: String(j.rule || '').trim(), items: (j.items || []).filter(x => x && x.pl && x.en).slice(0, 6).map(x => ({ pl: String(x.pl).trim(), en: String(x.en).trim() })) };
   }
+  /* „Trudne” z opisem: Artur mówi, co dokładnie sprawia kłopot → zasada + 5 zdań PL→EN pod ten problem (upd256) */
+  async function hardDrill(c) {
+    const system = 'Jesteś cierpliwym, konkretnym nauczycielem angielskiego dla dorosłego Polaka (poziom ' + c.level + '). Mówisz do Artura w 2. osobie, rodzaj męski. Odpowiadasz wyłącznie przez narzędzie.';
+    const user = 'Ćwiczenie (' + c.task + '). Zdanie: "' + c.sentence + '"' + (c.pl ? '\nZnaczenie po polsku: ' + c.pl : '') + (c.word ? '\nSłowo z lekcji: ' + c.word : '') +
+      '\nArtur oznaczył to jako trudne. Co sprawia kłopot: ' + (c.cats.length ? c.cats.join(', ') : '(nie wybrał)') + '.' + (c.note ? '\nJego słowami: "' + c.note + '"' : '') +
+      '\n\nNajpierw ustal JEDEN konkretny problem (np. „come to” — przyimek po come przy celu; szyk pytania z can; słowo, którego nie pamięta).' +
+      '\ntitle — krótka nazwa problemu, 1–4 słowa (najlepiej sam angielski zwrot, np. "come to").' +
+      '\nwhy — 2–4 krótkie zdania po polsku: dlaczego tak jest, porównanie z polskim (czym różni się od tego, jak mówimy po polsku), najważniejszy wyjątek, jeśli jest. Przy „nie pamiętam słowa” zamiast reguły daj obrazowe skojarzenie po polsku pomagające zapamiętać słowo.' +
+      '\nitems — 5 krótkich, codziennych zdań (5–10 słów), każde w innym kontekście, ćwiczących DOKŁADNIE ten problem; pl — naturalne polskie zdanie, en — poprawne angielskie tłumaczenie. Jedno zdanie (ostatnie) może być pułapką: podobne, ale gdzie reguła nie działa (np. come home bez to) — wtedy w why wspomnij ten wyjątek. Nie powtarzaj zdania z ćwiczenia.';
+    const j = await callJSON(system, user + fmtJ('why'), 1000, 30000, { type: 'object', required: ['title', 'why', 'items'], properties: { title: STR, why: STR, items: { type: 'array', items: { type: 'object', required: ['pl', 'en'], properties: { pl: STR, en: STR } } } } });
+    return { title: String(j.title || '').trim(), why: String(j.why || '').trim(), items: (j.items || []).filter(x => x && x.pl && x.en).slice(0, 5).map(x => ({ pl: String(x.pl).trim(), en: String(x.en).trim() })) };
+  }
   /* Audycja: krótki tekst do słuchania + 4 pytania */
   /* Szczegółowe wyjaśnienie błędu + krótka dyskusja */
   function mistakeContextPub(c) { return mistakeContext(c); }
@@ -762,7 +774,7 @@ window.AI = (function () {
 
   async function test() { await call('Odpowiadasz jednym słowem.', 'Napisz: OK', 10); return true; }
 
-  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), checkAnswer: smart(checkAnswer), checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
+  return { enabled, punctLines, guidePlan: smart(guidePlan), topicPack: smart(topicPack), askFree: smart(askFree), chatWords, memHook: smart(memHook), stubDrill: smart(stubDrill), hardDrill: smart(hardDrill), checkAnswer: smart(checkAnswer), checkTypo, checkSentence, makeExamples, analyzeMistakes, explainPhrase: smart(explainPhrase), translateSentence, askAboutText: smart(askAboutText), trIntro: smart(trIntro), trJudge: smart(trJudge), trRetell: smart(trRetell), trBack, punctuate, newWords, translateBatch, judgeTranslation: smart(judgeTranslation), makeListening, makeTenseItems, makeDistractors, checkSentences, reviewSentence: smart(reviewSentence), talkTurn, talkHint, talkSummary: smart(talkSummary), explainMistake: smart(explainMistake), discussMistake: smart(discussMistake), simplifySentence, test, testSmart: async () => { smartErr = ''; await smart(test)(); if (smartErr) throw new AIError(400, smartErr); return true; }, smartErr: () => smartErr, bad: () => (Store.data.aiBad || null), lastModel: () => lastModel, lastAt: () => lastAt, humanError };
 })();
 
 /* ---------- Mowa (syntezator przeglądarki) ---------- */

@@ -1963,3 +1963,21 @@ html body { background: transparent; }
 .tlesson.tpair b { padding-right: 30px; }
 .tlesson .tp-ic { position: absolute; right: 16px; top: 16px; color: #5A84BC; }
 .t-h { font-size: 22px; margin: 6px 0 -6px; }
+/* „Trudne” z opisem problemu (upd256) */
+.modal:has(.hd-mod) { width: min(680px, 92vw); max-width: none; }
+.hd-mod { text-align: left; width: 100%; }
+.hd-mod h2 { margin: 0 0 8px; font-size: 22px; }
+.hd-sent { font-size: 18px; margin: 0 0 6px; }
+.hd-lbl { font: 700 12px var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 16px 0 8px; }
+.hd-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn.hd-chip { padding: 8px 14px; font-size: 14px; border-radius: 14px; }
+.btn.hd-chip.sel { box-shadow: none !important; border: 2px solid #67625C; font-weight: 700; padding: 6px 12px; }
+.hd-in { display: flex; align-items: center; gap: 8px; border-radius: 16px; padding: 6px 6px 6px 14px; }
+.hd-in input { flex: 1; border: none; background: transparent; font: inherit; font-size: 15px; color: var(--ink); outline: none; padding: 6px 0; }
+.hd-act { justify-content: center; gap: 14px; margin-top: 20px; }
+.hd-why { border: 1.5px solid #BDB6AD; border-radius: 18px; padding: 12px 16px; font-size: 15px; line-height: 1.5; }
+.hd-why b { color: #43699C; }
+.hd-ex { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #CFC9C1; font-size: 15px; }
+.hd-ex:last-child { border-bottom: none; }
+.hd-ex small { margin-left: auto; color: var(--ink-3); font-size: 12.5px; }
+.hd-n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 12px var(--head); }
