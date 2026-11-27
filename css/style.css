@@ -2059,3 +2059,4 @@ html body { background: transparent; }
 .pz-low h3 { margin: 8px 0 4px; font-size: 15px; }
 .pz-low .tform > div { padding: 5px 12px; }
 @media (max-width: 900px) { .pz-top, .pz-low { grid-template-columns: 1fr; } }
+.tz-cmpic { display: inline-flex; align-items: center; gap: 1px; color: #5A84BC; margin-left: 6px; font: 700 11px var(--head); vertical-align: -2px; }

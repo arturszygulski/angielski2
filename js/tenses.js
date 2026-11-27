@@ -85,7 +85,16 @@ window.TENSE_PAIRS = [
     pairs: [["The phone's ringing. — I'll get it!", 'Telefon dzwoni. — Odbiorę! (decyzja teraz)'], ["I'm going to buy a new phone. I've saved the money.", 'Kupię nowy telefon. Odłożyłem pieniądze (plan).']] },
   { id: 'pp-ppc', a: 'pp', b: 'ppc', name: 'Present Perfect czy Continuous?', lvl: 3,
     how: ['ile / rezultat (three books, finished) → Perfect', 'jak długo / sama czynność (for two hours) → Perfect Continuous', 'stany (know, have) → Perfect: I\'ve known him for years'],
-    pairs: [["I've read three books this month.", 'Przeczytałem trzy książki (ile, rezultat).'], ["I've been reading all afternoon.", 'Czytam całe popołudnie (jak długo).']] }
+    pairs: [["I've read three books this month.", 'Przeczytałem trzy książki (ile, rezultat).'], ["I've been reading all afternoon.", 'Czytam całe popołudnie (jak długo).']] },
+  { id: 'pc-going', a: 'pc', b: 'going', name: 'Present Continuous czy going to?', lvl: 1,
+    how: ['umówione: jest godzina, miejsce, druga osoba, bilet → Present Continuous', 'sam zamiar, postanowienie, jeszcze nic nie załatwione → going to', 'gdy nie wiesz — going to prawie zawsze brzmi poprawnie'],
+    pairs: [["I'm meeting Tom at 6 tomorrow.", 'Jutro o 6 spotykam się z Tomem (umówione).'], ["I'm going to call Tom and ask him to meet.", 'Zadzwonię do Toma i zaproponuję spotkanie (zamiar).']] },
+  { id: 'when-ps', a: 'ps', b: 'will', name: 'When / if + Present Simple, nie will', lvl: 1,
+    how: ['po when, if, as soon as, before, after, until o przyszłości → Present Simple', 'will tylko w drugiej części zdania: When I arrive, I\'ll call you', 'po polsku „kiedy przyjadę” — po angielsku when I arrive (nie when I will arrive)'],
+    pairs: [["When I get home, I'll send you the photos.", 'Kiedy wrócę do domu, wyślę ci zdjęcia.'], ["If it rains tomorrow, we'll stay at home.", 'Jeśli jutro będzie padać, zostaniemy w domu.']] },
+  { id: 'pastp-past', a: 'pastp', b: 'past', name: 'Past Perfect czy Past Simple?', lvl: 3,
+    how: ['zdarzenia po kolei, jak w opowieści → Past Simple', 'coś stało się WCZEŚNIEJ niż inne zdarzenie w przeszłości → Past Perfect (had + 3. forma)', 'po before / after kolejność jest jasna — często wystarczy Past Simple'],
+    pairs: [['When I got to the station, the train had left.', 'Kiedy dotarłem na dworzec, pociągu już nie było (odjechał wcześniej).'], ['When I got to the station, the train left.', 'Kiedy dotarłem na dworzec, pociąg odjechał (w tej chwili).']] }
 ];
 window.TENSE_RAW = {
 ps: `

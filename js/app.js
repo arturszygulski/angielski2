@@ -7224,7 +7224,9 @@
     const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>';
     const PL_SHORT = { 'teraźniejszy dokonany ciągły': 'dokonany ciągły' };
     const row = T => { const st = tenseStatus(T.id), pd = st.total ? st.done / st.total * 100 : 0, pl2 = st.total ? st.learn / st.total * 100 : 0;
-      return '<div class="tz-row" data-tense="' + T.id + '" title="' + esc(T.name + ': opanowane ' + st.done + ', w nauce ' + st.learn + ', nowe ' + st.fresh) + '"><span class="tz-nm"><b>' + esc(T.name) + '</b><small>' + esc(PL_SHORT[T.pl] || T.pl) + '</small></span>' +
+      const cps = (window.TENSE_PAIRS || []).filter(x => x.a === T.id || x.b === T.id);
+      const cic = cps.length ? '<span class="tz-cmpic" title="Porównania w lekcji: ' + esc(cps.map(x => x.name).join(' · ')) + '"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg>' + (cps.length > 1 ? cps.length : '') + '</span>' : '';
+      return '<div class="tz-row" data-tense="' + T.id + '" title="' + esc(T.name + ': opanowane ' + st.done + ', w nauce ' + st.learn + ', nowe ' + st.fresh) + '"><span class="tz-nm"><b>' + esc(T.name) + '</b>' + cic + '<small>' + esc(PL_SHORT[T.pl] || T.pl) + '</small></span>' +
         '<span class="tm-bar inset"><i class="d" style="width:' + pd + '%"></i><i class="l" style="width:' + pl2 + '%"></i></span>' +
         '<span class="tm-acc">' + (st.acc == null ? '<span class="small-note">—</span>' : st.acc + '%') + '</span><button class="btn tz-go raised" aria-label="Lekcja: ' + esc(T.name) + '">' + GO + '</button></div>'; };
     const MAXA = 9, ads = TENSE_ADDONS.length > MAXA + 1 ? TENSE_ADDONS.slice(0, MAXA) : TENSE_ADDONS;
