@@ -1935,4 +1935,8 @@ html body { background: transparent; }
 .srsh { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
 .srsh .ic { display: flex; gap: 2px; }
 .srsh small { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
-.cal-day.prot:not(.is-today) { box-shadow: inset 0 0 0 1.5px #8FA6C0; color: #43699C; }
+/* Dzień chroniony = tarcza w kalendarzu; okienko o zużytej ochronie (upd251) */
+.cal-day.prot { position: relative; box-shadow: none !important; }
+.cal-day.prot svg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.cal-day.prot span { position: relative; color: #fff; font-weight: 700; font-size: 13px; }
+.sh-mod { text-align: center; } .sh-mod h2 { margin: 10px 0 6px; font-size: 24px; } .sh-mod p { margin: 4px 0; }

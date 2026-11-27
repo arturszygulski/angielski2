@@ -872,6 +872,18 @@
     return fresh;
   }
   /* cel dzienny zaliczony: raz dziennie, przy pierwszym wejściu na stronę główną po przekroczeniu celu — zielone okienko + fanfara (upd234) */
+  /* po wejściu: informacja o zużytych dniach ochrony (raz dla każdego chronionego dnia) (upd251) */
+  function shieldShow() {
+    const d = D(), SI = streakInfo(), seen = d.shSeen = d.shSeen || {}, fresh = Object.keys(SI.prot).filter(k => !seen[k]).sort();
+    if (!fresh.length || document.querySelector('.mi-ov, .gd-ov, .overlay')) return false;
+    fresh.forEach(k => { seen[k] = 1; }); Store.save();
+    const fd = k => new Date(k + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'numeric' });
+    const SH = '<svg viewBox="0 0 24 24" width="56" height="56" fill="#5A84BC" stroke="#3F6597" stroke-width="1.2" stroke-linejoin="round"><path d="M12 2.5l7.5 3.2v5.3c0 4.8-3.2 8.6-7.5 10.6-4.3-2-7.5-5.8-7.5-10.6V5.7z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    modal('<div class="sh-mod">' + SH + '<h2>Ochrona uratowała Twoją serię</h2><p>' + (fresh.length === 1 ? 'Zużyty 1 dzień ochrony' : 'Zużyte ' + fresh.length + ' dni ochrony') + ': ' + fresh.map(fd).join(', ') + '.</p>' +
+      '<p class="small-note">Seria trwa: <b>' + SI.cur + ' ' + (SI.cur === 1 ? 'dzień' : 'dni') + '</b> · zostało ' + SI.shields + ' ' + (SI.shields === 1 ? 'dzień' : 'dni') + ' ochrony.</p>' +
+      '<div class="row" style="justify-content:center;margin-top:14px"><button class="btn primary" id="shOk" data-esc>Dalej ' + K('Enter') + '</button></div></div>', (ov, close) => { ov.querySelector('#shOk').onclick = close; });
+    return true;
+  }
   function goalShow() {
     const d = D(), t = Store.today(), dk = U.dayKey(Date.now()), goal = d.settings.goalMin;
     if (d.goalShown === dk || (t.sec || 0) < goal * 60 || document.querySelector('.mi-ov, .gd-ov, .overlay')) return;
@@ -900,7 +912,7 @@
       '<div class="mi-btns"><button class="btn primary" id="miOk">' + (list.length > 1 ? 'Dalej (' + (list.length - 1) + ' więcej) ' : 'Dalej ') + K('Enter') + '</button></div></div>';
     document.body.appendChild(ov);
     try { Sound.play('combo'); } catch (e) { }
-    const close = () => { document.removeEventListener('keydown', kh, true); ov.remove(); if (list.length > 1) setTimeout(() => milesShow(list.slice(1)), 250); };
+    const close = () => { document.removeEventListener('keydown', kh, true); ov.remove(); if (list.length > 1) setTimeout(() => milesShow(list.slice(1)), 250); else if (screen === 'home') setTimeout(() => { if (!shieldShow()) goalShow(); }, 250); };
     const kh = e => { if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); close(); } else e.stopPropagation(); };
     document.addEventListener('keydown', kh, true);
     ov.querySelector('#miOk').onclick = close;
@@ -932,7 +944,7 @@
     guideLoad(); document.documentElement.dataset.scr = 'home';
     if (maybeWeeklyReport()) return;
     const d = D(), t = Store.today(), st = d.settings;
-    { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); else goalShow(); }
+    { const nm = milesTick(); if (nm.length) setTimeout(() => milesShow(nm), 300); else if (!shieldShow()) goalShow(); }
     Store.save();
     const goalSec = st.goalMin * 60;
     const pct = Math.min(100, Math.round(t.sec / goalSec * 100));
@@ -984,7 +996,7 @@
     for (let dd = 1; dd <= daysIn; dd++) {
       const k = U.dayKey(new Date(y, m, dd));
       const cls = (isStudyDay(d.days[k]) ? ' done' : '') + (SI.prot[k] ? ' prot' : '') + (dd === now.getDate() ? ' is-today' : '');
-      cal += '<div class="cal-day' + cls + '">' + dd + '</div>';
+      cal += SI.prot[k] && dd !== now.getDate() ? '<div class="cal-day prot" title="dzień chroniony — ochrona uratowała serię"><svg viewBox="0 0 24 24" width="30" height="30" fill="#5A84BC" stroke="#3F6597" stroke-width="1.3" stroke-linejoin="round"><path d="M12 2.5l7.5 3.2v5.3c0 4.8-3.2 8.6-7.5 10.6-4.3-2-7.5-5.8-7.5-10.6V5.7z"/></svg><span>' + dd + '</span></div>' : '<div class="cal-day' + cls + '">' + dd + '</div>';
     }
     const str = streak();
     const hasSync = !!st.syncFolder;
