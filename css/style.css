@@ -2005,3 +2005,5 @@ html body { background: transparent; }
 .btn.hb svg { width: 24px; height: 24px; }
 /* Czasy: Mapa czasów i Ćwicz to informacja, nie przyciski — płasko z obrysem (upd268) */
 .panel.raised.grow, .panel.raised.side { background: none; box-shadow: none; border: 1.5px solid #BDB6AD; }
+/* Moduły informacyjne płasko z obrysem: Raport, Graj, czytnik, Rozmowa (upd269) */
+.panel.raised, .kpi.raised, section.note.raised, .rtext.raised, .rpanel.raised, .chat.raised, .composer.raised { background: none; box-shadow: none; border: 1.5px solid #BDB6AD; }
