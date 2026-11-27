@@ -878,7 +878,7 @@
     if (!fresh.length || document.querySelector('.mi-ov, .gd-ov, .overlay')) return false;
     fresh.forEach(k => { seen[k] = 1; }); Store.save();
     const fd = k => new Date(k + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'numeric' });
-    const SH = '<svg viewBox="0 0 24 24" width="56" height="56" fill="#5A84BC" stroke="#3F6597" stroke-width="1.2" stroke-linejoin="round"><path d="M12 2.5l7.5 3.2v5.3c0 4.8-3.2 8.6-7.5 10.6-4.3-2-7.5-5.8-7.5-10.6V5.7z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    const SH = '<svg viewBox="0 0 24 24" width="56" height="56" fill="#E8A33D" stroke="none"><path d="M12 2.5l7.5 3.2v5.3c0 4.8-3.2 8.6-7.5 10.6-4.3-2-7.5-5.8-7.5-10.6V5.7z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
     modal('<div class="sh-mod">' + SH + '<h2>Ochrona uratowała Twoją serię</h2><p>' + (fresh.length === 1 ? 'Zużyty 1 dzień ochrony' : 'Zużyte ' + fresh.length + ' dni ochrony') + ': ' + fresh.map(fd).join(', ') + '.</p>' +
       '<p class="small-note">Seria trwa: <b>' + SI.cur + ' ' + (SI.cur === 1 ? 'dzień' : 'dni') + '</b> · zostało ' + SI.shields + ' ' + (SI.shields === 1 ? 'dzień' : 'dni') + ' ochrony.</p>' +
       '<div class="row" style="justify-content:center;margin-top:14px"><button class="btn primary" id="shOk" data-esc>Dalej ' + K('Enter') + '</button></div></div>', (ov, close) => { ov.querySelector('#shOk').onclick = close; });
@@ -996,7 +996,7 @@
     for (let dd = 1; dd <= daysIn; dd++) {
       const k = U.dayKey(new Date(y, m, dd));
       const cls = (isStudyDay(d.days[k]) ? ' done' : '') + (SI.prot[k] ? ' prot' : '') + (dd === now.getDate() ? ' is-today' : '');
-      cal += SI.prot[k] && dd !== now.getDate() ? '<div class="cal-day prot" title="dzień chroniony — ochrona uratowała serię"><svg viewBox="0 0 24 24" width="30" height="30" fill="#5A84BC" stroke="#3F6597" stroke-width="1.3" stroke-linejoin="round"><path d="M12 2.5l7.5 3.2v5.3c0 4.8-3.2 8.6-7.5 10.6-4.3-2-7.5-5.8-7.5-10.6V5.7z"/></svg><span>' + dd + '</span></div>' : '<div class="cal-day' + cls + '">' + dd + '</div>';
+      cal += SI.prot[k] && dd !== now.getDate() ? '<div class="cal-day prot" title="dzień chroniony — ochrona uratowała serię"><svg viewBox="0 0 24 24" width="30" height="30" fill="#E8A33D" stroke="none"><path d="M12 2.5l7.5 3.2v5.3c0 4.8-3.2 8.6-7.5 10.6-4.3-2-7.5-5.8-7.5-10.6V5.7z"/></svg><span>' + dd + '</span></div>' : '<div class="cal-day' + cls + '">' + dd + '</div>';
     }
     const str = streak();
     const hasSync = !!st.syncFolder;
@@ -1040,7 +1040,7 @@
 
       '<section class="lower"><div class="skills">' + tiles + '</div>' +
       '<div class="cal cal-flat">' + (function () {
-        const rec = SI.cur > 0 && SI.cur >= SI.best, SHI = f => '<svg viewBox="0 0 24 24" width="19" height="19" fill="' + (f ? '#5A84BC' : 'none') + '" stroke="' + (f ? '#3F6597' : '#B5AFA7') + '" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>';
+        const rec = SI.cur > 0 && SI.cur >= SI.best, SHI = f => '<svg viewBox="0 0 24 24" width="19" height="19" fill="' + (f ? '#E8A33D' : 'none') + '" stroke="' + (f ? 'none' : '#B5AFA7') + '" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>';
         return '<div class="srbox" title="Co 10 dni nauki bez przerwy +1 dzień ochrony, co miesiąc +1 dodatkowo (max ' + SHIELD_MAX + '). Dzień bez nauki zużywa ochronę i seria trwa dalej.">' +
           '<div><div class="srn"><b>' + SI.cur + '</b>' + (rec ? '<span class="srstar" title="rekord — Twoja najdłuższa seria">★</span>' : '') + '<span>' + (SI.cur === 1 ? 'dzień' : 'dni') + ' z rzędu</span></div>' +
           '<div class="srsub">' + (rec ? 'Twój najlepszy wynik' : 'rekord: ' + SI.best + ' ' + (SI.best === 1 ? 'dzień' : 'dni')) + '</div></div>' +
