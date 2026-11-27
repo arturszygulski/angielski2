@@ -7265,24 +7265,26 @@
       const items = (tenseItems().byT[T.id] || []).slice(0, 3);
       const st = tenseStatus(T.id);
       main = '<section class="lower"><div class="panel raised grow"><h3>Oś czasu</h3>' + tenseTimelineSvg(T) + '<p class="small-note" style="margin:0 0 6px">' + esc(T.tlNote) + '</p>' + summary(T) + '<section class="note inset tip"><div class="tx"><b>Uwaga dla Polaków</b><span>' + esc(T.tip) + '</span></div></section></div>' +
-        '<div class="panel raised side"><h2>Przykłady</h2>' + exHtml(items) +
+        '<div class="tz-scol"><div class="panel raised side"><h2>Przykłady</h2>' + exHtml(items) +
         '<div class="rstats"><div><b>' + st.done + '</b><span>opanowane</span></div><div><b>' + st.learn + '</b><span>w nauce</span></div><div><b>' + st.fresh + '</b><span>nowe</span></div></div>' +
         (st.fresh === 0 && AI.enabled() ? '<button class="btn small" id="tMore">Dobierz 10 nowych zdań z AI</button><div id="tMoreMsg"></div>' : '') +
         (function () { const ps = (window.TENSE_PAIRS || []).filter(x => x.a === T.id || x.b === T.id); if (!ps.length) return '';
           const GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-          return '<div class="tz-cmp"><h3>Porównaj z — czym się go myli</h3>' + ps.map(x => { const o = TS_BY[x.a === T.id ? x.b : x.a]; return '<div class="tz-fr tz-ad" data-cmp="' + x.id + '"><span class="tz-ic">' + addonIc('<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>') + '</span><b>' + esc(o ? o.name : x.name) + '</b><small>' + esc(x.name) + '</small><button class="btn tz-go raised" aria-label="Porównanie: ' + esc(x.name) + '">' + GO + '</button></div>'; }).join('') + '</div>'; })() + '</div></section>';
+          return '<div class="tz-cmp"><h3>Porównaj z — czym się go myli</h3>' + ps.map(x => { const o = TS_BY[x.a === T.id ? x.b : x.a]; return '<div class="tz-fr tz-ad" data-cmp="' + x.id + '"><span class="tz-ic">' + addonIc('<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>') + '</span><b>' + esc(o ? o.name : x.name) + '</b><small>' + esc(x.name) + '</small><button class="btn tz-go raised" aria-label="Porównanie: ' + esc(x.name) + '">' + GO + '</button></div>'; }).join('') + '</div>'; })() + '</div>' +
+        '<button class="btn tz-cta" id="tGo">Ćwicz ten czas ' + K('Enter') + '</button></div></section>';
     } else {
       const A = TS_BY[P.a], B = TS_BY[P.b];
       main = '<section class="note raised"><div class="tx"><b>Jak odróżnić?</b><span><ul class="twhen" style="margin:6px 0 0">' + P.how.map(h => '<li>' + esc(h) + '</li>').join('') + '</ul></span></div></section>' +
         '<section class="panel raised"><h2>Para przykładów</h2><div class="col" style="gap:10px">' + P.pairs.map(x => '<div class="tex inset"><button class="btn small" data-say="' + esc(x[0]) + '" aria-label="Odsłuchaj">' + IC.speaker + '</button><div><div lang="en"><b>' + esc(x[0]) + '</b></div><div class="small-note">' + esc(x[1]) + '</div></div></div>').join('') + '</div></section>' +
-        '<section class="lower">' + [A, B].map(TT => '<div class="panel raised grow"><h2>' + esc(TT.name) + '</h2>' + tenseTimelineSvg(TT) + summary(TT) + '</div>').join('') + '</section>';
+        '<section class="lower">' + [A, B].map(TT => '<div class="panel raised grow"><h2>' + esc(TT.name) + '</h2>' + tenseTimelineSvg(TT) + summary(TT) + '</div>').join('') + '</section>' +
+        '<button class="btn tz-cta wide" id="tGo">Ćwicz oba czasy ' + K('Enter') + '</button>';
     }
     const name = T ? T.name : P.name;
     app.innerHTML =
-      '<div class="wrap">' +
+      '<div class="wrap tz-lesson">' +
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Czasy ' + K('Esc') + '</button>' +
       '<div class="ex-title"><b style="font-size:26px">' + esc(name) + '</b><span>' + (T ? esc(T.pl) + ' · ' + L[T.lvl] : 'porównanie · ' + L[P.lvl]) + '</span></div>' +
-      '<button class="btn primary" id="tGo">Ćwicz ' + (T ? 'ten czas' : 'oba czasy') + ' ' + K('Enter') + '</button></header>' + main + '</div>';
+      '<div style="width:60px"></div></header>' + main + '</div>';
     const backTo = () => P && CMP_FROM && TS_BY[CMP_FROM] ? go('tense', CMP_FROM) : go('tenses');
     $('#back').onclick = backTo;
     $$('[data-cmp]').forEach(b => b.onclick = () => { CMP_FROM = T.id; go('tense', b.dataset.cmp); });

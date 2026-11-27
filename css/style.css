@@ -2035,3 +2035,14 @@ html body { background: transparent; }
 .tz-cmp { margin-top: 14px; border-top: 1px solid #D2CCC4; padding-top: 10px; }
 .tz-cmp h3 { font: 700 12.5px var(--head); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 4px; }
 .tz-cmp .tz-ad { grid-template-columns: 22px minmax(0, 1fr) 36px; } .tz-cmp .tz-ad small { display: none; }
+/* Lekcja czasu: płasko — obrysy tylko tam, gdzie porządkują treść; „Ćwicz” różowy pod Przykładami, kolumna przyklejona (upd272) */
+.tz-lesson .tex.inset { box-shadow: none; background: none; border-radius: 0; border-bottom: 1px solid #D2CCC4; padding: 8px 0; }
+.tz-lesson .tex.inset:last-child { border-bottom: 0; }
+.tz-lesson .rstats > div { box-shadow: none; background: none; }
+.tz-lesson .tform > div, .tz-lesson .chips .chip.inset, .tz-lesson .note.inset.tip { box-shadow: none; background: none; border: 1.5px solid #BDB6AD; }
+.tz-lesson .tform { gap: 8px; }
+.tz-scol { display: flex; flex-direction: column; gap: 20px; flex: 1 1 320px; min-width: 0; position: sticky; top: 16px; align-self: flex-start; }
+.tz-scol > .panel.side { flex: none; width: 100%; box-sizing: border-box; }
+.btn.tz-cta { width: 100%; min-height: 88px; height: auto; border-radius: 24px; background: var(--pink) !important; color: #fff !important; font: 700 18px var(--head); display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; }
+.btn.tz-cta .kbd { background: rgba(255,255,255,.25); color: #fff; border-color: transparent; }
+.btn.tz-cta.wide { margin-top: 4px; }
