@@ -1921,3 +1921,7 @@ html body { background: transparent; }
 .s3-spin button { border: 0; background: none; padding: 2px 3px; cursor: pointer; color: var(--ink-3); line-height: 0; border-radius: 4px; }
 .s3-spin button:hover { color: var(--ink); }
 .s3-spin button:active { transform: scale(.9); }
+/* Wybrana opcja = płaska z antracytowym obrysem; pozostałe wypukłe (upd248) */
+.btn.pressed:not(#hardBtn):not(.unsure), .seg .btn.on { box-shadow: none !important; background: transparent !important; outline: 2px solid #67625C; outline-offset: -2px; color: var(--ink) !important; font-weight: 700; }
+.seg .btn:not(.on) { box-shadow: 4px 4px 9px var(--sh-d), -4px -4px 9px var(--sh-l) !important; }
+.seg.inset, .seg { box-shadow: none !important; background: none !important; gap: 8px; }
