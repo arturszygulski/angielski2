@@ -5506,7 +5506,7 @@
   function startTrx(id, view) {
     const T = D().texts[id]; if (!T) return;
     stopReading();
-    const tr = trData(T);
+    const tr = trData(T); bumpUse('texts'); Store.save(); // praca z tekstem liczy się do „Moje teksty” (upd281)
     TR = { id, view: view || (tr.list && tr.pos < tr.list.length ? 'sent' : tr.list && tr.list.length && tr.pos >= tr.list.length ? 'done' : 'intro'), marks: {}, ans: '', think: '', busy: false, err: '', fb: null, qa: [], banner: false };
     if (view === 'back') { TR.backList = trBackDue(T); TR.bi = 0; TR.bAns = ''; TR.bRes = null; TR.bOk = 0; }
     go('trx', id);
@@ -5681,7 +5681,7 @@
       const f = await AI.trJudge({ level: L[levels().vocab], summary: (tr.intro && tr.intro.summary) || T.title, prev: si > 0 ? T.sents[si - 1].t : '', next: T.sents[si + 1] ? T.sents[si + 1].t : '', sentence: sn.t, translation: ans, think, red, yellow });
       f.m = AI.lastModel(); if (inHead) f.verdict = 'self';
       (f.words || []).forEach(w => { if (w.kind === 'red') { trAddWord(T, si, w); w.added = true; } });
-      tr.done[si] = { v: f.verdict, ans, think, better: f.better, learn: f.learn || [], at: Date.now(), back: false, fb: f };
+      bumpUse('texts'); tr.done[si] = { v: f.verdict, ans, think, better: f.better, learn: f.learn || [], at: Date.now(), back: false, fb: f };
       TR.fb = f; TR.lastAns = ans; TR.view = 'fb'; TR.qa = []; TR.ask = false;
       const set = trUnknownSet(T), rest = tr.list.slice(tr.pos + 1), [pa, pb] = trPartRange(T, tr.part || 0), after = []; for (let i = si + 1; i < pb; i++) after.push(i);
       TR.banner = tr.mode === 'all' && rest.length >= 3 && !tr.bannerSeen && after.every(i => trSentUnknown(T, i, set) === 0);
@@ -6034,7 +6034,7 @@
       const id = 'x' + Date.now().toString(36);
       const title = fileTitle || autoTitle(sents);
       D().texts = D().texts || {};
-      D().texts[id] = { id, title, added: Date.now(), sents, marks: {}, cache: {}, qa: [], pos: 0 };
+      D().texts[id] = { id, title, added: Date.now(), sents, marks: {}, cache: {}, qa: [], pos: 0 }; bumpUse('texts');
       progress();
       if (!Store.save()) { delete D().texts[id]; btn.disabled = false; msg.innerHTML = '<span class="status bad">Brakuje miejsca w pamięci przeglądarki — usuń jakiś stary tekst i spróbuj ponownie.</span>'; return; }
       TXO.add = false; TXO.open = id; TXO.edit = null;
