@@ -8421,3 +8421,28 @@
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
+/* Przycisk „Wróć” jako kółko: domek, gdy prowadzi na stronę główną; strzałka, gdy do poprzedniego ekranu (upd263) */
+(function () {
+  const HOME = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg>';
+  const ARR = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6l-6 6 6 6"/></svg>';
+  const NAMES = { texts: 'Teksty', tenses: 'Czasy', stats: 'Statystyki', play: 'Graj', guide: 'Krok po kroku' };
+  function conv() {
+    const b = document.getElementById('back');
+    if (!b || b.classList.contains('hb')) return;
+    const txt = (b.textContent || '').replace(/Esc/g, '').trim();
+    if (!/^(Wróć|Teksty|Czasy)$/.test(txt)) return; // „Przerwij”, „Dalej”, „Pomiń…” zostają słowem
+    const src = b.onclick ? String(b.onclick) : '';
+    const home = /go\(/.test(src) && /'home'/.test(src) && !/go\('(?!home)\w+'/.test(src);
+    const m = src.match(/go\('(\w+)'/), dest = txt !== 'Wróć' ? txt : m && NAMES[m[1]] ? NAMES[m[1]] : '';
+    b.classList.add('hb');
+    b.innerHTML = home ? HOME : ARR;
+    const lbl = home ? 'Strona główna' : dest ? 'Wróć: ' + dest : 'Wróć';
+    b.title = lbl; b.setAttribute('aria-label', lbl);
+  }
+  const start = () => {
+    const app = document.getElementById('app'); if (!app) return;
+    new MutationObserver(conv).observe(app, { childList: true, subtree: true });
+    conv();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();

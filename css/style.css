@@ -2000,3 +2000,6 @@ html body { background: transparent; }
 .t2-done-ic { background: linear-gradient(160deg, #FFFFFF, #E2EFE6); box-shadow: 0 2px 6px rgba(30,70,40,.25); }
 .t2-done-ic svg, .t2-guide.gp-done .t2-done-ic svg { stroke: #4F8A60; }
 .t2-done #extra { background: #E8F2EB; color: #1F3B27; box-shadow: 3px 3px 8px rgba(30,70,40,.35), -2px -2px 6px rgba(255,255,255,.35); }
+/* „Wróć” jako kółko z ikoną (upd263) */
+.btn.hb { width: 60px; height: 60px; min-height: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; flex: none; }
+.btn.hb svg { width: 24px; height: 24px; }
