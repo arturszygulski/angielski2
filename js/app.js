@@ -324,12 +324,27 @@
   }
   function accuracy(skill) { const h = hist()[skill] || []; if (h.length < 5) return null; const r = h.slice(-30); return Math.round(r.reduce((a, b) => a + b, 0) / r.length * 100); }
   function isStudyDay(day) { return !!day && (day.sec >= 300 || day.quick); }
-  function streak() {
-    const days = D().days; let t = U.startOfDay(); let n = 0;
-    if (!isStudyDay(days[U.dayKey(t)])) t = U.addDays(t, -1);
-    while (isStudyDay(days[U.dayKey(t)])) { n++; t = U.addDays(t, -1); }
-    return n;
+  /* seria z dniami ochrony (upd250): co 10 dni bez przerwy +1 dzień ochrony, co 30 dni +1 dodatkowo, max 5;
+     dzień bez nauki zużywa ochronę (seria trwa, ale się nie zwiększa); bez ochrony seria od zera. Liczone na nowo z historii dni. */
+  const SHIELD_MAX = 5;
+  function streakInfo() {
+    const days = D().days, ks = Object.keys(days).filter(k => isStudyDay(days[k])).sort();
+    const out = { cur: 0, best: 0, shields: 0, prot: {} };
+    if (!ks.length) return out;
+    const today = U.startOfDay();
+    let run = 0, sh = 0, prot = {};
+    for (let t = new Date(ks[0] + 'T00:00:00').getTime(); t <= today; t = U.addDays(t, 1)) {
+      const k = U.dayKey(t);
+      if (isStudyDay(days[k])) { run++; if (run % 10 === 0) sh = Math.min(SHIELD_MAX, sh + 1); if (run % 30 === 0) sh = Math.min(SHIELD_MAX, sh + 1); }
+      else if (t === today) { /* dziś jeszcze można się uczyć */ }
+      else if (run > 0 && sh > 0) { sh--; prot[k] = 1; }
+      else { run = 0; sh = 0; prot = {}; }
+      out.best = Math.max(out.best, run);
+    }
+    out.cur = run; out.shields = sh; out.prot = prot;
+    return out;
   }
+  function streak() { return streakInfo().cur; }
   function endOfToday() { return U.addDays(U.startOfDay(), 1); }
   function dueIds() {
     const end = endOfToday(), c = D().cards;
@@ -960,6 +975,7 @@
       return '<div class="skill inset v2' + (s.dim ? ' dim' : '') + '" title="' + esc(tip) + '"><div class="hd"><div class="name">' + s.name + '</div><b>' + L[s.lv] + '</b><small>' + s.small + '</small></div><div class="sk-rows">' + bands + '</div></div>';
     }).join('');
 
+    const SI = streakInfo();
     const y = now.getFullYear(), m = now.getMonth();
     const first = new Date(y, m, 1), daysIn = new Date(y, m + 1, 0).getDate();
     const offset = (first.getDay() + 6) % 7;
@@ -967,7 +983,7 @@
     for (let i = 0; i < offset; i++) cal += '<div class="cal-day"></div>';
     for (let dd = 1; dd <= daysIn; dd++) {
       const k = U.dayKey(new Date(y, m, dd));
-      const cls = (isStudyDay(d.days[k]) ? ' done' : '') + (dd === now.getDate() ? ' is-today' : '');
+      const cls = (isStudyDay(d.days[k]) ? ' done' : '') + (SI.prot[k] ? ' prot' : '') + (dd === now.getDate() ? ' is-today' : '');
       cal += '<div class="cal-day' + cls + '">' + dd + '</div>';
     }
     const str = streak();
@@ -1011,8 +1027,14 @@
       '</nav>' +
 
       '<section class="lower"><div class="skills">' + tiles + '</div>' +
-      '<div class="cal cal-flat"><div class="row between" style="align-items:baseline"><b style="font-family:var(--head);font-size:20px">' + MONTHS[m] + '</b>' +
-      '<span class="cal-ser">Seria <b>' + str + '</b> ' + (str === 1 ? 'dzień' : 'dni') + '</span></div>' +
+      '<div class="cal cal-flat">' + (function () {
+        const rec = SI.cur > 0 && SI.cur >= SI.best, SHI = f => '<svg viewBox="0 0 24 24" width="19" height="19" fill="' + (f ? '#5A84BC' : 'none') + '" stroke="' + (f ? '#3F6597' : '#B5AFA7') + '" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>';
+        return '<div class="srbox" title="Co 10 dni nauki bez przerwy +1 dzień ochrony, co miesiąc +1 dodatkowo (max ' + SHIELD_MAX + '). Dzień bez nauki zużywa ochronę i seria trwa dalej.">' +
+          '<div><div class="srn"><b>' + SI.cur + '</b>' + (rec ? '<span class="srstar" title="rekord — Twoja najdłuższa seria">★</span>' : '') + '<span>' + (SI.cur === 1 ? 'dzień' : 'dni') + ' z rzędu</span></div>' +
+          '<div class="srsub">' + (rec ? 'Twój najlepszy wynik' : 'rekord: ' + SI.best + ' ' + (SI.best === 1 ? 'dzień' : 'dni')) + '</div></div>' +
+          '<div class="srsh"><div class="ic">' + Array.from({ length: SHIELD_MAX }, (_, i) => SHI(i < SI.shields)).join('') + '</div><small>' + SI.shields + ' ' + (SI.shields === 1 ? 'dzień' : 'dni') + ' ochrony</small></div></div>';
+      })() +
+      '<div class="row between" style="align-items:baseline"><b style="font-family:var(--head);font-size:20px">' + MONTHS[m] + '</b></div>' +
       '<div class="cal-dow"><div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>So</div><div>Nd</div></div>' +
       '<div class="cal-grid">' + cal + '</div></div></section>' +
 
@@ -3090,7 +3112,8 @@
   }
 
   /* ---------- Odznaki ---------- */
-  function maxStreak() {
+  function maxStreak() { return Math.max(streakInfo().best, maxStreakRaw()); }
+  function maxStreakRaw() {
     const ks = Object.keys(D().days).filter(k => isStudyDay(D().days[k])).sort();
     let best = 0, run = 0, prev = null;
     ks.forEach(k => {
