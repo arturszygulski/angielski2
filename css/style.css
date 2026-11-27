@@ -2003,3 +2003,5 @@ html body { background: transparent; }
 /* „Wróć” jako kółko z ikoną (upd263) */
 .btn.hb { width: 60px; height: 60px; min-height: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; flex: none; }
 .btn.hb svg { width: 24px; height: 24px; }
+/* Czasy: Mapa czasów i Ćwicz to informacja, nie przyciski — płasko z obrysem (upd268) */
+.panel.raised.grow, .panel.raised.side { background: none; box-shadow: none; border: 1.5px solid #BDB6AD; }
