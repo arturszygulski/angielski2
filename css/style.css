@@ -1912,3 +1912,4 @@ html body { background: transparent; }
 @media (max-width: 900px) { .bk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bk-row { grid-template-columns: 1fr 100px; } .bk-row .small-note { display: none; } }
 .gcirc.gok { background: linear-gradient(180deg, #7BA3D6, #43699C) !important; color: #fff; box-shadow: none; } /* kółko minut po zaliczeniu celu — niebieskie jak dzisiejsza data (upd244) */
 .sw.off .tr { background: var(--pink) !important; box-shadow: inset 2px 2px 4px rgba(140,40,75,.4) !important; } /* wyłączone/niedziałające AI i Dysk — róż jak Krok po kroku (upd245) */
+.seg-row i { border-radius: 50%; } /* kreseczki → okrągłe wklęsłe kropeczki (upd246) */

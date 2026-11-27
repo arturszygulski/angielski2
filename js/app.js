@@ -8183,7 +8183,7 @@
     const fill = bar.querySelector(':scope > div, :scope > i, :scope > span'); if (!fill || bar.children.length !== 1) return;
     const w = bar.clientWidth; if (!w) return;
     bar.__seg = true;
-    const h = bar.clientHeight || 10, segH = Math.max(7, Math.min(14, h + 4)), segW = segH >= 12 ? 10 : 8, gap = 3;
+    const h = bar.clientHeight || 10, segH = Math.max(7, Math.min(14, h + 4)) >= 12 ? 11 : 8, segW = segH, gap = 4; // okrągłe kropeczki (upd246)
     const n = Math.max(4, Math.floor((w + gap) / (segW + gap)));
     const C = colorsOf(fill);
     bar.classList.add('seg-on');
