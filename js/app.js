@@ -7220,25 +7220,29 @@
     const lvl = levels().grammar;
     const open = Object.keys(D().tenseOpen || {}).filter(t => TS_BY[t]);
     const groups = [[0, 1, 'A1–A2'], [2, 2, 'B1'], [3, 4, 'B2–C1']];
+    /* jeden ekran bez przewijania: lista czasów (po lewej), Ćwicz i Dodatki (po prawej); płaskie wiersze, aktywne małe kółka (upd270) */
+    const GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+    const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>';
+    const PL_SHORT = { 'teraźniejszy dokonany ciągły': 'dokonany ciągły' };
+    const row = T => { const st = tenseStatus(T.id), pd = st.total ? st.done / st.total * 100 : 0, pl2 = st.total ? st.learn / st.total * 100 : 0;
+      return '<div class="tz-row" data-tense="' + T.id + '" title="' + esc(T.name + ': opanowane ' + st.done + ', w nauce ' + st.learn + ', nowe ' + st.fresh) + '"><span class="tz-nm"><b>' + esc(T.name) + '</b><small>' + esc(PL_SHORT[T.pl] || T.pl) + '</small></span>' +
+        '<span class="tm-bar inset"><i class="d" style="width:' + pd + '%"></i><i class="l" style="width:' + pl2 + '%"></i></span>' +
+        '<span class="tm-acc">' + (st.acc == null ? '<span class="small-note">—</span>' : st.acc + '%') + '</span><button class="btn tz-go raised" aria-label="Lekcja: ' + esc(T.name) + '">' + GO + '</button></div>'; };
+    const MAXA = 9, ads = TENSE_ADDONS.length > MAXA + 1 ? TENSE_ADDONS.slice(0, MAXA) : TENSE_ADDONS;
     app.innerHTML =
-      '<div class="wrap">' + backHeader('Czasy', 'lekcje z osią czasu i ćwiczenia w zdaniach') +
-      '<section class="lower"><div class="panel raised grow"><div class="row between"><h2>Mapa czasów</h2><div class="legend"><span><i style="background:#5E7898"></i>opanowane</span><span><i style="background:#AEBBCB"></i>w nauce</span><span><i style="background:var(--bg-in)"></i>nowe</span><span class="small-note">% = trafność</span></div></div>' + tenseMapHtml() + '</div>' +
-      '<div class="panel raised side"><h2>Ćwicz</h2><p class="small-note" style="margin:0">' + (open.length ? 'Mieszanka czasów, które już otworzyłeś (' + open.length + '). Ich zdania wchodzą też do codziennych sesji.' : 'Otwórz lekcję, żeby jej zdania pojawiały się w codziennych sesjach.') + '</p>' +
-      '<button class="btn primary" id="tMix"' + (open.length ? '' : ' disabled') + '>Ćwicz otwarte czasy ' + K('Enter') + '</button>' +
-      '<button class="btn" id="tLevel">Ćwicz czasy z mojego poziomu (' + L[lvl] + ')</button></div></section>' +
-      '<h2 class="t-h">Czasy i formy</h2>' +
-      groups.map(g => {
-        const ts = (window.TENSES || []).filter(T => T.lvl >= g[0] && T.lvl <= g[1]);
-        return '<section class="col" style="gap:14px"><h2 style="font-size:20px">' + g[2] + '</h2><div class="tlessons t5">' +
-          ts.map(T => { const st = tenseStatus(T.id); return '<button class="btn tlesson raised" data-tense="' + T.id + '"><b>' + esc(T.name) + '</b><small>' + esc(T.pl) + '</small><span class="tl-prog"><i style="width:' + (st.total ? (st.done + st.learn * 0.5) / st.total * 100 : 0) + '%"></i></span></button>'; }).join('') +
-          '</div></section>';
-      }).join('') +
-      '<section class="col tdod" style="gap:14px"><div class="sec-h"><h2 style="font-size:20px;margin:0">Dodatki</h2><small>ćwiczenia poza lekcjami</small></div><div class="dk">' +
-      TENSE_ADDONS.map(A => '<button class="btn dkt raised" data-addon="' + A.id + '"><span class="ic2">' + addonIc(A.ic) + '</span><span><b>' + A.name + '</b><small>' + A.sub + '</small></span><span class="cnt">' + A.count() + '</span></button>').join('') +
-      '</div></section></div>';
+      '<div class="wrap tz-wrap">' + backHeader('Czasy', 'lekcje z osią czasu i ćwiczenia w zdaniach') +
+      '<div class="tz-lay"><section class="tz-box tz-list"><div class="row between"><h2>Czasy i formy</h2><div class="legend"><span><i style="background:#5E7898"></i>opanowane</span><span><i style="background:#AEBBCB"></i>w nauce</span><span><i style="background:var(--bg-in)"></i>nowe</span><span class="small-note">% = trafność</span></div></div>' +
+      '<div class="tz-grp">' + groups.map(g => '<h3>' + g[2] + '</h3>' + (window.TENSES || []).filter(T => T.lvl >= g[0] && T.lvl <= g[1]).map(row).join('')).join('') + '</div></section>' +
+      '<div class="tz-side"><section class="tz-box"><h2>Ćwicz</h2>' +
+      '<div class="tz-fr"><span class="tz-tx"><b>Ćwicz otwarte czasy</b><small>' + (open.length ? 'mieszanka czasów, które już otworzyłeś (' + open.length + ')' : 'otwórz lekcję, żeby zacząć') + '</small></span>' + (open.length ? K('Enter') : '<span></span>') + '<button class="btn tz-go pk raised" id="tMix"' + (open.length ? '' : ' disabled') + ' aria-label="Start: otwarte czasy">' + PLAY + '</button></div>' +
+      '<div class="tz-fr"><span class="tz-tx"><b>Ćwicz czasy z mojego poziomu</b><small>wszystkie czasy do ' + L[lvl] + '</small></span><span></span><button class="btn tz-go raised" id="tLevel" aria-label="Start: czasy z mojego poziomu">' + PLAY + '</button></div></section>' +
+      '<section class="tz-box tz-add"><h2>Dodatki</h2>' +
+      ads.map(A => '<div class="tz-fr tz-ad" data-addon="' + A.id + '"><span class="tz-ic">' + addonIc(A.ic) + '</span><b>' + A.name + '</b><small>' + A.count() + '</small><button class="btn tz-go raised" aria-label="Otwórz: ' + A.name + '">' + GO + '</button></div>').join('') +
+      (ads.length < TENSE_ADDONS.length ? '<div class="tz-fr tz-ad" data-addon="all"><span class="tz-ic"></span><b>Wszystkie dodatki</b><small>' + TENSE_ADDONS.length + '</small><button class="btn tz-go raised" aria-label="Wszystkie dodatki">' + GO + '</button></div>' : '') +
+      '</section></div></div></div>';
     $('#back').onclick = () => go('home');
     $$('[data-tense]').forEach(b => b.onclick = () => go('tense', b.dataset.tense));
-    $$('[data-addon]').forEach(b => b.onclick = () => go('tenses', b.dataset.addon));
+    $$('[data-addon]').forEach(b => b.onclick = () => go('tenses', b.dataset.addon === 'all' ? 'cmp' : b.dataset.addon));
     $('#tMix').onclick = () => startTenseSession(open, 'Czasy: mieszanka');
     $('#tLevel').onclick = () => startTenseSession((window.TENSES || []).filter(T => T.lvl <= lvl).map(T => T.id), 'Czasy: poziom ' + L[lvl]);
     keyHandler = e => {
