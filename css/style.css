@@ -1933,7 +1933,7 @@ html body { background: transparent; }
 .srn .srstar { color: #D96A8C; font-size: 22px; line-height: 1; transform: translateY(-18px); margin: 0 2px 0 -4px; }
 .srsub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
 .srsh { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-.srsh .ic { display: flex; gap: 2px; }
+.srsh .ic { display: flex; gap: 2px; align-items: center; }
 .srsh small { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
 /* Dzień chroniony = tarcza w kalendarzu; okienko o zużytej ochronie (upd251) */
 .cal-day.prot { position: relative; box-shadow: none !important; }
