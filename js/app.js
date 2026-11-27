@@ -1041,12 +1041,11 @@
       '<section class="lower"><div class="skills">' + tiles + '</div>' +
       '<div class="cal cal-flat">' + (function () {
         const rec = SI.cur > 0 && SI.cur >= SI.best, SHI = f => '<svg viewBox="0 0 24 24" width="' + (f ? 21 : 19) + '" height="' + (f ? 21 : 19) + '" fill="' + (f ? '#E8A33D' : 'none') + '" stroke="' + (f ? 'none' : '#B5AFA7') + '" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>';
-        return '<div class="srbox" title="Co 10 dni nauki bez przerwy +1 dzień ochrony, co miesiąc +1 dodatkowo (max ' + SHIELD_MAX + '). Dzień bez nauki zużywa ochronę i seria trwa dalej.">' +
-          '<div><div class="srn"><b>' + SI.cur + '</b>' + (rec ? '<span class="srstar" title="rekord — Twoja najdłuższa seria">★</span>' : '') + '<span>' + (SI.cur === 1 ? 'dzień' : 'dni') + ' z rzędu</span></div>' +
-          '<div class="srsub">' + (rec ? 'Twój najlepszy wynik' : 'rekord: ' + SI.best + ' ' + (SI.best === 1 ? 'dzień' : 'dni')) + '</div></div>' +
-          '<div class="srsh"><div class="ic">' + Array.from({ length: SHIELD_MAX }, (_, i) => SHI(i < SI.shields)).join('') + '</div><small>' + SI.shields + ' ' + (SI.shields === 1 ? 'dzień' : 'dni') + ' ochrony</small></div></div>';
+        return '<div class="row between cal-hd"><b style="font-family:var(--head);font-size:20px">' + MONTHS[m] + '</b>' +
+          '<div class="srC" title="Seria: ' + SI.cur + ' · rekord: ' + SI.best + ' · ' + SI.shields + ' ' + (SI.shields === 1 ? 'dzień' : 'dni') + ' ochrony. Co 10 dni nauki bez przerwy +1 dzień ochrony, co miesiąc +1 dodatkowo (max ' + SHIELD_MAX + '). Dzień bez nauki zużywa ochronę i seria trwa dalej.">' +
+          '<div class="srCn"><b' + (SI.cur > 99 ? ' class="d3"' : '') + '>' + SI.cur + (rec ? '<i title="rekord — Twoja najdłuższa seria">★</i>' : '') + '</b><span>dni<br>serii</span></div>' +
+          '<div class="srCs">' + Array.from({ length: SHIELD_MAX }, (_, i) => SHI(i < SI.shields)).join('') + '</div></div></div>';
       })() +
-      '<div class="row between" style="align-items:baseline"><b style="font-family:var(--head);font-size:20px">' + MONTHS[m] + '</b></div>' +
       '<div class="cal-dow"><div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>So</div><div>Nd</div></div>' +
       '<div class="cal-grid">' + cal + '</div></div></section>' +
 

@@ -1940,3 +1940,12 @@ html body { background: transparent; }
 .cal-day.prot svg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .cal-day.prot span { position: relative; color: #fff; font-weight: 700; font-size: 13px; }
 .sh-mod { text-align: center; } .sh-mod h2 { margin: 10px 0 6px; font-size: 24px; } .sh-mod p { margin: 4px 0; }
+/* Seria obok nazwy miesiąca (upd254) */
+.cal-hd { align-items: center !important; flex-wrap: nowrap; }
+.srC { border: 1.5px solid #BDB6AD; border-radius: 18px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: 1; margin-left: 12px; max-width: 232px; }
+.srCn { display: flex; align-items: center; }
+.srCn b { position: relative; font: 700 32px var(--head); color: #43699C; line-height: 1; }
+.srCn b.d3 { font-size: 27px; }
+.srCn b i { position: absolute; right: -12px; top: -4px; font-style: normal; font-size: 16px; color: #D96A8C; }
+.srCn span { margin-left: 14px; font-size: 12.5px; line-height: 1.15; color: var(--ink-2); }
+.srCs { display: flex; align-items: center; }
