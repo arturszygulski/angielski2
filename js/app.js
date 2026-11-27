@@ -2812,7 +2812,7 @@
   }
   /* zapis z limitem czasu — Dysk Google potrafi „zawiesić” zapis bez błędu (upd264) */
   const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('Dysk nie odpowiada od ' + Math.round(ms / 1000) + ' s — sprawdź, czy Dysk Google działa na komputerze')), ms))]);
-  async function syncNow(ask) {
+  async function syncNow(ask, fresh) {
     if (!Sync.supported) return false;
     if (syncState.busy && Date.now() - (syncState.busyAt || 0) < 40000) return false;
     let h;
@@ -2821,7 +2821,8 @@
     syncState.noHandle = false;
     syncState.busy = true; syncState.busyAt = Date.now(); syncState.phase = 'perm'; refreshSyncUI(); const tk = setInterval(refreshSyncUI, 1000);
     try {
-      const p = await withTimeout(Sync.perm(h, ask), 60000);
+      let p = 'granted';
+      if (!fresh) { try { p = await withTimeout(Sync.perm(h, ask), 10000); } catch (e) { syncState.ok = false; syncState.needsPerm = false; syncState.status = 'Przeglądarka nie odpowiada na sprawdzenie zgody do tego folderu — kliknij „Zmień folder” i wskaż go jeszcze raz (to odświeży dostęp).'; return false; } }
       syncState.phase = 'write'; refreshSyncUI();
       if (p !== 'granted') { syncState.ok = false; syncState.status = 'Brak zgody na zapis w folderze kopii.'; syncState.needsPerm = true; return false; }
       await withTimeout(Sync.write(h), 25000);
@@ -2882,7 +2883,7 @@
     catch (e) { if (e && e.name !== 'AbortError') toast('Nie udało się wybrać folderu: ' + e.message); return; }
     syncState.needsPerm = false;
     const offered = await checkRemote(h, !!loadOnly);
-    if (!offered && !loadOnly) await syncNow(false);
+    if (!offered && !loadOnly) { const ok = await syncNow(false, true); toast(ok ? 'Folder podłączony — kopia zapisana.' : 'Folder wybrany, ale zapis się nie udał: ' + (syncState.status || ''), 8000); }
     if (screen === 'settings') renderSettings();
   }
   async function syncStartup() {
