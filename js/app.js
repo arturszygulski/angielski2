@@ -3053,7 +3053,7 @@
     return best == null ? 12 : Math.min(12, best);
   }
   function idleArc(n, size) {
-    const r = size / 2 - 2, C = 2 * Math.PI * r, col = n <= 3 ? '#6FAE7E' : n <= 6 ? '#E2C25A' : n <= 9 ? '#E0904A' : '#D0564A', h = size / 2;
+    const r = size / 2 - 2, C = 2 * Math.PI * r, col = n <= 3 ? '#6FAE7E' : n <= 6 ? '#E2C25A' : n <= 9 ? '#E0904A' : '#D96A8C', h = size / 2;
     return '<svg class="idle-arc" width="' + size + '" height="' + size + '" viewBox="' + (-h) + ' ' + (-h) + ' ' + size + ' ' + size + '" aria-hidden="true"><circle r="' + r + '" fill="none" stroke="rgba(120,110,100,.14)" stroke-width="3"/>' +
       (n ? '<circle r="' + r + '" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round" stroke-dasharray="' + (C * n / 12).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90)"/>' : '') + '</svg>';
   }
