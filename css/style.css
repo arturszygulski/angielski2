@@ -1913,3 +1913,11 @@ html body { background: transparent; }
 .gcirc.gok { background: linear-gradient(180deg, #7BA3D6, #43699C) !important; color: #fff; box-shadow: none; } /* kółko minut po zaliczeniu celu — niebieskie jak dzisiejsza data (upd244) */
 .sw.off .tr { background: var(--pink) !important; box-shadow: inset 2px 2px 4px rgba(140,40,75,.4) !important; } /* wyłączone/niedziałające AI i Dysk — róż jak Krok po kroku (upd245) */
 .seg-row i { border-radius: 50%; } /* kreseczki → okrągłe wklęsłe kropeczki (upd246) */
+/* Pola liczbowe: bez systemowych przycisków, własne strzałki (upd247) */
+.s3-numw { position: relative; display: inline-flex; align-items: center; }
+.s3-numw input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-right: 28px !important; }
+.s3-numw input[type=number]::-webkit-inner-spin-button, .s3-numw input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.s3-spin { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 1px; }
+.s3-spin button { border: 0; background: none; padding: 2px 3px; cursor: pointer; color: var(--ink-3); line-height: 0; border-radius: 4px; }
+.s3-spin button:hover { color: var(--ink); }
+.s3-spin button:active { transform: scale(.9); }

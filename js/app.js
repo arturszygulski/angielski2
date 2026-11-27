@@ -2748,7 +2748,9 @@
     };
     const cb = (id, on, label, extra) => '<label class="check s3-cb"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + label + '</label>' + (extra || '');
     const row = (lbl, ctl, forId) => '<div class="s3-r"><label' + (forId ? ' for="' + forId + '"' : '') + '>' + lbl + '</label>' + ctl + '</div>';
-    const numIn = (id, v, min, max) => '<input id="' + id + '" class="txt num s3-num" type="number" min="' + min + '" max="' + max + '" value="' + v + '">';
+    const CHV = d => '<svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+    /* pole liczbowe z własnymi strzałkami (bez systemowych prostokątnych przycisków) (upd247) */
+    const numIn = (id, v, min, max) => '<span class="s3-numw"><input id="' + id + '" class="txt num s3-num" type="number" min="' + min + '" max="' + max + '" value="' + v + '"><span class="s3-spin"><button type="button" tabindex="-1" data-spin="' + id + ':1" aria-label="więcej">' + CHV('M2 6l4-4 4 4') + '</button><button type="button" tabindex="-1" data-spin="' + id + ':-1" aria-label="mniej">' + CHV('M2 2l4 4 4-4') + '</button></span></span>';
     const gameCb = (key, label, title, disabled) => '<label class="check s3-cb"' + (title ? ' title="' + esc(title) + '"' : '') + '><input type="checkbox" data-game="' + key + '"' + (games[key] !== false && !disabled ? ' checked' : '') + (disabled ? ' disabled' : '') + '> ' + label + '</label>';
     app.innerHTML =
       '<div class="wrap s3-wrap">' +
@@ -2840,6 +2842,7 @@
     $$('[data-game]').forEach(cb => cb.onchange = () => { st.games = Object.assign({}, st.games, { [cb.dataset.game]: cb.checked }); save(); });
     $('#name').oninput = e => { d.profile.name = e.target.value.trim(); save(); };
     const num = (id, key, min, max) => { $('#' + id).onchange = e => { let v = Math.round(+e.target.value); if (!isFinite(v)) v = st[key]; v = Math.min(max, Math.max(min, v)); st[key] = v; e.target.value = v; save(); }; };
+    $$('[data-spin]').forEach(b => b.onclick = () => { const [id, d] = b.dataset.spin.split(':'), inp = $('#' + id); if (!inp) return; d > 0 ? inp.stepUp() : inp.stepDown(); inp.dispatchEvent(new Event('change')); });
     num('newPerDay', 'newPerDay', 0, 40); num('newExtraPerDay', 'newExtraPerDay', 0, 30); num('goalMin', 'goalMin', 5, 120); num('blockMin', 'blockMin', 2, 20); num('slowSec', 'slowSec', 5, 120);
     $('#voice').onchange = e => { st.voiceURI = e.target.value; save(); Speech.speak('Practice a little English every day.'); };
     on('#testVoice', () => Speech.speak('Practice a little English every day.'));
