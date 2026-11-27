@@ -2798,9 +2798,11 @@
     if (!Sync.supported) { label = 'Dysk — nieobsługiwany'; title = 'Ta przeglądarka nie zapisuje do folderu — użyj Chrome albo Edge.'; }
     else if (!st.syncFolder) { label = 'Dysk niepodłączony'; title = 'Kliknij, aby wybrać folder kopii na Dysku Google.'; }
     else if (syncState.needsPerm) { label = 'Połącz z Dyskiem'; title = 'Przeglądarka potrzebuje Twojej zgody na zapis w folderze kopii.'; }
-    else if (syncState.busy) { ok = true; label = 'Dysk — zapisuję…'; title = ''; }
+    else if (syncState.busy) { label = 'Dysk — zapisuję…'; title = 'Zapis trwa — zielony będzie dopiero po udanym zapisie.'; }
     else if (!syncState.ok) { label = 'Dysk — błąd'; title = syncState.status || 'Ostatni zapis się nie udał.'; }
-    else { ok = true; label = 'Dysk Google'; title = 'Synchronizacja działa · folder: ' + st.syncFolder + (D().lastSync ? ' · ostatni zapis: ' + fmtTime(D().lastSync) : ''); }
+    else if (!syncState.okAt) { label = 'Dysk — nie sprawdzono'; title = 'W tym uruchomieniu nie było jeszcze udanego zapisu' + (D().lastSync ? ' · ostatni zapis: ' + fmtTime(D().lastSync) : '') + '.'; }
+    else if (!D().lastSync || Date.now() - D().lastSync > 26 * 3600 * 1000) { label = 'Dysk — dawno bez zapisu'; title = 'Ostatni zapis: ' + (D().lastSync ? fmtTime(D().lastSync) : 'nigdy') + '.'; }
+    else { ok = true; label = 'Dysk Google'; title = 'Synchronizacja działa · folder: ' + st.syncFolder + ' · ostatni zapis: ' + fmtTime(D().lastSync); }
     return '<button class="sw ' + (ok ? 'on' : 'off') + '" id="syncChip" title="' + esc(label + (title ? ' — ' + title : '')) + '"><span class="tr"></span>Dysk Google</button>';
   }
   function bindSyncChip() { const b = document.getElementById('syncChip'); if (b) b.onclick = () => syncState.needsPerm ? connectSync() : go('settings'); }
@@ -2826,7 +2828,7 @@
       syncState.phase = 'write'; refreshSyncUI();
       if (p !== 'granted') { syncState.ok = false; syncState.status = 'Brak zgody na zapis w folderze kopii.'; syncState.needsPerm = true; return false; }
       await withTimeout(Sync.write(h), 25000);
-      syncState.ok = true; syncState.needsPerm = false; syncState.status = 'Zapisano na Dysku Google · ' + fmtTime(Date.now());
+      syncState.ok = true; syncState.okAt = Date.now(); syncState.needsPerm = false; syncState.status = 'Zapisano na Dysku Google · ' + fmtTime(Date.now());
       return true;
     } catch (e) {
       syncState.ok = false; syncState.status = 'Nie udało się zapisać kopii (' + (e && e.message ? e.message : 'błąd') + ').';
