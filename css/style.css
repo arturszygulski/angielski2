@@ -2073,3 +2073,4 @@ html body { background: transparent; }
 .fs-bt .btn.sel { box-shadow: none !important; border: 2px solid #67625C; font-weight: 700; opacity: 1; }
 .fs-note { display: block; font-size: 12px; opacity: .8; margin-top: 2px; }
 .nav-tile .nt-n { display: block; font-style: normal; font: 700 12px var(--head); color: var(--pink-ink); margin-top: 2px; }
+.tr-learn > div { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: start; } .tr-lbtn { white-space: nowrap; } .tr-lok { white-space: nowrap; padding-top: 4px; }

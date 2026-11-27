@@ -5570,10 +5570,11 @@
         const KIC = { grammar: '⏱', word: '📈', usage: '🔗' };
         html += '<section class="tr-f tr-card"><div class="tr-sent tr-small" lang="en">' + sentHtml(false) + '</div>' +
           '<div class="fb ' + v[0] + '" role="status">' + v[1] + '<span><b>' + v[2] + (f.verdict === 'self' ? '' : ' — ') + '</b>' + (f.verdict === 'self' ? '' : qaFmt(f.headline)) + '</span></div>' +
-          (f.verdict === 'self' && d.self == null ? '<div class="tr-self">Zrozumiałeś to tak samo? <button class="btn small" data-trself="1">Tak ' + K('1') + '</button><button class="btn small" data-trself="0">Nie całkiem ' + K('2') + '</button></div>' : '') +
+          (f.verdict === 'self' && d.self == null ? '<div class="tr-self" title="Twoja samoocena — „Tak” liczy się jako dobre zdanie w podsumowaniu tekstu">Czy w głowie przetłumaczyłeś to tak samo jak niżej? <button class="btn small" data-trself="1">Tak ' + K('1') + '</button><button class="btn small" data-trself="0">Nie całkiem ' + K('2') + '</button></div>' : '') +
           '<div class="tr-cmp">' + (TR.lastAns ? '<span>Twoje</span><div>' + esc(TR.lastAns) + '</div>' : '') + '<span>' + (TR.lastAns ? 'Lepiej' : 'Tłumaczenie') + '</span><div class="tr-better">' + esc(f.better) + '</div></div>' +
           '<div class="row between"><b class="tr-h3">Komentarz</b>' + aiTag(f.m) + '</div><div class="tr-aic">' + qaFmt(f.comment) + '</div>' +
-          (f.learn && f.learn.length ? '<div class="tr-learn"><b class="tr-h3">Warto zapamiętać</b>' + f.learn.map(l => '<div><span>' + (KIC[l.kind] || '•') + '</span><span>' + qaFmt(l.text) + '</span></div>').join('') + '</div>' : '') +
+          (f.learn && f.learn.length ? '<div class="tr-learn"><b class="tr-h3">Warto zapamiętać</b>' + f.learn.map((l, li) => '<div><span>' + (KIC[l.kind] || '•') + '</span><span>' + qaFmt(l.text) + '</span>' +
+            (l.added ? '<span class="small-note tr-lok">✓ w Moich błędach</span>' : '<button class="btn small tr-lbtn" data-trlearn="' + li + '">Do nauki' + (li === f.learn.findIndex(x => !x.added) ? ' ' + K('L') : '') + '</button>') + '</div>').join('') + '</div>' : '') +
           (f.words && f.words.length ? '<div><b class="tr-h3">Słowa z tego zdania</b>' + f.words.map((w, k) => '<div class="tr-wrow"><i class="' + (w.kind === 'red' ? 'r' : w.kind === 'yellow' ? 'y' : 'm') + '"></i><span><b lang="en">' + esc(w.phrase || w.surface) + '</b> — ' + esc(w.pl) + (w.note ? ' <span class="small-note">· ' + qaFmt(w.note) + '</span>' : '') + '</span>' +
             (w.added ? '<span class="small-note">✓ dodane do nauki</span>' : w.known ? '<span class="small-note">znasz</span>' : '<span class="row" style="gap:8px"><button class="btn small" data-trwk="' + k + '">Znam</button><button class="btn small primary" data-trwa="' + k + '">Do nauki</button></span>') + '</div>').join('') + '</div>' : '') +
           (TR.qa.length ? '<div class="tr-qa">' + TR.qa.map(q => '<div class="tr-q">' + esc(q.q) + '</div><div class="tr-a">' + (q.a ? qaFmt(q.a) : '<span class="spinner"></span>') + '</div>').join('') + '</div>' : '') +
@@ -5684,6 +5685,19 @@
     tr.pos++; TR.marks = {}; TR.ans = ''; TR.think = ''; TR.fb = null; TR.err = ''; TR.banner = false; TR.view = tr.pos >= tr.list.length ? 'done' : 'sent';
     Store.save(); renderTrx();
   }
+  /* „Warto zapamiętać” → lekcja w Moje błędy → Do nauki (upd278) */
+  function trLearnAdd(T, li) {
+    const l = TR.fb && TR.fb.learn && TR.fb.learn[li]; if (!l || l.added) return;
+    const tr = trData(T), si = tr.list[tr.pos], sn = T.sents[si];
+    let ph = String(l.phrase || '').trim(); if (!ph) { const m = /\*\*([^*]+)\*\*/.exec(l.text || ''); ph = m ? m[1].trim() : ''; }
+    if (!ph) ph = (l.text || '').replace(/\*/g, '').split(/[—:;.]/)[0].slice(0, 40).trim();
+    const S0 = stubs(), k = 'lrn:' + ph.toLowerCase();
+    const x = S0[k] || (S0[k] = { wrong: '', right: ph, rule: '', n: 1, days: [], src: [] });
+    x.rule = (l.text || '').replace(/\s+/g, ' ').trim(); x.mine = 1; x.fromLearn = 1; x.state = 'active'; x.days = []; x.since = x.since || Date.now(); delete x.doneAt;
+    if (sn && !x.src.some(q => q.en === sn.t)) x.src.push({ pl: (TR.fb && TR.fb.better) || '', en: sn.t });
+    l.added = true; Store.save(); stubPrepare(k); renderTrx();
+    toast('Dodane do „Moje błędy → Do nauki”: ' + ph + '.');
+  }
   function trMic(id, lang) {
     if (TR.mic) { Recog.stop(); return; }
     const el = document.getElementById(id); if (!el) return;
@@ -5712,6 +5726,7 @@
     on('#trCheck', () => trCheck(T, false));
     on('#trHead', () => trCheck(T, true));
     on('#trDupNext', () => { const si = tr.list[tr.pos], k = trNorm(T.sents[si].t), j = Object.keys(tr.done).map(Number).find(x => tr.done[x].v === 'ok' && trNorm(T.sents[x].t) === k); if (j != null) tr.done[si] = Object.assign({}, tr.done[j], { at: Date.now(), back: true }); trNext(T); });
+    $$('[data-trlearn]').forEach(b => b.onclick = () => trLearnAdd(T, +b.dataset.trlearn));
     $$('[data-trself]').forEach(b => b.onclick = () => { const d = tr.done[tr.list[tr.pos]]; d.self = b.dataset.trself === '1'; Store.save(); renderTrx(); });
     $$('[data-trwa]').forEach(b => b.onclick = () => { const w = TR.fb.words[+b.dataset.trwa]; trAddWord(T, tr.list[tr.pos], w); w.added = true; progress(); Store.save(); renderTrx(); });
     $$('[data-trwk]').forEach(b => b.onclick = () => { TR.fb.words[+b.dataset.trwk].known = true; renderTrx(); });
@@ -5775,6 +5790,7 @@
         if (document.activeElement && document.activeElement.id === 'trAsk') return;
         if (e.key === 'Enter') { e.preventDefault(); trNext(T); return; }
         if (altKey(e, 'KeyE')) { e.preventDefault(); $('#trMore').click(); return; }
+        if (!inField && plainKey(e, 'KeyL') && TR.fb && TR.fb.learn) { const li = TR.fb.learn.findIndex(x => !x.added); if (li >= 0) { e.preventDefault(); trLearnAdd(T, li); return; } }
         if (!inField && (e.key === '1' || e.key === '2') && $('[data-trself="1"]')) { e.preventDefault(); $('[data-trself="' + (e.key === '1' ? '1' : '0') + '"]').click(); }
         return;
       }

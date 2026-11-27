@@ -366,12 +366,13 @@ window.AI = (function () {
       'WAŻNE: oceniasz WYŁĄCZNIE tłumaczenie ZDANIA — dokładnie tego fragmentu, który uczeń widział. Poprzednie i następne zdanie są tylko dla zrozumienia sensu. Jeśli ZDANIE jest urywkiem (np. wers piosenki bez interpunkcji, a myśl kończy się w następnym zdaniu), nie wymagaj tłumaczenia tego, czego w nim nie ma, i nie obniżaj za to oceny — najwyżej w komentarzu krótko powiedz, jak łączy się z następnym. "better" tłumaczy tylko ZDANIE. Punkty "learn" muszą być prawdziwe i konkretne — bez ogólników i bez wymyślonych reguł.\n\n' +
       'Zwróć:\n"verdict": "ok" (sens oddany, drobiazgi), "almost" (sens częściowo), "wrong" (sens nie oddany)' + (o.translation ? '' : ' — tu zawsze "self"') + ';\n' +
       '"headline": jedno krótkie zdanie werdyktu po polsku;\n"better": naturalne polskie tłumaczenie całego zdania;\n' +
-      '"comment": 2–4 zdania po polsku: odnieś się do tłumaczenia ucznia i — jeśli coś napisał — do jego toku myślenia (co dobrze zgadł, gdzie się pomylił i dlaczego, odpowiedz na jego pytania);\n' +
-      '"learn": 1–3 krótkie punkty „warto zapamiętać” z TEGO zdania: czas/konstrukcja gramatyczna, kolokacja, fałszywy przyjaciel, rzadkie lub częste słowo, różne tłumaczenia słowa (każdy punkt: "kind" jeden z "grammar","word","usage" i "text");\n' +
+      (o.translation ? '"comment": 2–4 zdania po polsku: odnieś się do tłumaczenia ucznia i — jeśli coś napisał — do jego toku myślenia (co dobrze zgadł, gdzie się pomylił i dlaczego, odpowiedz na jego pytania);\n'
+        : '"comment": 2–3 zdania po polsku: wyjaśnij sens zdania i jego trudniejsze miejsca (bez wspominania, że brak tłumaczenia ucznia — on tłumaczył w głowie i sam to oceni)' + (o.think ? '; odnieś się też do tego, jak uczeń to zrozumiał' : '') + ';\n') +
+      '"learn": 1–3 krótkie punkty „warto zapamiętać” z TEGO zdania: czas/konstrukcja gramatyczna, kolokacja, fałszywy przyjaciel, rzadkie lub częste słowo, różne tłumaczenia słowa (każdy punkt: "kind" jeden z "grammar","word","usage", "text" i "phrase" — sam angielski zwrot/konstrukcja do nauki, najwyżej 5 słów, np. "road map", "see what … are");\n' +
       '"words": słowa/zwroty do nauki: wszystkie NIEZNANE i „domyślam się” oraz te, które uczeń wyraźnie przetłumaczył źle mimo braku zaznaczenia. Dla każdego: "surface" — dokładnie ten fragment, jak stoi w zdaniu; "phrase" — forma słownikowa albo cały zwrot (np. "be capable of" zamiast "capable"); "pl" — znaczenie w tym zdaniu; "kind": "red", "yellow" albo "missed"; "note" — krótka uwaga (np. „częste, B1”, „dobrze się domyśliłeś”, „przetłumaczyłeś jako …”).';
     const j = await callJSON(system, user + fmtJ('comment, learn.text, headline'), 1200, 40000, { type: 'object', required: ['verdict', 'headline', 'better', 'comment', 'learn', 'words'], properties: {
       verdict: { type: 'string', enum: ['ok', 'almost', 'wrong', 'self'] }, headline: STR, better: STR, comment: STR,
-      learn: { type: 'array', items: { type: 'object', required: ['kind', 'text'], properties: { kind: STR, text: STR } } },
+      learn: { type: 'array', items: { type: 'object', required: ['kind', 'text'], properties: { kind: STR, text: STR, phrase: STR } } },
       words: { type: 'array', items: { type: 'object', required: ['surface', 'phrase', 'pl', 'kind'], properties: { surface: STR, phrase: STR, pl: STR, kind: STR, note: STR } } } } });
     return j;
   }
@@ -514,7 +515,7 @@ window.AI = (function () {
   /* uparty błąd: krótka zasada + 6 zdań PL→EN z poprawnym zwrotem (upd224) */
   async function stubDrill(wrong, right, examples) {
     const system = 'Jesteś nauczycielem angielskiego dla dorosłego Polaka (poziom A2–B1). Odpowiadasz wyłącznie przez narzędzie.';
-    const user = 'Artur uparcie robi ten sam błąd: pisze "' + wrong + '" zamiast "' + right + '".' + (examples && examples.length ? '\nPrzykłady zdań, w których się pomylił: ' + examples.map(e => '"' + e + '"').join('; ') : '') +
+    const user = (wrong ? 'Artur uparcie robi ten sam błąd: pisze "' + wrong + '" zamiast "' + right + '".' : 'Artur chce opanować i umieć użyć zwrot/konstrukcję: "' + right + '".') + (examples && examples.length ? '\nPrzykłady zdań, w których się pomylił: ' + examples.map(e => '"' + e + '"').join('; ') : '') +
       '\n\n1) rule: JEDNO krótkie zdanie po polsku — zasada, kiedy mówi się "' + right + '" (np. „w szkole” jako na lekcjach = at school, jak at work, at home). Jeśli to tylko literówka — podaj, jak zapamiętać pisownię.' +
       '\n2) items: 6 krótkich, codziennych zdań (5–9 słów), każde z innym kontekstem, w których poprawna wersja zawiera "' + right + '". Pole pl — naturalne, poprawne polskie zdanie; pole en — poprawne angielskie tłumaczenie. Nie używaj przykładów Artura dosłownie.';
     const j = await callJSON(system, user, 900, 30000, { type: 'object', required: ['rule', 'items'], properties: { rule: STR, items: { type: 'array', items: { type: 'object', required: ['pl', 'en'], properties: { pl: STR, en: STR } } } } });
