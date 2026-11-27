@@ -1074,7 +1074,7 @@
       navTile('words', IC.book, 'Moje słówka', 'dodaj własne słowa', 'M') +
       navTile('talk', IC.chat, 'Rozmowa', 'scenki z AI — mów i dogadaj się', 'R') +
       navTile('listen', IC.headphones, 'Audycja', 'minuta słuchania i 4 pytania', 'A') +
-      navTile('mistakes', IC.list, 'Dziennik błędów', 'co sprawia trudność', 'D', 'tint') +
+      navTile('mistakes', IC.list, 'Moje błędy' + (function () { const S0 = stubs(), n = Object.keys(S0).filter(q => S0[q].state === 'active').length; return n ? '<em class="nt-n">' + n + ' do nauki</em>' : ''; })(), 'Twoje błędy jako lekcje do nauki', 'D', 'tint') +
       '</nav>' +
 
       '<section class="lower"><div class="skills">' + tiles + '</div>' +
@@ -1813,7 +1813,8 @@
     on('#reMic', retrySpeak);
     on('#topicBtn', () => openTopic(it));
     on('#hardBtn', () => hardAsk(c));
-    on('#sideP', () => sideProblem(c));
+    $$('[data-slearn]').forEach(b => b.onclick = () => sideMark(+b.dataset.slearn, 'learn', it));
+    $$('[data-styp]').forEach(b => b.onclick = () => sideMark(+b.dataset.styp, 'typo', it));
     const keepAnswer = () => { if (inp && !inp.disabled) S.answer = inp.value; };
     const toggleUnsure = () => { keepAnswer(); S.unsure = !S.unsure; renderExercise(); };
     if (ph === 'answer') {
@@ -1912,7 +1913,7 @@
         if ((plainKey(e, 'KeyM') || altKey(e, 'KeyM')) && $('#reMic')) { e.preventDefault(); retrySpeak(); return; }
         if (plainKey(e, 'KeyR') && !S.ygOpen && AI.enabled() && !it.topic && !S.topicId) { e.preventDefault(); openTopic(it); return; }
         if (plainKey(e, 'KeyT') && $('#hardBtn')) { e.preventDefault(); hardAsk(c); return; }
-        if (plainKey(e, 'KeyP') && $('#sideP')) { e.preventDefault(); sideProblem(c); return; }
+        if (plainKey(e, 'KeyL') && S.fb && S.fb.side && S.fb.side.length) { const sel = S.fb.sideSel || {}, i = S.fb.side.findIndex((_, j) => !sel[j]); if (i >= 0) { e.preventDefault(); sideMark(i, 'learn', curView(c)); return; } }
         if (plainKey(e, 'KeyH') && $('#hkBtn')) { e.preventDefault(); $('#hkBtn').click(); return; }
         if ((altKey(e, 'KeyU') || plainKey(e, 'KeyU') || (e.key === 'Enter' && e.altKey)) && $('#known')) { e.preventDefault(); markKnown(); return; }
         if (plainKey(e, 'KeyE') && $('#exBtn') && S.exToggle) { e.preventDefault(); S.exToggle(); return; }
@@ -2189,7 +2190,8 @@
           if (!guard()) return;
         } else m = listenScore(full, ans) >= 0.8 ? 'typo' : 'wrong';
       }
-      return applyOutcome(c, it, m, elapsed, { ans, expl, aiErr, better, wordOk: lw && wordOk && side.length && m !== 'ai-ok' ? lw : '', side: m !== 'ai-ok' ? side : [] });
+      const wOk = lw && wordOk && side.length && m !== 'ai-ok';
+      return applyOutcome(c, it, m, elapsed, { ans, expl, aiErr, better, wordOk: wOk && m !== 'wrong' ? lw : '', wordKeep: wOk && m === 'wrong' ? lw : '', side: m !== 'ai-ok' ? side : [] });
     }
 
     if (it.type === 'dictation') {
@@ -2310,7 +2312,7 @@
       S.combo = 0;
       if (!S.finishing) S.queue.splice(Math.min(S.queue.length, S.pos + 4), 0, { id: c.id, isNew: false, relearn: true });
     }
-    const wsc = isFirst ? (extra.wordOk ? scaleUpdate(it, 'ok', true) : scaleUpdate(it, kind, correct)) : null; // słowo dobre, błędy poza nim nie zabierają kropek (upd257)
+    const wsc = isFirst && !extra.wordKeep ? (extra.wordOk ? scaleUpdate(it, 'ok', true) : scaleUpdate(it, kind, correct)) : null; // zdanie złe, słowo dobre → słowo bez zmian (upd275) // słowo dobre, błędy poza nim nie zabierają kropek (upd257)
     if (wsc) extra = Object.assign({}, extra, { wsc }, wsc.d > 0 && wsc.lv === 5 ? { stepMsg: '' } : {});
     progress(); Store.save();
     const fill = it.type === 'cloze' && m === 'ai-ok' ? (extra.ans || '').trim() : (it.type === 'cloze' || it.type === 'choice') ? it.w.answers[0] : '';
@@ -2398,9 +2400,12 @@
       if (fb.expl && fb.kind !== 'bad') smalls.push(ai(fb.expl));
       if (fb.kind === 'typo' && !fb.expl && fb.aiErr) smalls.push(esc(fb.aiErr) + ' Oceniam po podobieństwie do wzoru.');
       if (fb.m === 'ai-ok' || fb.kind === 'typo') smalls.push('Wzorcowo: ' + esc(fullSentence(it)));
-      if (fb.wordOk && fb.side && fb.side.length) smalls.push('<span class="fb-split"><span class="fs-ok"><b>✓ Słowo „' + esc(fb.wordOk) + '” — dobrze</b>Liczę do słowa — kropka i koszyk jak przy dobrej odpowiedzi.</span>' +
-        '<span class="fs-side"><b>Do poprawy poza słowem</b>' + fb.side.map(x => '<span class="fs-row"><s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>' + (x.why ? ' <i>— ' + esc(x.why) + '</i>' : '') + '</span>').join('') +
-        (AI.enabled() ? '<button class="btn small" id="sideP">Ćwicz „' + esc(fb.side[0].right) + '” — mój problem ' + K('P') + '</button>' : '') + '</span></span>');
+      if ((fb.wordOk || fb.wordKeep) && fb.side && fb.side.length) { const sel = fb.sideSel || {}, firstOpen = fb.side.findIndex((_, i) => !sel[i]);
+        smalls.push('<span class="fb-split"><span class="fs-ok"><b>✓ Słowo „' + esc(fb.wordOk || fb.wordKeep) + '” — dobrze</b>' + (fb.wordKeep ? 'Zdanie złe → słowo bez zmian (bez kropki, bez kary).' : 'Liczę do słowa — kropka i koszyk jak przy dobrej odpowiedzi.') + '</span>' +
+        '<span class="fs-side"><b>Do poprawy poza słowem</b>' + fb.side.map((x, i) => '<span class="fs-row"><span><s>' + esc(x.wrong) + '</s> → <b>' + esc(x.right) + '</b>' + (x.why ? '<i>' + esc(x.why) + '</i>' : '') + '</span><span class="fs-bt">' +
+          '<button class="btn small' + (sel[i] === 'learn' ? ' sel' : ' pk') + '" data-slearn="' + i + '"' + (sel[i] ? ' disabled' : '') + '>' + (sel[i] === 'learn' ? 'Dodane do nauki ✓' : 'Ucz mnie tego' + (i === firstOpen ? ' ' + K('L') : '')) + '</button>' +
+          (sel[i] === 'learn' ? '' : '<button class="btn small' + (sel[i] === 'typo' ? ' sel' : '') + '" data-styp="' + i + '"' + (sel[i] ? ' disabled' : '') + '>Literówka</button>') + '</span></span>').join('') +
+          '<small class="fs-note">Wybrane trafi do „Moje błędy → Do nauki”. Bez wyboru — nic się nie dzieje.</small></span></span>'); }
     } else if (it.type === 'speak') {
       if (fb.kind === 'bad') main = fb.hasTarget ? 'Słowo było dobre, ale zdanie niepełne.' : 'Nie usłyszałem słowa <b>' + esc(it.w.answers[0]) + '</b>.';
       else if (fb.kind === 'typo') { main = esc(it.w.answers[0]) + xp; smalls.push('Słowo dobre, ale nie całe zdanie się zgadza — przekreślone usłyszałem inaczej, zaznaczonych brakuje. Powiedz jeszcze raz (M), aż się zgodzi.'); }
@@ -2415,7 +2420,7 @@
     if (fb.stubMsg) smalls.push('<span class="ub-msg">' + fb.stubMsg + '</span>');
     if (fb.kind === 'uns' && fb.isFirst) smalls.push('Wróci za 1–2 dni, żeby się utrwaliło.');
     if (fb.slow) smalls.push((fb.hinted ? 'Z podpowiedzią' : 'Długo to trwało') + ' — wróci trochę wcześniej.');
-    if (fb.wordOk && fb.side && fb.side.length) smalls.push('Błędy poza słowem nie zabierają mu kropek — śledzę je osobno (3 razy ten sam = karta „Uparty błąd”).');
+    if ((fb.wordOk || fb.wordKeep) && fb.side && fb.side.length) { /* informacja w polu z błędami */ }
     else if ((it.type === 'cloze' || it.type === 'translate' || it.type === 'tense_w' || it.type === 'tense_t') && fb.kind === 'typo') smalls.push('Liczę jako trafienie, ale wróci trochę wcześniej.');
     return '<div class="fb ' + cls + '" role="status">' + icon + '<span><b>' + title + '</b> ' + main + smalls.map(s => '<small>' + s + '</small>').join('') + '</span></div>';
   }
@@ -2461,6 +2466,21 @@
   }
   /* „Trudne” z opisem problemu (upd256): co dokładnie trudne → AI: zasada + 5 zdań pod ten problem; problem śledzony jak uparty błąd */
   const HARD_CATS = ['nie pamiętam słowa', 'przyimek (to / at / in…)', 'szyk zdania', 'czas', 'wymowa'];
+  /* błąd poza słowem: „Ucz mnie tego” → lekcja w Moje błędy (AI: zasada + zdania); „Literówka” → nie liczę (upd275) */
+  function sideMark(i, how, it) {
+    const fb = S && S.fb; if (!fb || !fb.side || !fb.side[i]) return;
+    const sel = fb.sideSel = fb.sideSel || {}; if (sel[i]) return;
+    sel[i] = how;
+    const sd = fb.side[i], c0 = { wrong: stubTok(sd.wrong).join(' '), right: stubTok(sd.right).join(' '), rule: sd.why || '' };
+    const S0 = stubs(), k = c0.wrong + '>' + c0.right;
+    if (how === 'typo') { const x = S0[k]; if (x && x.state === 'watch' && x.n > 0) x.n--; Store.save(); renderExercise(); return; }
+    let en = ''; try { en = fullSentence(it); } catch (e) { }
+    const x = S0[k] || (S0[k] = { wrong: c0.wrong, right: c0.right, rule: c0.rule, n: 1, days: [], src: [] });
+    if (en && !x.src.some(q => q.en === en)) x.src.push({ pl: it.pl || '', en });
+    x.state = 'active'; x.days = []; x.since = x.since || Date.now(); x.mine = 1; x.fromErr = 1; if (!x.rule) x.rule = c0.rule; delete x.doneAt;
+    Store.save(); stubPrepare(k); renderExercise();
+    toast('Dodane do „Moje błędy → Do nauki”: ' + c0.right + '.');
+  }
   function sideProblem(c) {
     const sd = S && S.fb && S.fb.side; if (!sd || !sd.length) return;
     hardAsk(c, { cats: [/^(in|at|on|to|for|of|from|with|by|into|onto|about)$/.test(stubTok(sd[0].right).join(' ')) || /^(in|at|on|to|for|of|from|with|by)\b/.test(sd[0].right) ? 1 : -1].filter(i => i >= 0),
@@ -4173,7 +4193,7 @@
     return !(c && c.last > m.at && U.dayKey(c.last) !== day && (c.ivl || 0) > 1 && c.state !== 'known') && !(c && c.state === 'known');
   }
   const MZ_SPECIFIC = /^(Mylisz|Gramatyka|Czasy|Phrasal)/;
-  let mzTab = 'pat', mzRange = 30, mzOpenCat = null;
+  let mzTab = 'learn', mzRange = 30, mzOpenCat = null;
   function mzGroups(days, offset) {
     const now = Date.now(), from = now - (days + offset) * U.DAY, to = now - offset * U.DAY, g = {};
     (D().mistakes || []).forEach(m => {
@@ -4225,8 +4245,17 @@
     const tab = (id, label) => '<button class="btn' + (mzTab === id ? ' on' : '') + '" role="tab" aria-selected="' + (mzTab === id) + '" data-mztab="' + id + '">' + label + '</button>';
     const rng = (d, label) => '<button class="btn' + (mzRange === d ? ' on' : '') + '" data-mzr="' + d + '">' + label + '</button>';
     let body = '';
-    if (mzTab === 'pat') {
-      body = stubListHtml() + (!cur.length
+    const S0 = stubs(), learnK = Object.keys(S0).filter(q => S0[q].state === 'active').sort((a, b) => (S0[b].since || 0) - (S0[a].since || 0)), doneK = Object.keys(S0).filter(q => S0[q].state === 'done').sort((a, b) => (S0[b].doneAt || 0) - (S0[a].doneAt || 0));
+    const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>';
+    const lrow = (q, done) => { const x = S0[q], nS = (x.sents && x.sents.length) || x.src.length || 0, dl = done ? STUB_DAYS : x.days.length;
+      return '<div class="ml-row"><span class="ml-tx"><b>' + (x.wrong && !x.mine ? '<s>' + esc(x.wrong) + '</s> → ' : '') + esc(x.right) + '</b><small>' + (x.rule ? qaFmt(x.rule) + ' · ' : '') + nS + ' zdań · ' + (done ? 'opanowane ' + new Date(x.doneAt || Date.now()).toLocaleDateString('pl-PL') : 'od ' + new Date(x.since || x.at || Date.now()).toLocaleDateString('pl-PL')) + '</small></span>' +
+        '<span class="ub-dots">' + [0, 1, 2, 3].map(i => '<i' + (i < dl ? ' class="ok"' : '') + '></i>').join('') + '</span>' +
+        (done ? '<span></span>' : '<button class="btn tz-go pk raised" data-mlgo="' + esc(q) + '" aria-label="Ćwicz: ' + esc(x.right) + '">' + PLAY + '</button>') + '</div>'; };
+    if (mzTab === 'learn') body = learnK.length ? '<section class="ml-box">' + learnK.map(q => lrow(q, false)).join('') + '</section><p class="small-note">Każda lekcja: krótkie wyjaśnienie i nowe zdania do tłumaczenia. 4 kropki = 4 różne dni bez błędu → „Opanowane”. Błąd = liczenie od nowa. Codziennie jedno zdanie z każdej lekcji wchodzi do sesji.</p>'
+      : '<section class="note flatbox"><div class="tx"><b>Na razie pusto</b><span>Lekcje powstają z Twoich błędów: po tłumaczeniu kliknij „Ucz mnie tego” (L) przy błędzie, albo opisz problem przy „Trudne” (T). Błąd powtórzony 3 razy trafia tu sam.</span></div></section>';
+    else if (mzTab === 'done') body = doneK.length ? '<section class="ml-box">' + doneK.map(q => lrow(q, true)).join('') + '</section>' : '<p class="small-note">Jeszcze nic — lekcja trafia tu po 4 dniach bez błędu.</p>';
+    else if (mzTab === 'pat') {
+      body = (!cur.length
         ? '<section class="note flatbox"><div class="tx"><b>' + ((D().mistakes || []).length ? 'Brak błędów w tym okresie' : 'Jeszcze pusto') + '</b><span>Błędy z sesji i gier są tu grupowane we wzorce, np. „Mylisz słowa: borrow ↔ lend” albo „Gramatyka: since / for”.</span></div></section>'
         : (spec.length ? '<div class="mz-grp">Konkretne wzorce</div><section class="mz-box">' + spec.map(rowHtml).join('') + '</section>' : '') +
           (area.length ? '<div class="mz-grp">Obszary</div><section class="mz-box">' + area.map(rowHtml).join('') + '</section>' : '') +
@@ -4238,16 +4267,21 @@
     else if (mzTab === 'chat') body = aiChatsHtml() || '<p class="small-note">Brak rozmów. Przycisk „AI” jest w prawym dolnym rogu ekranu (Alt+Q).</p>';
     else body = fixesHtml() || '<p class="small-note">Brak poprawionych zdań.</p>';
     app.innerHTML =
-      '<div class="wrap narrow mz">' + backHeader('Dziennik błędów', '') +
+      '<div class="wrap narrow mz">' + backHeader('Moje błędy', '') +
+      (mzTab === 'learn' || mzTab === 'done' ? '<section class="mz-top"><div><div class="big">' + learnK.length + ' do nauki <span>· ' + doneK.length + ' opanowanych</span></div><div class="small-note" style="font-size:15px;margin-top:4px">Twoje błędy zamienione w krótkie lekcje.</div></div>' +
+        (learnK.length ? '<button class="btn primary big-cta" id="mlAll">Ćwicz wszystkie (' + learnK.length + ') ' + K('Enter') + '</button>' : '') + '</section>' :
       '<section class="mz-top"><div><div class="big">' + openIds.length + ' ' + (openIds.length === 1 ? 'otwarty' : 'otwartych') + ' <span>· ' + closed + ' opanowanych · ' + (all ? 'od początku' : 'ostatnie ' + mzRange + ' dni') + '</span></div>' +
       '<div class="small-note" style="font-size:15px;margin-top:4px">' + (openIds.length ? 'Najwięcej otwartych: <b>' + esc(cur[0].cat) + '</b><br>' : '') + 'Błąd „zamyka się” po dobrej odpowiedzi innego dnia.</div></div>' +
-      (openIds.length ? '<button class="btn primary big-cta" id="mzAll">Powtórz otwarte (' + Math.min(20, openIds.length) + ') ' + K('Enter') + '</button>' : '') + '</section>' +
-      '<div class="mz-tabs"><div class="seg inset" role="tablist">' + tab('pat', 'Wzorce') + tab('hard', 'Trudne (' + hardN + ')') + tab('ex', 'Wyjaśnienia (' + exN + ')') + tab('fix', 'Poprawione zdania (' + fxN + ')') + (chN ? tab('chat', 'Rozmowy z AI (' + chN + ')') : '') + '</div>' +
+      (openIds.length ? '<button class="btn primary big-cta" id="mzAll">Powtórz otwarte (' + Math.min(20, openIds.length) + ') ' + K('Enter') + '</button>' : '') + '</section>') +
+      '<div class="mz-tabs"><div class="seg inset" role="tablist">' + tab('learn', 'Do nauki (' + learnK.length + ')') + tab('done', 'Opanowane (' + doneK.length + ')') + tab('pat', 'Wzorce') + tab('hard', 'Trudne (' + hardN + ')') + tab('ex', 'Wyjaśnienia (' + exN + ')') + tab('fix', 'Poprawione zdania (' + fxN + ')') + (chN ? tab('chat', 'Rozmowy z AI (' + chN + ')') : '') + '</div>' +
       (mzTab === 'pat' ? '<div class="seg inset">' + rng(7, '7 dni') + rng(30, '30 dni') + rng(3650, 'wszystko') + '</div>' : '') + '</div>' +
       body + '</div>';
     $('#back').onclick = () => go('home');
     bindFixes();
     if ($('#mzAll')) $('#mzAll').onclick = () => startCustomSession(openIds, 'Otwarte błędy');
+    const mlIds = q => { const x = S0[q], n = Math.max(1, (x.sents && x.sents.length) || x.src.length || 1); stubPrepare(q); return Array.from({ length: Math.min(n, 6) }, (_, i) => 'stb:' + q + ':' + i); };
+    if ($('#mlAll')) $('#mlAll').onclick = () => startCustomSession(learnK.map(q => 'stb:' + q + ':' + Math.floor(Math.random() * Math.max(1, (S0[q].sents || S0[q].src).length))), 'Moje błędy');
+    $$('[data-mlgo]').forEach(b => b.onclick = () => startCustomSession(mlIds(b.dataset.mlgo), 'Moje błędy: ' + S0[b.dataset.mlgo].right));
     if ($('#ubGo')) $('#ubGo').onclick = () => { const S0 = stubs(); startCustomSession(Object.keys(S0).filter(k => S0[k].state === 'active').map(k => 'stb:' + k + ':' + Math.floor(Math.random() * 6)), 'Uparte błędy'); };
     $$('[data-qacont]').forEach(b => b.onclick = () => qaOpen(b.dataset.qacont));
     $$('[data-mztab]').forEach(b => b.onclick = () => { mzTab = b.dataset.mztab; renderMistakes(); });
@@ -4270,7 +4304,7 @@
     keyHandler = e => {
       if (e.key === 'Escape') { e.preventDefault(); go('home'); return; }
       if (typingInField()) return;
-      if (e.key === 'Enter' && !onButton() && !(document.activeElement && document.activeElement.closest('[data-mzcat]')) && $('#mzAll')) { e.preventDefault(); $('#mzAll').click(); return; }
+      if (e.key === 'Enter' && !onButton() && !(document.activeElement && document.activeElement.closest('[data-mzcat]')) && ($('#mlAll') || $('#mzAll'))) { e.preventDefault(); ($('#mlAll') || $('#mzAll')).click(); return; }
       if (plainKey(e, 'KeyA') && $('#aiTips')) { e.preventDefault(); askAI(); return; }
       if (!e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key) && mzTab === 'pat') {
         const btns = $$('[data-practice]'); const b = btns[+e.key - 1]; if (b) { e.preventDefault(); b.click(); }
@@ -6586,7 +6620,7 @@
     const per = 8, maxSteps = Math.max(3, Math.min(6, Math.round(st.goalMin / 3)));
     const add = x => { if (x && steps.length < maxSteps && !used[x.type]) { steps.push(x); used[x.type] = 1; } };
     const sq = stubQueue();
-    if (sq.length) add({ type: 'stub', title: 'Uparte błędy', mode: 'srs', why: 'Błędy, które powtarzasz: ' + sq.map(q => itemFor(q.id).stubRight).join(', ') + ' — po jednym krótkim zdaniu.', queue: sq });
+    if (sq.length) add({ type: 'stub', title: 'Moje błędy', mode: 'srs', why: 'Lekcje z Twoich błędów: ' + sq.map(q => itemFor(q.id).stubRight).join(', ') + ' — po jednym krótkim zdaniu.', queue: sq });
     const due = dueIds().slice(0, Math.min(15, reviewCap()));
     if (due.length) add({ type: 'due', title: 'Powtórki', mode: 'srs', why: due.length + ' do powtórki — to dziś najważniejsze dla pamięci.', queue: due.map(id => ({ id, isNew: false })) });
     { const dset = new Set(due), tq = trQueue(8).filter(q => !dset.has(q.id)); if (tq.length) add({ type: 'trw', title: 'Tłumaczenia', mode: 'srs', why: 'Słowa w zdaniach z polskiego — bez tego słowo nie dojdzie do 5/5 ani do „znam”.', queue: tq }); }
