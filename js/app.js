@@ -4330,6 +4330,8 @@
   /* zdanie z bieżącego ćwiczenia — przed odpowiedzią z luką (żeby nie zdradzać odpowiedzi) */
   function qaCtx() {
     try {
+      if (screen === 'trx' && TR && (TR.view === 'sent' || TR.view === 'fb')) { const T0 = D().texts[TR.id], tr0 = T0 && trData(T0), sn0 = T0 && T0.sents[tr0.list[tr0.pos]]; if (!sn0) return null;
+        return { show: sn0.t, send: sn0.t + (TR.view === 'fb' && TR.fb && TR.fb.better ? ' (tłumaczenie: ' + TR.fb.better + ')' : ' (Artur jeszcze nie przetłumaczył — nie podawaj tłumaczenia, chyba że poprosi)') }; }
       if (screen !== 'exercise' || !S || !cur()) return null;
       const it = curView(cur()); if (!it) return null;
       if (S.phase === 'feedback') { const f = fullSentence(it); return f ? { show: f, send: f } : null; }
@@ -5568,6 +5570,7 @@
         const vMap = { ok: ['ok', IC.check, 'Dobrze'], almost: ['unsure', IC.alert, 'Prawie'], wrong: ['bad', IC.alert, 'Nie całkiem'], self: ['unsure', IC.check, 'Tłumaczenie'] };
         const v = vMap[f.verdict] || vMap.self;
         const KIC = { grammar: '⏱', word: '📈', usage: '🔗' };
+        const ADDI = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
         const mkSet = {}; Object.values(T.marks || {}).forEach(m => { if (m.s === si) for (let q = m.a; q <= m.b; q++) mkSet[q] = 1; });
         const fbSent = (() => { let out = '', last = 0; toks.forEach((tk, k) => { out += esc(sn.t.slice(last, tk.a)); const sel = TR.wsel && k >= TR.wsel.a && k <= TR.wsel.b; out += '<span class="tr-w tr-pk' + (mkSet[k] ? ' mk' : '') + (sel ? ' sel' : '') + '" data-trw="' + k + '">' + esc(tk.w) + '</span>'; last = tk.b; }); return out + esc(sn.t.slice(last)); })();
         const wp = TR.wpop;
@@ -5576,17 +5579,17 @@
         html += '<section class="tr-f tr-card"><div class="tr-sent tr-small" lang="en">' + fbSent + '</div>' + popHtml +
           '<div class="small-note" style="text-align:center;margin:-4px 0 4px">Kliknij słowo (Shift — kilka słów), żeby dodać je do nauki</div>' +
           '<div class="fb ' + v[0] + '" role="status">' + v[1] + '<span><b>' + v[2] + (f.verdict === 'self' ? '' : ' — ') + '</b>' + (f.verdict === 'self' ? '' : qaFmt(f.headline)) + '</span></div>' +
-          (f.verdict === 'self' && d.self == null ? '<div class="tr-self" title="Twoja samoocena — „Tak” liczy się jako dobre zdanie w podsumowaniu tekstu">Czy w głowie przetłumaczyłeś to tak samo jak niżej? <button class="btn small" data-trself="1">Tak ' + K('1') + '</button><button class="btn small" data-trself="0">Nie całkiem ' + K('2') + '</button></div>' : '') +
+
           '<div class="tr-cmp">' + (TR.lastAns ? '<span>Twoje</span><div>' + esc(TR.lastAns) + '</div>' : '') + '<span>' + (TR.lastAns ? 'Lepiej' : 'Tłumaczenie') + '</span><div class="tr-better">' + esc(f.better) + '</div></div>' +
           '<div class="row between"><b class="tr-h3">Komentarz</b>' + aiTag(f.m) + '</div><div class="tr-aic">' + qaFmt(f.comment) + '</div>' +
           (f.learn && f.learn.length ? '<div class="tr-learn"><b class="tr-h3">Warto zapamiętać</b>' + f.learn.map((l, li) => '<div><span>' + (KIC[l.kind] || '•') + '</span><span>' + qaFmt(l.text) + '</span>' +
-            (l.added ? '<span class="small-note tr-lok">✓ w Moich błędach</span>' : '<button class="btn small tr-lbtn" data-trlearn="' + li + '">Do nauki' + (li === f.learn.findIndex(x => !x.added) ? ' ' + K('L') : '') + '</button>') + '</div>').join('') + '</div>' : '') +
+            (l.added ? '<span class="tr-ok" title="w Moich błędach → Do nauki">✓</span>' : '<button class="btn tz-go pk raised" data-trlearn="' + li + '" title="Do nauki (lekcja w Moich błędach)' + (li === f.learn.findIndex(x => !x.added) ? ' — L' : '') + '" aria-label="Do nauki">' + ADDI + '</button>') + '</div>').join('') + '</div>' : '') +
           (f.words && f.words.length ? '<div><b class="tr-h3">Słowa z tego zdania</b>' + f.words.map((w, k) => '<div class="tr-wrow"><i class="' + (w.kind === 'red' ? 'r' : w.kind === 'yellow' ? 'y' : 'm') + '"></i><span><b lang="en">' + esc(w.phrase || w.surface) + '</b> — ' + esc(w.pl) + (w.note ? ' <span class="small-note">· ' + qaFmt(w.note) + '</span>' : '') + '</span>' +
-            (w.added ? '<span class="small-note">✓ dodane do nauki</span>' : w.known ? '<span class="small-note">znasz</span>' : '<span class="row" style="gap:8px"><button class="btn small" data-trwk="' + k + '">Znam</button><button class="btn small primary" data-trwa="' + k + '">Do nauki</button></span>') + '</div>').join('') + '</div>' : '') +
+            (w.added ? '<span class="tr-ok" title="dodane do nauki">✓</span>' : '<button class="btn tz-go pk raised" data-trwa="' + k + '" title="Do nauki" aria-label="Do nauki: ' + esc(w.phrase || w.surface) + '">' + ADDI + '</button>') + '</div>').join('') + '</div>' : '') +
           (TR.qa.length ? '<div class="tr-qa">' + TR.qa.map(q => '<div class="tr-q">' + esc(q.q) + '</div><div class="tr-a">' + (q.a ? qaFmt(q.a) : '<span class="spinner"></span>') + '</div>').join('') + '</div>' : '') +
           (TR.ask ? '<div class="tr-ta"><input id="trAsk" class="tr-in" placeholder="Zapytaj o to zdanie… (Enter)" autocomplete="off"></div>' : '') +
           '</section>' +
-          '<div class="tr-under"><button class="btn" id="trMore">Zapytaj o to zdanie ' + K('Alt+E') + '</button><button class="btn primary" id="trNext">Dalej ' + K('Enter') + '</button></div>';
+          '<div class="tr-under"><button class="btn primary" id="trNext">Dalej ' + K('Enter') + '</button></div>';
         if (TR.banner) {
           const rest = tr.list.slice(tr.pos + 1), hs = new Set((tr.intro && tr.intro.hard) || []), hrest = rest.filter(i => hs.has(i));
           html += '<div class="tr-banner"><span><b>Do końca ' + (trParts(T) > 1 ? 'tej części' : 'tekstu') + ' nie ma już słów spoza Twojego słownika.</b> ' + (hrest.length ? 'Zostały ' + hrest.length + ' trudniejsze zdania (gramatyka). ' : '') + 'Resztę możesz przeczytać swobodnie z lektorem.</span><span class="row" style="gap:14px;flex:none">' +
@@ -5862,7 +5865,7 @@
       if (TR.view === 'fb') {
         if (document.activeElement && document.activeElement.id === 'trAsk') return;
         if (e.key === 'Enter') { e.preventDefault(); trNext(T); return; }
-        if (altKey(e, 'KeyE')) { e.preventDefault(); $('#trMore').click(); return; }
+        if (altKey(e, 'KeyE')) { e.preventDefault(); qaOpen(); return; } // pytania o zdanie → asystent AI (zna bieżące zdanie)
         if (!inField && plainKey(e, 'KeyL') && TR.fb && TR.fb.learn) { const li = TR.fb.learn.findIndex(x => !x.added); if (li >= 0) { e.preventDefault(); trLearnAdd(T, li); return; } }
         if (!inField && (e.key === '1' || e.key === '2') && $('[data-trself="1"]')) { e.preventDefault(); $('[data-trself="' + (e.key === '1' ? '1' : '0') + '"]').click(); }
         return;

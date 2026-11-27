@@ -2092,3 +2092,4 @@ html body { background: transparent; }
 .tw-go b { font: 700 15px var(--head); } .tw-go small { display: block; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tw-tag { font: 700 11px var(--head); color: #5A84BC; margin-left: 6px; }
 .tw-x { width: 32px; height: 32px; padding: 0; border-radius: 50%; }
+.tr-wrow { grid-template-columns: 14px minmax(0, 1fr) 36px !important; align-items: center; } .tr-ok { color: #4E8A5D; font-weight: 700; text-align: center; width: 34px; } .tr-learn > div { align-items: center; }
