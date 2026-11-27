@@ -5370,10 +5370,28 @@
     if (cur.length) paras.push(cur.join(' '));
     return paras.map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
   }
+  /* YouTube przy kopiowaniu skleja znacznik czasu z polskim opisem i tekstem: „get 0:099 sekundyou guys” → „get you guys” (upd277) */
+  function stripYtTimes(str) {
+    const re = /\(?\d{1,2}:\d{2}(?::\d{2})?\)?/g, PL = { sekund: 1, minut: 1, godzin: 1 };
+    let out = '', last = 0, m;
+    while ((m = re.exec(str))) {
+      let p = m.index + m[0].length, got = 0;
+      for (;;) {
+        const d = /^\s*(\d+)\s*(sekund|minut|godzin|second|minute|hour)/i.exec(str.slice(p)); if (!d) break;
+        const n = +d[1], st = d[2].toLowerCase(); let q = p + d[0].length;
+        if (PL[st]) { const suf = n === 1 ? 'a' : (n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14)) ? 'y' : ''; if (suf && str.slice(q, q + 1).toLowerCase() === suf) q++; }
+        else if (n !== 1 && str.slice(q, q + 1).toLowerCase() === 's') q++;
+        p = q; got++;
+        const sep = /^\s*(,|\bi\b|\band\b)?/.exec(str.slice(p)); if (sep && sep[1]) p += sep[0].length; else break;
+      }
+      if (got) { out += str.slice(last, m.index).replace(/\s+$/, '') + ' '; last = p; re.lastIndex = p; }
+    }
+    return (out + str.slice(last)).replace(/ {2,}/g, ' ');
+  }
   function cleanLines(raw) {
     const out = [];
     String(raw || '').replace(/\r/g, '').replace(/_/g, ' ').split('\n').forEach(line => {
-      let l = line.trim();
+      let l = stripYtTimes(line).trim();
       if (!l) { if (out.length && out[out.length - 1] !== '') out.push(''); return; }
       if (/^WEBVTT/i.test(l) || /^NOTE\b/.test(l) || /^(Kind|Language):/i.test(l)) return;
       if (/^\d+$/.test(l)) return;                                  // numery napisów .srt
@@ -8435,6 +8453,12 @@
   if (D().profile.placementDone) go('home'); else go('welcome');
   syncStartup();
   try { basketMigrate(); } catch (e) { console.warn(e); }
+  /* jednorazowo: usuń sklejone znaczniki czasu YouTube z już zapisanych tekstów; zaznaczenia słów przelicz po frazie (upd277) */
+  try { if (!D().ytFix1) { let ch = 0; Object.values(D().texts || {}).forEach(T => { (T.sents || []).forEach((sn, si) => { const nt = stripYtTimes(sn.t).trim(); if (nt === sn.t) return; sn.t = nt; ch++;
+        Object.keys(T.marks || {}).forEach(mk => { const m = T.marks[mk]; if (m.s !== si) return; const tk = tokenize(nt), ph = String(m.phrase || '').toLowerCase().split(/\s+/).filter(Boolean);
+          const at = tk.findIndex((_, i) => ph.length && ph.every((w, j) => tk[i + j] && String(tk[i + j].w || tk[i + j].t || '').toLowerCase().replace(/[^a-z0-9']/g, '') === w.replace(/[^a-z0-9']/g, '')));
+          if (at >= 0) { m.a = at; m.b = at + ph.length - 1; } else delete T.marks[mk]; }); }); delete TOKS[T.id]; });
+      D().ytFix1 = 1; Store.save(); if (ch) setTimeout(() => toast('Usunięto pozostałości znaczników czasu YouTube z ' + ch + ' zdań w Twoich tekstach.'), 1500); } } catch (e) { }
   try { stubBackfill(); const pc = D().plCache || {}; Object.keys(pc).forEach(k => { if (/to było przyrody/.test(pc[k] || '')) pc[k] = pc[k].replace('to było przyrody', 'to była przyroda'); }); } catch (e) { }
   if (AI.enabled()) AI.test().catch(() => {}); // przy starcie: sprawdzenie AI — przełącznik zielony/czerwony
   setTimeout(qcOldAiWords, 6000);
