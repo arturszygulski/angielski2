@@ -2031,3 +2031,7 @@ html body { background: transparent; }
 .tz-ic { color: #5A84BC; display: grid; place-items: center; } .tz-ic svg { width: 19px; height: 19px; }
 .tz-fr .kbd { font-size: 10.5px; }
 @media (max-width: 900px) { .tz-lay { grid-template-columns: 1fr; } }
+/* Porównania w lekcji czasu (upd271) */
+.tz-cmp { margin-top: 14px; border-top: 1px solid #D2CCC4; padding-top: 10px; }
+.tz-cmp h3 { font: 700 12.5px var(--head); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 4px; }
+.tz-cmp .tz-ad { grid-template-columns: 22px minmax(0, 1fr) 36px; } .tz-cmp .tz-ad small { display: none; }

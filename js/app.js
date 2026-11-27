@@ -7202,12 +7202,11 @@
     }).join('') + '</div>';
   }
   /* Dodatki w Czasach — rejestr: nowy pomysł = nowy wpis (upd255) */
-  const TENSE_ADDONS = [
-    { id: 'cmp', name: 'Porównania', sub: 'dwa czasy obok siebie', ic: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>', count: () => (window.TENSE_PAIRS || []).length + ' lekcji' }
+  const TENSE_ADDONS = [ // Porównania przeniesione do lekcji czasów (upd271); tu tylko nowe rodzaje ćwiczeń
   ];
   const addonIc = p => '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
   function renderTensePairs() {
-    const L = ['A1', 'A2', 'B1', 'B2', 'C1'], A = TENSE_ADDONS[0];
+    const L = ['A1', 'A2', 'B1', 'B2', 'C1'], A = { ic: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>' };
     app.innerHTML = '<div class="wrap">' + backHeader('Porównania', 'dwa czasy obok siebie — kiedy który') +
       '<div class="tlessons t5">' + (window.TENSE_PAIRS || []).slice().sort((a, b) => a.lvl - b.lvl).map(P => '<button class="btn tlesson tpair raised" data-pair="' + P.id + '"><b>' + esc(P.name) + '</b><small>' + L[P.lvl] + '</small><span class="tp-ic">' + addonIc(A.ic) + '</span></button>').join('') + '</div></div>';
     $('#back').onclick = () => go('tenses');
@@ -7236,10 +7235,10 @@
       '<div class="tz-side"><section class="tz-box"><h2>Ćwicz</h2>' +
       '<div class="tz-fr"><span class="tz-tx"><b>Ćwicz otwarte czasy</b><small>' + (open.length ? 'mieszanka czasów, które już otworzyłeś (' + open.length + ')' : 'otwórz lekcję, żeby zacząć') + '</small></span>' + (open.length ? K('Enter') : '<span></span>') + '<button class="btn tz-go pk raised" id="tMix"' + (open.length ? '' : ' disabled') + ' aria-label="Start: otwarte czasy">' + PLAY + '</button></div>' +
       '<div class="tz-fr"><span class="tz-tx"><b>Ćwicz czasy z mojego poziomu</b><small>wszystkie czasy do ' + L[lvl] + '</small></span><span></span><button class="btn tz-go raised" id="tLevel" aria-label="Start: czasy z mojego poziomu">' + PLAY + '</button></div></section>' +
-      '<section class="tz-box tz-add"><h2>Dodatki</h2>' +
+      (TENSE_ADDONS.length ? '<section class="tz-box tz-add"><h2>Dodatki</h2>' +
       ads.map(A => '<div class="tz-fr tz-ad" data-addon="' + A.id + '"><span class="tz-ic">' + addonIc(A.ic) + '</span><b>' + A.name + '</b><small>' + A.count() + '</small><button class="btn tz-go raised" aria-label="Otwórz: ' + A.name + '">' + GO + '</button></div>').join('') +
       (ads.length < TENSE_ADDONS.length ? '<div class="tz-fr tz-ad" data-addon="all"><span class="tz-ic"></span><b>Wszystkie dodatki</b><small>' + TENSE_ADDONS.length + '</small><button class="btn tz-go raised" aria-label="Wszystkie dodatki">' + GO + '</button></div>' : '') +
-      '</section></div></div></div>';
+      '</section>' : '') + '</div></div></div>';
     $('#back').onclick = () => go('home');
     $$('[data-tense]').forEach(b => b.onclick = () => go('tense', b.dataset.tense));
     $$('[data-addon]').forEach(b => b.onclick = () => go('tenses', b.dataset.addon === 'all' ? 'cmp' : b.dataset.addon));
@@ -7250,6 +7249,7 @@
       if (e.key === 'Enter' && !onButton() && open.length) { e.preventDefault(); $('#tMix').click(); }
     };
   }
+  let CMP_FROM = null;
   function renderTenseLesson(id) {
     S = null;
     const T = TS_BY[id], P = TPAIR_BY[id];
@@ -7267,7 +7267,10 @@
       main = '<section class="lower"><div class="panel raised grow"><h3>Oś czasu</h3>' + tenseTimelineSvg(T) + '<p class="small-note" style="margin:0 0 6px">' + esc(T.tlNote) + '</p>' + summary(T) + '<section class="note inset tip"><div class="tx"><b>Uwaga dla Polaków</b><span>' + esc(T.tip) + '</span></div></section></div>' +
         '<div class="panel raised side"><h2>Przykłady</h2>' + exHtml(items) +
         '<div class="rstats"><div><b>' + st.done + '</b><span>opanowane</span></div><div><b>' + st.learn + '</b><span>w nauce</span></div><div><b>' + st.fresh + '</b><span>nowe</span></div></div>' +
-        (st.fresh === 0 && AI.enabled() ? '<button class="btn small" id="tMore">Dobierz 10 nowych zdań z AI</button><div id="tMoreMsg"></div>' : '') + '</div></section>';
+        (st.fresh === 0 && AI.enabled() ? '<button class="btn small" id="tMore">Dobierz 10 nowych zdań z AI</button><div id="tMoreMsg"></div>' : '') +
+        (function () { const ps = (window.TENSE_PAIRS || []).filter(x => x.a === T.id || x.b === T.id); if (!ps.length) return '';
+          const GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+          return '<div class="tz-cmp"><h3>Porównaj z — czym się go myli</h3>' + ps.map(x => { const o = TS_BY[x.a === T.id ? x.b : x.a]; return '<div class="tz-fr tz-ad" data-cmp="' + x.id + '"><span class="tz-ic">' + addonIc('<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>') + '</span><b>' + esc(o ? o.name : x.name) + '</b><small>' + esc(x.name) + '</small><button class="btn tz-go raised" aria-label="Porównanie: ' + esc(x.name) + '">' + GO + '</button></div>'; }).join('') + '</div>'; })() + '</div></section>';
     } else {
       const A = TS_BY[P.a], B = TS_BY[P.b];
       main = '<section class="note raised"><div class="tx"><b>Jak odróżnić?</b><span><ul class="twhen" style="margin:6px 0 0">' + P.how.map(h => '<li>' + esc(h) + '</li>').join('') + '</ul></span></div></section>' +
@@ -7280,7 +7283,10 @@
       '<header class="ex-head"><button class="btn" id="back">' + IC.back + ' Czasy ' + K('Esc') + '</button>' +
       '<div class="ex-title"><b style="font-size:26px">' + esc(name) + '</b><span>' + (T ? esc(T.pl) + ' · ' + L[T.lvl] : 'porównanie · ' + L[P.lvl]) + '</span></div>' +
       '<button class="btn primary" id="tGo">Ćwicz ' + (T ? 'ten czas' : 'oba czasy') + ' ' + K('Enter') + '</button></header>' + main + '</div>';
-    $('#back').onclick = () => go('tenses', P ? 'cmp' : undefined);
+    const backTo = () => P && CMP_FROM && TS_BY[CMP_FROM] ? go('tense', CMP_FROM) : go('tenses');
+    $('#back').onclick = backTo;
+    $$('[data-cmp]').forEach(b => b.onclick = () => { CMP_FROM = T.id; go('tense', b.dataset.cmp); });
+    if (T) CMP_FROM = null;
     $('#tGo').onclick = () => startTenseSession(tids, T ? 'Czasy: ' + T.name : P.name);
     $$('[data-say]').forEach(b => b.onclick = () => Speech.speak(b.dataset.say));
     if ($('#tMore')) $('#tMore').onclick = async () => {
@@ -7300,7 +7306,7 @@
       } catch (e) { if (msg) msg.innerHTML = '<span class="status bad">' + esc(AI.humanError(e)) + '</span>'; btn.disabled = false; }
     };
     keyHandler = e => {
-      if (e.key === 'Escape') { e.preventDefault(); go('tenses', P ? 'cmp' : undefined); return; }
+      if (e.key === 'Escape') { e.preventDefault(); backTo(); return; }
       if (e.key === 'Enter' && !onButton()) { e.preventDefault(); $('#tGo').click(); }
     };
   }
