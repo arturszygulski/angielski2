@@ -2814,13 +2814,15 @@
   const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('Dysk nie odpowiada od ' + Math.round(ms / 1000) + ' s — sprawdź, czy Dysk Google działa na komputerze')), ms))]);
   async function syncNow(ask) {
     if (!Sync.supported) return false;
-    if (syncState.busy) return false;
-    const h = await Sync.handle();
+    if (syncState.busy && Date.now() - (syncState.busyAt || 0) < 40000) return false;
+    let h;
+    try { h = await withTimeout(Sync.handle(), 8000); } catch (e) { syncState.ok = false; syncState.status = 'Nie mogę odczytać zapamiętanego folderu (' + e.message + ').'; refreshSyncUI(); return false; }
     if (!h) { syncState.ok = false; syncState.noHandle = true; syncState.status = 'Ta przeglądarka nie ma dostępu do folderu „' + (D().settings.syncFolder || '') + '” — kliknij „Zmień folder” i wskaż go jeszcze raz.'; refreshSyncUI(); return false; }
     syncState.noHandle = false;
-    syncState.busy = true; refreshSyncUI();
+    syncState.busy = true; syncState.busyAt = Date.now(); syncState.phase = 'perm'; refreshSyncUI(); const tk = setInterval(refreshSyncUI, 1000);
     try {
-      const p = await Sync.perm(h, ask);
+      const p = await withTimeout(Sync.perm(h, ask), 60000);
+      syncState.phase = 'write'; refreshSyncUI();
       if (p !== 'granted') { syncState.ok = false; syncState.status = 'Brak zgody na zapis w folderze kopii.'; syncState.needsPerm = true; return false; }
       await withTimeout(Sync.write(h), 25000);
       syncState.ok = true; syncState.needsPerm = false; syncState.status = 'Zapisano na Dysku Google · ' + fmtTime(Date.now());
@@ -2828,7 +2830,7 @@
     } catch (e) {
       syncState.ok = false; syncState.status = 'Nie udało się zapisać kopii (' + (e && e.message ? e.message : 'błąd') + ').';
       return false;
-    } finally { syncState.busy = false; refreshSyncUI(); }
+    } finally { clearInterval(tk); syncState.busy = false; refreshSyncUI(); }
   }
   function syncAfterSession() { if (D().settings.syncFolder) syncNow(true); }
   async function connectSync() {
@@ -2898,7 +2900,7 @@
     if (!Sync.supported) return '<span class="status bad">Ta przeglądarka tego nie obsługuje — użyj Chrome albo Edge.</span>';
     if (!d.settings.syncFolder) return 'Folder: <b>nie wybrano</b>';
     return 'Folder: <b>' + esc(d.settings.syncFolder) + '</b> · ostatni zapis: <b>' + (d.lastSync ? fmtTime(d.lastSync) : 'jeszcze nie było') + '</b>' +
-      (syncState.busy ? '<br><span class="status">Zapisuję…</span>' : syncState.ok && syncState.status ? '<br><span class="status ok">' + esc(syncState.status) + '</span>' : '') +
+      (syncState.busy ? '<br><span class="status">' + (syncState.phase === 'perm' ? 'Czekam na zgodę przeglądarki na zapis w folderze (okienko przy pasku adresu)…' : 'Zapisuję… (' + Math.round((Date.now() - (syncState.busyAt || Date.now())) / 1000) + ' s)') + '</span>' : syncState.ok && syncState.status ? '<br><span class="status ok">' + esc(syncState.status) + '</span>' : '') +
       (syncState.status && !syncState.ok ? '<br><span class="status bad">' + esc(syncState.status) + '</span>' : '') +
       (syncState.needsPerm ? '<br><span class="status bad">Przeglądarka potrzebuje Twojej zgody — kliknij „Zapisz teraz”.</span>' : '');
   }
