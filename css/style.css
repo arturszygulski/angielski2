@@ -1949,3 +1949,17 @@ html body { background: transparent; }
 .srCn b i { position: absolute; right: -12px; top: -4px; font-style: normal; font-size: 16px; color: #D96A8C; }
 .srCn span { margin-left: 14px; font-size: 12.5px; line-height: 1.15; color: var(--ink-2); }
 .srCs { display: flex; align-items: center; }
+/* Czasy: lekcje w 5 kolumnach, Dodatki pod kreską (upd255) */
+.tlessons.t5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 900px) { .tlessons.t5 { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+.tdod { border-top: 1.5px solid #BDB6AD; padding-top: 18px; margin-top: 6px; }
+.sec-h { display: flex; align-items: baseline; gap: 10px; } .sec-h small { color: var(--ink-3); font-size: 14px; }
+.dk { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.btn.dkt { position: relative; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; padding: 14px 16px; border-radius: 22px; text-align: left; min-height: 0; height: auto; }
+.dkt .ic2 { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #5A84BC; box-shadow: inset 3px 3px 6px var(--sh-in-d), inset -3px -3px 6px var(--sh-l); }
+.dkt b { display: block; font: 600 16px var(--head); color: var(--ink); }
+.dkt small { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+.dkt .cnt { position: absolute; right: 14px; top: 10px; font-size: 12px; color: var(--ink-3); }
+.tlesson.tpair b { padding-right: 30px; }
+.tlesson .tp-ic { position: absolute; right: 16px; top: 16px; color: #5A84BC; }
+.t-h { font-size: 22px; margin: 6px 0 -6px; }

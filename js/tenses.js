@@ -26,7 +26,7 @@ window.TENSES = [
     signals: ['I think', 'probably', 'I\'m sure', 'tomorrow', 'next year', 'in the future'],
     tip: 'Decyzja teraz → will („Odbiorę!” – I\'ll get it). Plan podjęty wcześniej → going to.',
     tl: [{ k: 'dot', x: 84, dashed: true }], tlNote: 'w przyszłości — przewidywanie albo decyzja z tej chwili' },
-  { id: 'going', name: 'Be going to', pl: 'zamiar, plan', lvl: 1,
+  { id: 'going', name: 'Be going to', pl: 'forma przyszła — plan, zamiar', lvl: 1,
     when: ['plany i zamiary podjęte wcześniej', 'przewidywanie na podstawie tego, co widać teraz („zaraz spadnie!”)'],
     form: [['+', "I'm going to start · she's going to start"], ['−', "I'm not going to start"], ['?', 'Are you going to start?']],
     signals: ['Look at…!', 'already decided', 'next month', 'this summer', 'I\'ve bought…'],
